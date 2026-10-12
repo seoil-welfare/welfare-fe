@@ -1,0 +1,108 @@
+import { useMemo } from "react";
+import { useParams } from "react-router-dom";
+import { AppShell } from "@/components/layout/AppShell";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { FormSection } from "@/components/common/FormSection";
+import { MetricCard } from "@/components/common/MetricCard";
+import { DemoNote } from "@/components/common/states";
+import { HorizontalBars } from "@/components/stats/charts";
+import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
+import { QueryGate } from "@/components/common/QueryGate";
+import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
+import { useStatsDiaries } from "@/app/useStatsDiaries";
+import { findServiceUser } from "@/services/diaryService";
+import {
+  activityFieldCounts,
+  completedDiaries,
+  conditionCounts,
+  periodRange,
+  type ActivityField,
+} from "@/services/statsService";
+import { useStatsContext } from "@/app/StatsContext";
+
+/**
+ * 기타 카테고리 상세 통계 (/stats/:category).
+ * 자료에 상세 목업이 없어 메인 카드의 같은 통계 구조를 확장한 데모 화면이다 (지시서 2장).
+ * '자세히' 선택 시 상세 화면 구성은 FR-37·FR-43 미확정 사항이다.
+ */
+
+const CATEGORY_META: Record<
+  string,
+  { title: string; field: ActivityField | "condition"; unitLabel: string }
+> = {
+  reaction: { title: "이용자 반응 상세", field: "reaction", unitLabel: "활동별 선택 건수" },
+  preSupport: { title: "사전 지원 상세", field: "preSupport", unitLabel: "활동별 선택 건수" },
+  positiveSupport: {
+    title: "긍정행동지원 상세",
+    field: "positiveSupport",
+    unitLabel: "활동별 선택 건수",
+  },
+  condition: { title: "컨디션 상세", field: "condition", unitLabel: "일지별 선택 건수" },
+};
+
+export function StatsCategoryPage() {
+  const usersQuery = useServiceUsers();
+  const { category } = useParams();
+  const { userId, period } = useStatsContext();
+  const { query: diariesQuery, diaries } = useStatsDiaries(userId, period);
+
+  const meta = CATEGORY_META[category ?? ""] ?? {
+    title: "통계 상세",
+    field: "reaction" as ActivityField,
+    unitLabel: "활동별 선택 건수",
+  };
+
+  const range = periodRange(period);
+  const completed = useMemo(
+    () => completedDiaries(diaries, userId, range),
+    [diaries, userId, range],
+  );
+  const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
+
+  const items =
+    meta.field === "condition"
+      ? conditionCounts(completed, { includeZero: true })
+      : activityFieldCounts(completed, meta.field, { includeZero: true });
+
+  const total = items.reduce((sum, item) => sum + item.count, 0);
+  const recorded = items.filter((item) => item.count > 0).length;
+
+  // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
+  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, diariesQuery]), [
+    diariesQuery,
+  ]);
+  if (loadState.isPending || loadState.isError) {
+    return (
+      <AppShell header={<AppHeader title={meta.title} backTo="/stats" />}>
+        <div className="flex flex-col gap-3">
+          <StatsScopeSection userName={serviceUser?.name} />
+          <QueryGate state={loadState}>{() => null}</QueryGate>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell header={<AppHeader title={meta.title} backTo="/stats" />}>
+      <div className="flex flex-col gap-3">
+        <StatsScopeSection userName={serviceUser?.name} />
+
+        <div className="grid grid-cols-3 gap-3">
+          <MetricCard value={total} unit="건" description={"전체 " + meta.unitLabel} />
+          <MetricCard value={recorded} unit="종" description="기록된 항목 수" />
+          <MetricCard value={completed.length} unit="건" description="작성 완료 일지" />
+        </div>
+
+        <FormSection title="항목별 기록 건수" description={meta.unitLabel + " 기준"}>
+          <HorizontalBars items={items} />
+        </FormSection>
+
+        <DemoNote>
+          이 화면은 자료에 상세 목업이 없어 통계 메인 카드와 같은 구조를 확장한 시연용 화면입니다.
+          ‘자세히’의 상세 화면 구성은 FR-37·FR-43 미확정 사항입니다. 0건 항목도 함께 표시했으며, 표시
+          여부 역시 미확정입니다(FR-38~FR-42).
+        </DemoNote>
+      </div>
+    </AppShell>
+  );
+}

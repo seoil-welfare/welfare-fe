@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   원광 복지관 · UI Guideline v1.0 토큰 (원문 B 11-1 병합 기준)
+   라이트 테마만 다룬다. 시스템 dark 설정을 따라가지 않는다.
+   ========================================================================= */
+
+:root {
+  --radius: 0.75rem;
+
+  --background: #f0f3fa;
+  --foreground: #152e63;
+  --card: #ffffff;
+  --card-foreground: #152e63;
+  --popover: #ffffff;
+  --popover-foreground: #152e63;
+  --primary: #152e63;
+  --primary-foreground: #ffffff;
+  --secondary: #e5eaf1;
+  --secondary-foreground: #152e63;
+  --muted: #f6f8fb;
+  --muted-foreground: #586579;
+  --accent: #e7edf7;
+  --accent-foreground: #152e63;
+  --destructive: #a8123a;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #738094;
+  --ring: #152e63;
+  --chart-1: #152e63;
+  --chart-2: #6185c2;
+  --chart-3: #9cb0d4;
+  --chart-4: #d9dfea;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #152e63;
+  --sidebar-primary: #152e63;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e7edf7;
+  --sidebar-accent-foreground: #152e63;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #152e63;
+
+  /* 프로젝트 토큰 */
+  --primary-hover: #2b4a8a;
+  --destructive-soft: #fff1f3;
+  --brand-gold: #d4a820;
+  --behavior: #b83e12;
+  --behavior-soft: #fef4f1;
+  --warning-soft: #fef6e0;
+  --warning-foreground: #854d0e;
+  --calendar-sunday: #c62828;
+  --calendar-saturday: #1d5fd1;
+}
+
+@theme inline {
+  --font-sans: "Noto Sans KR", system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-primary-hover: var(--primary-hover);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-brand-gold: var(--brand-gold);
+  --color-behavior: var(--behavior);
+  --color-behavior-soft: var(--behavior-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-calendar-sunday: var(--calendar-sunday);
+  --color-calendar-saturday: var(--calendar-saturday);
+
+  /* radius는 --radius 비율 계산 대신 고정값을 쓴다 (가이드 11-1) */
+  --radius-check: 6px;
+  --radius-badge: 6px;
+  --radius-control: 12px;
+  --radius-card: 16px;
+
+  /* 간격 스케일 보강: 28px는 로그인 여백 보존값 (가이드 4-1) */
+  --spacing-login: 28px;
+
+  --shadow-app-header: 0 1px 2px -1px rgb(0 0 0 / 0.1), 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-home: 0 1px 2px rgb(21 46 99 / 0.08);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    /* 루트 글자 크기를 강제로 고정하지 않는다 (가이드 3장) */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    overflow-x: hidden;
+  }
+
+  /* 키보드 focus 표시를 전역에서 지우지 않는다 (가이드 8장) */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  /* Typography 8개 역할 (가이드 3장) */
+  .type-display {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+  }
+  .type-title {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+  }
+  .type-brand {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+  }
+  .type-heading {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 700;
+  }
+  .type-input {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  .type-body {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .type-body-long {
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+  }
+  .type-caption {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
