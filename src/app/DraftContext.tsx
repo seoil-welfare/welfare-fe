@@ -29,6 +29,12 @@ interface DraftContextValue {
    */
   pendingActivity: Activity | null;
   setPendingActivity: (activity: Activity | null) => void;
+  /**
+   * 일지 작성 화면에서 활동 화면으로 넘어갈 때의 스크롤 위치.
+   * 돌아왔을 때 같은 위치로 되돌리고 지운다.
+   */
+  editScrollY: number | null;
+  setEditScrollY: (value: number | null) => void;
 }
 
 const DraftContext = createContext<DraftContextValue | null>(null);
@@ -36,6 +42,7 @@ const DraftContext = createContext<DraftContextValue | null>(null);
 export function DraftProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<DiaryDraft | null>(null);
   const [pendingActivity, setPendingActivity] = useState<Activity | null>(null);
+  const [editScrollY, setEditScrollY] = useState<number | null>(null);
 
   const startDraft = useCallback((userId: string, date: string) => {
     setDraft(emptyDraft(userId, date));
@@ -52,6 +59,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   const discardDraft = useCallback(() => {
     setDraft(null);
     setPendingActivity(null);
+    setEditScrollY(null);
   }, []);
 
   const upsertActivity = useCallback((activity: Activity) => {
@@ -84,6 +92,8 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       removeActivity,
       pendingActivity,
       setPendingActivity,
+      editScrollY,
+      setEditScrollY,
     }),
     [
       draft,
@@ -94,6 +104,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       upsertActivity,
       removeActivity,
       pendingActivity,
+      editScrollY,
     ],
   );
 

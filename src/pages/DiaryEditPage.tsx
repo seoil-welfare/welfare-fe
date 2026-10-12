@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Save } from "lucide-react";
@@ -46,7 +46,7 @@ export function DiaryEditPage() {
   const [params] = useSearchParams();
   const today = useToday();
   const currentStaff = useCurrentStaff();
-  const { draft, startDraft, updateDraft, discardDraft } = useDraft();
+  const { draft, startDraft, updateDraft, discardDraft, editScrollY, setEditScrollY } = useDraft();
   const saveDiary = useSaveDiary();
   const usersQuery = useServiceUsers();
   const users = activeServiceUsers(usersQuery.data ?? []);
@@ -67,6 +67,19 @@ export function DiaryEditPage() {
     const firstAvailable = users.find((user) => !saved.some((d) => d.userId === user.id));
     startDraft(requestedUserId ?? firstAvailable?.id ?? users[0].id, targetDate);
   }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData]);
+
+  // 활동 화면에서 돌아오면 넘어가기 전 스크롤 위치로 되돌린다 (화면이 그려지기 전에 맞춰 깜빡임을 막는다)
+  const hasDraft = Boolean(draft);
+  useLayoutEffect(() => {
+    if (!hasDraft || editScrollY === null) return;
+    window.scrollTo(0, editScrollY);
+    setEditScrollY(null);
+  }, [hasDraft, editScrollY, setEditScrollY]);
+
+  /** 활동 화면으로 넘어가기 직전에 현재 위치를 기억한다 */
+  function rememberScroll() {
+    setEditScrollY(window.scrollY);
+  }
 
   if (!draft) {
     return (
@@ -243,6 +256,7 @@ export function DiaryEditPage() {
                     <li key={activity.id}>
                       <Link
                         to={"/diaries/new/activities/" + activity.id}
+                        onClick={rememberScroll}
                         className={
                           "flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-accent" +
                           (behaviorCount > 0 ? " bg-behavior-soft" : "")
@@ -272,7 +286,7 @@ export function DiaryEditPage() {
           )}
 
           <Button variant="dashed" asChild>
-            <Link to="/diaries/new/activities/new">
+            <Link to="/diaries/new/activities/new" onClick={rememberScroll}>
               <Plus aria-hidden />
               활동 내용 추가
             </Link>

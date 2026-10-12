@@ -82,7 +82,8 @@ export function HomePage() {
                 : "오늘 기록을 불러오는 중…"}
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* hero Card는 내용을 한 번 더 감싸므로 Card의 gap이 적용되지 않는다. 간격을 직접 준다 */}
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button
               variant="outline"
               className="border-transparent bg-white text-primary hover:bg-white/90"
