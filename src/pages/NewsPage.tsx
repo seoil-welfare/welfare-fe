@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/misc";
 import { PillToggle } from "@/components/ui/toggle-group";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { DemoNote, EmptyState, ListSkeleton } from "@/components/common/states";
+import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, useNews, useServiceUsers, useStaffList } from "@/api/queries";
 import { useToday } from "@/lib/today";
@@ -87,11 +87,6 @@ export function NewsPage() {
           {loading ? "불러오는 중…" : "지난 소식 더 보기"}
         </Button>
 
-        <DemoNote>
-          ‘지난 소식 더 보기’가 한 번에 불러오는 날짜 범위는 미확정 사항입니다. 이 화면은 3일씩
-          불러옵니다. 수정 내역을 눌렀을 때 최신 일지를 보여줄지 수정 당시 내용을 보여줄지도 미확정이며,
-          여기서는 최신 일지로 이동합니다.
-        </DemoNote>
       </div>
     </AppShell>
   );

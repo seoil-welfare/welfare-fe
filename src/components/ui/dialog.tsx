@@ -85,6 +85,7 @@ SheetContent.displayName = "SheetContent";
 /**
  * AlertDialog — 이용 종결처럼 주의가 필요한 동작의 확인 (가이드 6장).
  * 제목에 대상과 동작, 본문에 결과. 확정 버튼은 동작 이름 ('확인'·'예'를 쓰지 않는다).
+ * cancelLabel에 null을 주면 취소 버튼 없이 확정 버튼 하나만 둔다.
  */
 export function ConfirmDialog({
   open,
@@ -101,7 +102,7 @@ export function ConfirmDialog({
   title: string;
   description: string;
   confirmLabel: string;
-  cancelLabel?: string;
+  cancelLabel?: string | null;
   onConfirm: () => void;
   tone?: "destructive" | "default";
 }) {
@@ -120,11 +121,13 @@ export function ConfirmDialog({
             {description}
           </AlertDialogPrimitive.Description>
           <div className="mt-6 flex gap-3">
-            <AlertDialogPrimitive.Cancel asChild>
-              <Button variant="outline" block>
-                {cancelLabel}
-              </Button>
-            </AlertDialogPrimitive.Cancel>
+            {cancelLabel !== null ? (
+              <AlertDialogPrimitive.Cancel asChild>
+                <Button variant="outline" block>
+                  {cancelLabel}
+                </Button>
+              </AlertDialogPrimitive.Cancel>
+            ) : null}
             <AlertDialogPrimitive.Action asChild>
               <Button variant={tone === "destructive" ? "destructive" : "default"} block onClick={onConfirm}>
                 {confirmLabel}

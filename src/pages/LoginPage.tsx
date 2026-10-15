@@ -7,7 +7,6 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/components/
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
-import { DemoNote } from "@/components/common/states";
 import { errorMessage, isApiError } from "@/api/errors";
 import { MOCK_PASSWORD } from "@/api/mock/mockApi";
 import { readDb } from "@/api/mock/mockDb";
@@ -142,7 +141,7 @@ export function LoginPage() {
             </DialogTrigger>
             <DialogContent
               title="비밀번호 재설정"
-              description="시연 프로토타입에서는 실제 재설정 절차를 진행하지 않습니다. 운영 환경에서는 담당자 확인 후 재설정 메일 또는 임시 비밀번호 발급 절차를 연결할 예정입니다."
+              description="비밀번호 재설정은 담당자에게 문의해 주세요."
             >
               <DialogClose asChild>
                 <Button block>닫기</Button>
@@ -170,12 +169,8 @@ function DemoAccounts({ onPick }: { onPick: (loginId: string) => void }) {
   const staff = readDb().staff;
   return (
     <div className="mt-6 flex flex-col gap-2">
-      <DemoNote>
-        실제 인증이 아닙니다. 비밀번호는 <span className="font-medium">{MOCK_PASSWORD}</span>{" "}
-        하나만 통과합니다.
-      </DemoNote>
       <div className="rounded-card border border-border p-3">
-        <p className="mb-2 type-caption text-muted-foreground">데모 계정 (가상 직원)</p>
+        <p className="mb-2 type-caption text-muted-foreground">계정 선택</p>
         <ul className="flex flex-col gap-1">
           {staff.map((member) => (
             <li key={member.id}>
@@ -186,7 +181,6 @@ function DemoAccounts({ onPick }: { onPick: (loginId: string) => void }) {
               >
                 <span className="truncate">
                   {member.name} · {member.position}
-                  {member.unconfirmedPosition ? " (U4 미확정 예시)" : ""}
                 </span>
                 <span className="shrink-0 type-caption text-muted-foreground">
                   {member.loginId}

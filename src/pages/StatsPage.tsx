@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AppShell } from "@/components/layout/AppShell";
 import { FormSection } from "@/components/common/FormSection";
 import { MetricCard } from "@/components/common/MetricCard";
-import { ChartSkeleton, DemoNote, EmptyState } from "@/components/common/states";
+import { ChartSkeleton, EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { BehaviorDonut, HorizontalBars, TrendBars } from "@/components/stats/charts";
 import { PeriodPicker, UnitToggle } from "@/components/stats/PeriodPicker";
@@ -67,7 +67,7 @@ export function StatsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-40 flex-1">
               <Select value={userId} onValueChange={setUserId}>
-                <SelectTrigger aria-label="통계 조회 이용자" triggerSize="dense">
+                <SelectTrigger aria-label="통계 조회 이용자" triggerSize="dense" className="border-input/40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,11 +176,6 @@ export function StatsPage() {
           )}
         </QueryGate>
 
-        <DemoNote>
-          기록 건수는 실제 발생 횟수가 아니라 항목 선택 건수입니다(단위 ‘건’). 주간 통계 제공 여부,
-          추이 그래프 구간 수, 0건 항목 표시 여부는 모두 회의 미확정 사항입니다. 추이 구간 수는 제안값
-          (월 6개월·분기 4분기·연 5년)을 따랐습니다.
-        </DemoNote>
       </div>
     </AppShell>
   );

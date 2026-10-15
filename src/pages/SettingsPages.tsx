@@ -10,11 +10,9 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
-import { DemoNote } from "@/components/common/states";
 import { errorMessage } from "@/api/errors";
 import { useChangePassword } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
-import { IS_MOCK } from "@/config";
 
 /** 비밀번호 변경 (FR-83). mock 모드에서는 실제로 변경하지 않는다 */
 export function PasswordPage() {
@@ -40,12 +38,7 @@ export function PasswordPage() {
       { currentPassword: current, newPassword: next },
       {
         onSuccess: () => {
-          // mock 모드에서는 실제 계정 변경이라고 주장하지 않는다 (지시서 4.5)
-          toast.success(IS_MOCK ? "시연용 안내입니다." : "비밀번호를 변경했어요.", {
-            description: IS_MOCK
-              ? "실제 비밀번호는 변경되지 않았습니다. 운영 환경에서는 서버 검증 후 처리합니다."
-              : undefined,
-          });
+          toast.success("비밀번호를 변경했어요.");
           navigate("/mypage");
         },
         // 현재 비밀번호 불일치·규칙 위반 등 서버 안내를 그대로 보여 준다
@@ -111,9 +104,6 @@ export function PasswordPage() {
           </FieldGroup>
         </FormSection>
 
-        <DemoNote>
-          샘플 폼입니다. 실제 비밀번호를 변경하지 않고, 입력값을 저장하거나 전송하지도 않습니다.
-        </DemoNote>
       </div>
     </AppShell>
   );
@@ -156,17 +146,13 @@ export function ProfilePage() {
                 currentStaff?.role === "teamLead"
                   ? "팀장"
                   : currentStaff?.role === "director"
-                    ? "국장 (U4 미확정 예시)"
+                    ? "국장"
                     : "담당 직원"
               }
             />
           </dl>
         </FormSection>
 
-        <DemoNote>
-          프로필 상세 화면의 구성과 수정 가능 항목은 미확정 사항입니다(FR-73, FR-74). 팀장·국장의
-          구체적인 역할과 접근 권한도 복지관 측과 추가 협의 후 확정됩니다.
-        </DemoNote>
       </div>
     </AppShell>
   );

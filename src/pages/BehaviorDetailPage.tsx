@@ -7,7 +7,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { OtherInput } from "@/components/common/OtherInput";
-import { DemoNote } from "@/components/common/states";
 import { BEHAVIOR_DETAILS, behaviorTypeLabel } from "@/data/catalog";
 import { useDraft } from "@/app/DraftContext";
 import type { BehaviorType } from "@/types";
@@ -146,12 +145,6 @@ export function BehaviorDetailPage() {
           />
         ) : null}
 
-        <DemoNote>
-          이 목록은 첨부 문서에 최종 항목이 정의되어 있지 않아 전부 ‘예시 항목(확정 필요)’으로 두었습니다
-          (FR-27 미확정). 세부 행동을 하나도 고르지 않고 완료할 수 있는지도 미확정이며(FR-28, U3), 이
-          화면에서는 완료를 막지 않습니다. ‘모두 해제’는 직접 입력한 텍스트를 지우지 않습니다(FR-26
-          미확정).
-        </DemoNote>
       </div>
     </AppShell>
   );

@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
 import { MetricCard } from "@/components/common/MetricCard";
-import { DemoNote, EmptyState } from "@/components/common/states";
+import { EmptyState } from "@/components/common/states";
 import { HorizontalBars } from "@/components/stats/charts";
 import { PillToggle } from "@/components/ui/toggle-group";
 import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
@@ -118,11 +118,6 @@ export function StatsBehaviorsPage() {
               })),
             ]}
           />
-          <DemoNote>
-            유형 필터가 상단 요약까지 바꾸는 동작은 미확정 제안입니다(FR-47). 현재{" "}
-            {flags.behaviorFilterUpdatesSummary ? "요약도 함께 갱신" : "요약은 전체 기준 유지"}{" "}
-            상태이며, 데모 패널에서 바꿀 수 있습니다.
-          </DemoNote>
         </FormSection>
 
         <FormSection title="세부 행동별 기록 건수">
@@ -131,10 +126,6 @@ export function StatsBehaviorsPage() {
             tone="behavior"
             emptyMessage="이 기간·유형에는 기록이 없어요."
           />
-          <DemoNote>
-            세부 행동 항목은 모두 ‘예시 항목(확정 필요)’입니다. 0건 세부 행동의 표시 여부도 미확정
-            사항입니다(FR-48).
-          </DemoNote>
         </FormSection>
 
         <FormSection
@@ -181,11 +172,6 @@ export function StatsBehaviorsPage() {
               ) : null}
             </>
           )}
-          <DemoNote>
-            발생 기록의 최초 표시 개수와 추가 조회 방식은 미확정이라 {RECORDS_PAGE_SIZE_DEMO_ONLY}건씩
-            보여 줍니다(FR-49). 일지 상세로 이동할 때 해당 활동으로 자동 이동·강조할지도 미확정
-            사항입니다(FR-50).
-          </DemoNote>
         </FormSection>
       </div>
     </AppShell>

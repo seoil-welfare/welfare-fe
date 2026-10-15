@@ -3,7 +3,6 @@ import { CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogTrigger, SheetContent } from "@/components/ui/dialog";
 import { SegmentedToggle } from "@/components/ui/toggle-group";
-import { DemoNote } from "@/components/common/states";
 import { periodLabel, selectableYears, weekCountOfMonth } from "@/services/statsService";
 import type { StatPeriodUnit, StatisticPeriod } from "@/types";
 import { cn } from "@/lib/utils";
@@ -67,7 +66,7 @@ export function PeriodPicker({
   return (
     <Dialog open={open} onOpenChange={openSheet}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="dense" className={cn("gap-2", className)}>
+        <Button variant="outline" size="dense" className={cn("gap-2 border-input/40", className)}>
           <CalendarRange aria-hidden />
           <span className="tnum">{periodLabel(period)}</span>
         </Button>
@@ -112,13 +111,6 @@ export function PeriodPicker({
               />
             ) : null}
           </div>
-
-          {pending.unit === "week" ? (
-            <DemoNote>
-              주간 통계 제공 여부와 월 경계 주차 계산 방식은 회의 미확정 사항입니다. 이 화면의 주차
-              계산은 시연 기준입니다.
-            </DemoNote>
-          ) : null}
 
           <div className="flex gap-3 pb-2 pt-1">
             <DialogClose asChild>

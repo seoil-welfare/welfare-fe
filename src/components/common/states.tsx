@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FlaskConical, Inbox, RotateCcw } from "lucide-react";
+import { Inbox, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/misc";
@@ -73,31 +73,3 @@ export function ChartSkeleton() {
   );
 }
 
-/**
- * 시연용 표시.
- * 미확정 업무를 결정사항으로 오인하지 않도록 화면에 작게 남긴다 (지시서 0-7).
- */
-export function DemoNote({
-  children,
-  className,
-  tone = "muted",
-}: {
-  children: ReactNode;
-  className?: string;
-  tone?: "muted" | "inline";
-}) {
-  return (
-    <p
-      className={cn(
-        "flex items-start gap-1.5 type-caption text-muted-foreground",
-        tone === "muted" && "rounded-control bg-muted px-3 py-2",
-        className,
-      )}
-    >
-      <FlaskConical className="mt-px size-3.5 shrink-0" aria-hidden />
-      <span className="break-keep">
-        <span className="font-medium">시연용</span> · {children}
-      </span>
-    </p>
-  );
-}

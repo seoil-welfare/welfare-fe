@@ -9,7 +9,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar, BottomNoticeBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
 import { MetricCard } from "@/components/common/MetricCard";
-import { DemoNote, EmptyState } from "@/components/common/states";
+import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { ActivityAccordion } from "@/components/diary/ActivityAccordion";
 import { isApiError } from "@/api/errors";
@@ -17,7 +17,6 @@ import { combineQueries, useDiary, useServiceUsers, useStaffList } from "@/api/q
 import { useCurrentStaff } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
 import {
-  activeServiceUsers,
   countDiaryBehaviors,
   findServiceUser,
   findStaff,
@@ -28,7 +27,7 @@ import type { Diary, ServiceUser, Staff } from "@/types";
 /**
  * 일지 상세 조회 (2.1.11/FR-57 ~ FR-64, 2.1.12/FR-65 ~ FR-72).
  * 세 상태를 각각 구현한다 (가이드 7장):
- *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언
+ *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 하단 고정 '수정하기'
  *  2) 본인이 작성 중 — 작성 중 Badge + 남은 활동 안내 + '이어서 작성' 작업 버튼
  *  3) 다른 담당자가 작성 중 — 작성 중 Badge + BottomNoticeBar (수정 CTA 없음)
  * 어떤 상태를 누구에게 보여 줄지의 권한·동시 편집 판정은 이 프로토타입에서 정하지 않는다.
@@ -87,8 +86,8 @@ function DiaryDetail({
   const behaviorCount = countDiaryBehaviors(diary);
   const isMine = diary.authorId === currentStaff?.id;
   const isDraft = diary.status === "draft";
-  const userCount = activeServiceUsers(serviceUsers).length;
 
+  // 이어서 작성·수정하기 모두 이 일지를 작성 화면으로 불러온다
   function handleContinue() {
     continueDraft(diary);
     navigate("/diaries/new");
@@ -100,9 +99,7 @@ function DiaryDetail({
       size="icon"
       aria-label="공유"
       onClick={() =>
-        toast.info("공유 기능은 동작이 미확정입니다.", {
-          description: "FR-72 미확정 사항이라 시연에서는 안내만 표시합니다.",
-        })
+        toast.info("공유 기능은 준비 중이에요.")
       }
     >
       <Share2 aria-hidden />
@@ -112,7 +109,7 @@ function DiaryDetail({
   return (
     <AppShell
       header={<AppHeader title="일지 상세" backTo="/calendar" action={headerAction} />}
-      bottom={isDraft ? "action" : "nav"}
+      bottom="action"
       width="form"
       bottomBar={
         isDraft ? (
@@ -129,7 +126,14 @@ function DiaryDetail({
               description="다른 담당자가 작성 중인 일지는 이어서 작성할 수 없어요. 저장된 내용만 볼 수 있어요."
             />
           )
-        ) : undefined
+        ) : (
+          // 스크롤 위치와 상관없이 화면 하단에 고정된다
+          <BottomActionBar>
+            <Button block onClick={handleContinue}>
+              수정하기
+            </Button>
+          </BottomActionBar>
+        )
       }
     >
       <div className="flex flex-col gap-3">
@@ -216,8 +220,7 @@ function DiaryDetail({
             <div className="rounded-card bg-warning-soft p-3 text-warning-foreground">
               <p className="type-body font-medium">아직 작성 전이에요</p>
               <p className="type-caption break-keep">
-                지금까지 활동 {diary.activities.length}건을 저장했어요. 남은 활동 개수는 하루 최대
-                활동 수 제한이 미확정이라 표시하지 않았어요. (FR-68 미확정)
+                지금까지 활동 {diary.activities.length}건을 저장했어요.
               </p>
             </div>
           ) : null}
@@ -233,10 +236,6 @@ function DiaryDetail({
           )}
         </FormSection>
 
-        <DemoNote>
-          이 화면의 상태 표시는 시연용입니다. 실제 권한 정책·동시 편집 판정·수정 이력 규칙은 회의에서
-          확정합니다. 달력 지표의 분모로 쓰이는 대상 이용자는 현재 {userCount}명입니다.
-        </DemoNote>
       </div>
     </AppShell>
   );

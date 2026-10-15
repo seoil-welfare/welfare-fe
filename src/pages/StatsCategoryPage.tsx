@@ -4,7 +4,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
 import { MetricCard } from "@/components/common/MetricCard";
-import { DemoNote } from "@/components/common/states";
 import { HorizontalBars } from "@/components/stats/charts";
 import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
 import { QueryGate } from "@/components/common/QueryGate";
@@ -97,11 +96,6 @@ export function StatsCategoryPage() {
           <HorizontalBars items={items} />
         </FormSection>
 
-        <DemoNote>
-          이 화면은 자료에 상세 목업이 없어 통계 메인 카드와 같은 구조를 확장한 시연용 화면입니다.
-          ‘자세히’의 상세 화면 구성은 FR-37·FR-43 미확정 사항입니다. 0건 항목도 함께 표시했으며, 표시
-          여부 역시 미확정입니다(FR-38~FR-42).
-        </DemoNote>
       </div>
     </AppShell>
   );

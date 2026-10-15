@@ -111,6 +111,8 @@ export interface StatisticPeriod {
 export interface DiaryDraft {
   /** 기존 일지를 이어 쓰는 경우의 원본 id */
   diaryId?: string;
+  /** 작성 완료된 일지를 수정하는 중이다. 저장 요청에는 넣지 않는다 */
+  editingCompleted?: boolean;
   userId: string;
   date: string;
   weather: Weather;

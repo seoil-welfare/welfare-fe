@@ -9,7 +9,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
-import { DemoNote } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, useServiceUsers } from "@/api/queries";
 import { useToday } from "@/lib/today";
@@ -23,21 +22,18 @@ import type { ServiceUser } from "@/types";
  * 출력 형식과 다운로드 흐름은 U5 미확정 사항이다 (지시서 4.5).
  */
 
-const KIND_META: Record<string, { title: string; description: string; formatNote: string }> = {
+const KIND_META: Record<string, { title: string; description: string }> = {
   diaries: {
     title: "일지 모아 출력",
     description: "선택한 기간의 일지를 모아 출력해요.",
-    formatNote: "파일 형식과 출력 범위는 미확정 사항입니다(FR-77).",
   },
   monthly: {
     title: "월간 기록 출력",
     description: "복지관 양식에 맞춘 월간 기록을 출력해요.",
-    formatNote: "출력 양식과 포함 항목은 복지관 확인이 필요합니다(FR-78).",
   },
   excel: {
     title: "엑셀 내보내기",
     description: "일지 관련 데이터를 표 형태로 내보내요.",
-    formatNote: "엑셀 파일의 데이터 구성과 내보내기 범위는 미확정 사항입니다(FR-79).",
   },
 };
 
@@ -151,19 +147,13 @@ function ExportForm({
         </FormSection>
 
         {done ? (
-          // 완성된 파일처럼 거짓 표시를 하지 않는다 (지시서 1장)
-          <Alert tone="warning" title="시연: 출력 기능은 백엔드 연동 후 구현">
+          <Alert tone="warning" title="출력 기능은 준비 중이에요">
             <p className="mt-1 break-keep">
-              대상 {selectedUsers.length}명 · {from} ~ {to} 범위를 선택했습니다. 이 프로토타입에서는
-              실제 파일을 만들지 않았고 다운로드도 제공하지 않습니다. {meta.formatNote}
+              대상 {selectedUsers.length}명 · {from} ~ {to} 범위를 선택했어요.
             </p>
           </Alert>
         ) : null}
 
-        <DemoNote>
-          출력 형식(워드·PDF·엑셀 등)과 다운로드 흐름은 U5 미확정 사항입니다. HWPX를 기본 형식으로
-          확정하지 않았습니다.
-        </DemoNote>
       </div>
     </AppShell>
   );

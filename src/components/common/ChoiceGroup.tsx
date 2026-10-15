@@ -72,13 +72,11 @@ export function MultiChoiceGroup({
   onOtherChange,
   /** U2_REVIEW — '없음' 배타 선택. 글자가 '없음'이라는 이유로 모든 그룹에 적용하지 않는다 */
   exclusiveNone = false,
-  demoNote,
   className,
 }: BaseProps & {
   values: readonly string[];
   onChange: (values: string[]) => void;
   exclusiveNone?: boolean;
-  demoNote?: string;
 }) {
   const name = useId();
 
@@ -100,9 +98,6 @@ export function MultiChoiceGroup({
         {description}
         {values.length > 0 ? <span className="ml-1 tnum">· {values.length}개 선택됨</span> : null}
       </FieldDescription>
-      {demoNote ? (
-        <p className="-mt-1 mb-1 type-caption text-muted-foreground">{demoNote}</p>
-      ) : null}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <Chip

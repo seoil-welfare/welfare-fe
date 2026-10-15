@@ -174,6 +174,7 @@ export function emptyDraft(userId: string, date: string): DiaryDraft {
 export function draftFromDiary(diary: Diary): DiaryDraft {
   return {
     diaryId: diary.id,
+    editingCompleted: diary.status === "completed",
     userId: diary.userId,
     date: diary.date,
     weather: diary.weather,

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/misc";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,11 +13,9 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
 import { ListRowStatic } from "@/components/common/ListRow";
-import { DemoNote } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { errorMessage, isApiError } from "@/api/errors";
 import { combineQueries, useCreateStaff, useStaffList } from "@/api/queries";
-import { IS_MOCK } from "@/config";
 import type { Staff, UserRole } from "@/types";
 
 /**
@@ -58,7 +56,7 @@ function StaffList({ staff }: { staff: Staff[] }) {
                     </Badge>
                   ) : member.unconfirmedPosition ? (
                     <Badge variant="outline" tone="neutral">
-                      {member.position} (U4 미확정)
+                      {member.position}
                     </Badge>
                   ) : (
                     <span className="type-caption text-muted-foreground">{member.position}</span>
@@ -74,11 +72,6 @@ function StaffList({ staff }: { staff: Staff[] }) {
         <Link to="/staff/new">계정 추가</Link>
       </Button>
 
-      <DemoNote>
-        계정 삭제·정지 정책과 직위 종류는 U4 미확정 사항입니다. 원본에서 확인한 ‘팀장’ 표시만
-        유지했고, ‘국장’은 미확정 예시로 표시했습니다. 정지 Badge나 정지 상태 화면은 추가하지
-        않았습니다.
-      </DemoNote>
     </div>
   );
 }
@@ -110,12 +103,7 @@ export function StaffNewPage() {
       },
       {
         onSuccess: () => {
-          // mock 모드에서는 실제 계정을 만들었다고 주장하지 않는다 (지시서 4.5)
-          toast.success(IS_MOCK ? "시연용 데모 목록에 추가했어요." : "계정을 추가했어요.", {
-            description: IS_MOCK
-              ? "실제 계정은 발급되지 않았습니다. 초기 비밀번호 발급·권한 지정 방식은 미확정입니다."
-              : undefined,
-          });
+          toast.success("계정을 추가했어요.");
           navigate("/staff");
         },
         onError: (error) => {
@@ -169,9 +157,6 @@ export function StaffNewPage() {
                 onChange={(event) => setLoginId(event.target.value)}
               />
               <FieldError>{errors.loginId}</FieldError>
-              <FieldDescription>
-                초기 비밀번호 발급 방식은 미확정이라 이 화면에서는 입력하지 않아요.
-              </FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="staff-dept">소속 팀</FieldLabel>
@@ -192,17 +177,10 @@ export function StaffNewPage() {
                   <SelectItem value="teamLead">팀장</SelectItem>
                 </SelectContent>
               </Select>
-              <FieldDescription>
-                새 직위 종류는 U4 확인 전까지 추가하지 않았어요.
-              </FieldDescription>
             </Field>
           </FieldGroup>
         </FormSection>
 
-        <DemoNote>
-          실제 계정 생성·권한 부여는 하지 않습니다. 담당자 관리 기능의 접근 권한도 미확정
-          사항입니다(FR-80, FR-81).
-        </DemoNote>
       </div>
     </AppShell>
   );

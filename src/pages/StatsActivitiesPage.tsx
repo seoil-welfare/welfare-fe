@@ -3,7 +3,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
 import { MetricCard } from "@/components/common/MetricCard";
-import { DemoNote } from "@/components/common/states";
 import { HorizontalBars } from "@/components/stats/charts";
 import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
 import { PillToggle } from "@/components/ui/toggle-group";
@@ -78,11 +77,6 @@ export function StatsActivitiesPage() {
           description="도전적 행동이 기록되지 않은 활동도 0건으로 표시합니다."
         >
           <HorizontalBars items={behaviorCountsByParticipation(completed)} tone="behavior" />
-          <DemoNote>
-            한 활동에서 참여 활동을 여러 개 선택한 경우 도전적 행동을 어떻게 배분할지는 미확정
-            사항입니다(FR-55). 이 화면은 선택된 모든 카테고리에 같은 건수를 계상하므로 합계가 전체
-            건수보다 클 수 있습니다. 집계 기준(세부 행동 선택 건수 vs 활동 건수)도 회의 검토 대상입니다.
-          </DemoNote>
         </FormSection>
 
         <FormSection title="활동별 이용자 반응">
@@ -94,10 +88,6 @@ export function StatsActivitiesPage() {
             options={PARTICIPATION_OPTIONS.map((label) => ({ value: label, label }))}
           />
           <HorizontalBars items={reactionCountsForParticipation(completed, focusActivity)} />
-          <DemoNote>
-            이용자 반응의 기준 참여 활동을 사용자가 고를 수 있게 할지는 미확정이라(FR-56) 선택 UI를
-            시연용으로 추가했습니다. 반응의 복수 선택 허용 여부는 FR-22와 함께 확정됩니다.
-          </DemoNote>
         </FormSection>
       </div>
     </AppShell>

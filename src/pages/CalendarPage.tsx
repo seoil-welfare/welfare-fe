@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { RecordCalendar } from "@/components/calendar/RecordCalendar";
-import { DemoNote, EmptyState } from "@/components/common/states";
+import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import {
   combineQueries,
@@ -96,12 +96,6 @@ export function CalendarPage() {
                 도전적 행동 기록 있음
               </li>
             </ul>
-            <DemoNote>
-              날짜별 완료 건수 표기는 이번 회의에 제안하려는 안이고, 기존 원형 게이지는 비교용입니다.
-              어느 쪽도 확정된 방식이 아닙니다. 일지가 전혀 저장되지 않은 날짜에는 지표를 표시하지
-              않고, 저장은 있으나 완료가 0이면 0/{users.length}로 표시합니다. 공휴일·근무 스케줄 연동은
-              구현하지 않았습니다.
-            </DemoNote>
           </div>
         </Card>
 

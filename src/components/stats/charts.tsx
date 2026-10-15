@@ -41,7 +41,6 @@ export function HorizontalBars({
           tone === "behavior"
             ? "var(--behavior)"
             : ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"][Math.min(index, 2)];
-        const needsOutline = tone === "primary" && index >= 2;
 
         const row = (
           <>
@@ -57,8 +56,6 @@ export function HorizontalBars({
                 style={{
                   width: percent + "%",
                   backgroundColor: shade,
-                  outline: needsOutline ? "1px solid var(--chart-2)" : undefined,
-                  outlineOffset: needsOutline ? "-1px" : undefined,
                 }}
               />
             </div>
@@ -104,8 +101,6 @@ export function TrendBars({ points }: { points: readonly TrendPoint[] }) {
                 <Cell
                   key={point.label}
                   fill={point.isCurrent ? "var(--chart-1)" : "var(--chart-4)"}
-                  stroke={point.isCurrent ? "none" : "var(--chart-2)"}
-                  strokeWidth={point.isCurrent ? 0 : 1}
                 />
               ))}
             </Bar>
@@ -170,27 +165,15 @@ export function BehaviorDonut({
               nameKey="label"
               innerRadius={44}
               outerRadius={74}
-              paddingAngle={total > 0 ? 2 : 0}
-              stroke="#ffffff"
-              strokeWidth={2}
+              paddingAngle={total > 0 ? 5 : 0}
+              stroke="none"
               isAnimationActive={false}
             >
               {(total > 0
                 ? data
                 : [{ label: "기록 없음", count: 1, color: "var(--secondary)" }]
               ).map((entry) => (
-                <Cell
-                  key={entry.label}
-                  fill={entry.color}
-                  stroke={
-                    entry.color === "var(--chart-3)" || entry.color === "var(--chart-4)"
-                      ? "var(--chart-2)"
-                      : "#ffffff"
-                  }
-                  strokeWidth={
-                    entry.color === "var(--chart-3)" || entry.color === "var(--chart-4)" ? 1 : 2
-                  }
-                />
+                <Cell key={entry.label} fill={entry.color} />
               ))}
             </Pie>
           </PieChart>
@@ -203,14 +186,7 @@ export function BehaviorDonut({
             <span
               aria-hidden
               className="size-3 shrink-0 rounded-sm"
-              style={{
-                backgroundColor: entry.color,
-                outline:
-                  entry.color === "var(--chart-3)" || entry.color === "var(--chart-4)"
-                    ? "1px solid var(--chart-2)"
-                    : undefined,
-                outlineOffset: "-1px",
-              }}
+              style={{ backgroundColor: entry.color }}
             />
             <span className="min-w-0 flex-1 truncate type-body">{entry.label}</span>
             <span className="tnum shrink-0 type-body font-medium">{entry.count}건</span>

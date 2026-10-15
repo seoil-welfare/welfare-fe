@@ -16,17 +16,15 @@ import { Card } from "@/components/ui/card";
 import { Separator, Switch } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { ListRowButton, ListRowLink, ListRowStatic } from "@/components/common/ListRow";
-import { DemoNote } from "@/components/common/states";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { useLogout, useServiceUsers, useStaffList } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
-import { IS_MOCK } from "@/config";
 import { useDemo } from "@/demo/DemoContext";
 import { activeServiceUsers } from "@/services/diaryService";
 import { useState } from "react";
 
-const APP_VERSION = IS_MOCK ? "0.1.0 (UI 시연)" : "0.1.0";
+const APP_VERSION = "0.1.0";
 
 /**
  * 마이페이지 (2.1.13/FR-73 ~ FR-85).
@@ -61,8 +59,7 @@ export function MyPage() {
             subtitle={
               (currentStaff?.department ?? "") +
               " · " +
-              (currentStaff?.position ?? "") +
-              (currentStaff?.unconfirmedPosition ? " (U4 미확정 예시)" : "")
+              (currentStaff?.position ?? "")
             }
             trailing={
               currentStaff?.position === "팀장" ? (
@@ -113,9 +110,6 @@ export function MyPage() {
               title="엑셀 내보내기"
             />
           </Card>
-          <DemoNote>
-            출력 형식과 다운로드 흐름은 U5 미확정 사항입니다. 실제 문서는 만들지 않습니다.
-          </DemoNote>
         </section>
 
         {canManageStaff ? (
@@ -137,17 +131,8 @@ export function MyPage() {
                 title="계정 추가"
               />
             </Card>
-            <DemoNote>
-              담당자 관리 메뉴의 접근 권한은 미확정이라(FR-80, FR-81) 현재는 팀장·국장 역할에만
-              보이게 두었습니다. 확정된 권한 정책이 아닙니다.
-            </DemoNote>
           </section>
-        ) : (
-          <DemoNote>
-            담당자 관리 메뉴는 역할별 가시성 예시로 숨겨져 있습니다. 시연 설정에서 팀장으로 바꾸면
-            보입니다. 확정된 권한이 아닙니다.
-          </DemoNote>
-        )}
+        ) : null}
 
         <section className="flex flex-col gap-2">
           <h2 className="px-1 type-heading">설정</h2>
@@ -155,15 +140,12 @@ export function MyPage() {
             <ListRowStatic
               leading={<Bell className="size-5 text-primary" aria-hidden />}
               title="새 일지 알림 받기"
-              subtitle="알림 발생 조건과 전달 방식은 미확정이에요"
               trailing={
                 <Switch
                   checked={notifyNewDiary}
                   onCheckedChange={(value) => {
                     setNotifyNewDiary(value);
-                    toast.success(value ? "알림을 받도록 설정했어요." : "알림을 끄었어요.", {
-                      description: "시연용 설정입니다. 실제 알림을 보내지 않습니다.",
-                    });
+                    toast.success(value ? "알림을 받도록 설정했어요." : "알림을 껐어요.");
                   }}
                   aria-label="새 일지 알림 받기"
                 />
@@ -192,7 +174,7 @@ export function MyPage() {
           open={logoutOpen}
           onOpenChange={setLogoutOpen}
           title="로그아웃할까요?"
-          description="작성 중이지만 저장하지 않은 내용은 사라져요. 저장되지 않은 데이터의 처리 기준은 회의 미확정 사항입니다."
+          description="작성 중이지만 저장하지 않은 내용은 사라져요."
           confirmLabel="로그아웃"
           tone="default"
           onConfirm={() => {

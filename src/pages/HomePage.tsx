@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { ChevronRight, NotebookPen, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { Avatar, Separator } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
-import { DemoNote, EmptyState } from "@/components/common/states";
+import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import {
   combineQueries,
@@ -15,6 +18,7 @@ import {
   useStaffList,
 } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
+import { useDraft } from "@/app/DraftContext";
 import { useToday } from "@/lib/today";
 import {
   activeServiceUsers,
@@ -23,12 +27,15 @@ import {
   type NewsItem,
 } from "@/services/diaryService";
 import { formatDateTime, formatLongDate } from "@/lib/utils";
+import type { Diary } from "@/types";
 
 /**
  * 일지 홈 (FR-04~FR-07).
  * - 오늘 날짜와 로그인한 계정명을 표시한다
  * - 오늘의 소식은 최신순 최대 3건. 0건이면 안내 문구
  * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 당일 3건 이상일 때만 보인다
+ * - '오늘 일지 작성'은 담당 이용자에게 오늘 일지가 이미 있으면 새로 만들지 않고 그 일지로 안내한다
+ *   (이용자 1명당 하루 1건)
  */
 export function HomePage() {
   const navigate = useNavigate();
@@ -53,6 +60,32 @@ export function HomePage() {
     (d) => d.status === "draft" && d.authorId === currentStaff?.id,
   );
 
+  const { draft } = useDraft();
+  // 오늘 이미 일지가 있어 새로 만들 수 없을 때 안내 팝업에 띄울 일지
+  const [blockedDiary, setBlockedDiary] = useState<Diary | null>(null);
+
+  function handleWriteToday() {
+    // 작성하던 내용이 있으면 그대로 이어서 연다
+    if (draft) {
+      navigate("/diaries/new");
+      return;
+    }
+    // 담당 이용자(1:1 매칭)를 대상으로 한다. 담당이 없으면 오늘 일지가 없는 첫 이용자
+    const target =
+      users.find((user) => user.assignedStaffId === currentStaff?.id) ??
+      users.find((user) => !todayDiaries.some((d) => d.userId === user.id));
+    if (!target) {
+      toast.info("오늘은 모든 이용자의 일지가 이미 있어요.");
+      return;
+    }
+    const existing = todayDiaries.find((d) => d.userId === target.id);
+    if (existing) {
+      setBlockedDiary(existing);
+      return;
+    }
+    navigate("/diaries/new?userId=" + target.id);
+  }
+
   return (
     <AppShell gutter="home">
       <div className="flex flex-col gap-6">
@@ -68,7 +101,6 @@ export function HomePage() {
           </p>
           <p className="type-caption text-muted-foreground">
             {currentStaff?.department} · {currentStaff?.position}
-            {currentStaff?.unconfirmedPosition ? " (U4 미확정 예시)" : ""}
           </p>
         </Card>
 
@@ -87,7 +119,8 @@ export function HomePage() {
             <Button
               variant="outline"
               className="border-transparent bg-white text-primary hover:bg-white/90"
-              onClick={() => navigate("/diaries/new")}
+              disabled={!usersQuery.isSuccess || !todayQuery.isSuccess}
+              onClick={handleWriteToday}
             >
               <Plus aria-hidden />
               오늘 일지 작성
@@ -123,11 +156,27 @@ export function HomePage() {
           <QueryGate state={combineQueries([newsQuery, usersQuery, staffQuery])}>
             {() => <TodayNewsCard items={visibleNews} showMore={showMore} />}
           </QueryGate>
-          <DemoNote>
-            가상 직원·가상 이용자의 예시 기록입니다. 실제 활동 이력이 아닙니다.
-          </DemoNote>
         </section>
       </div>
+
+      <ConfirmDialog
+        open={blockedDiary !== null}
+        onOpenChange={(open) => {
+          if (!open) setBlockedDiary(null);
+        }}
+        title={
+          blockedDiary?.status === "draft"
+            ? "이 이용자는 이 날짜에 작성 중인 일지가 있어요."
+            : "이 이용자는 이 날짜에 작성 완료된 일지가 있어요."
+        }
+        description="일지는 이용자 한 명당 하루 한 건이에요."
+        confirmLabel="일지 보기"
+        cancelLabel={null}
+        tone="default"
+        onConfirm={() => {
+          if (blockedDiary) navigate("/diaries/" + blockedDiary.id);
+        }}
+      />
     </AppShell>
   );
 }

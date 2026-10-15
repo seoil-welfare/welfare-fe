@@ -14,7 +14,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
 import { ListRowLink } from "@/components/common/ListRow";
-import { DemoNote, EmptyState } from "@/components/common/states";
+import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { errorMessage } from "@/api/errors";
 import {
@@ -25,7 +25,6 @@ import {
   useStaffList,
   useUpdateServiceUser,
 } from "@/api/queries";
-import { IS_MOCK } from "@/config";
 import { activeServiceUsers, findStaff } from "@/services/diaryService";
 import type { ServiceUser, Staff } from "@/types";
 
@@ -98,10 +97,6 @@ function UsersList({ serviceUsers, staff }: { serviceUsers: ServiceUser[]; staff
               </li>
             ))}
           </ul>
-          <DemoNote>
-            종결된 이용자의 과거 기록 조회 방법과 재이용 시 복원 여부는 미확정 사항입니다(FR-91).
-            이 목록은 종결 상태를 확인하기 위한 시연용 표시입니다.
-          </DemoNote>
         </FormSection>
       ) : null}
     </div>
@@ -139,9 +134,7 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
       { name: name.trim(), birthDate, assignedStaffId: staffId },
       {
         onSuccess: (created) => {
-          toast.success(created.name + " 님을 등록했어요.", {
-            description: IS_MOCK ? "시연용 데모 데이터에만 추가했습니다." : undefined,
-          });
+          toast.success(created.name + " 님을 등록했어요.");
           navigate("/users");
         },
         onError: (error) => toast.error("등록하지 못했어요.", { description: errorMessage(error) }),
@@ -237,11 +230,7 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
       { userId: user.id, input: { name: name.trim(), birthDate, assignedStaffId: staffId } },
       {
         onSuccess: () => {
-          toast.success("이용자 정보를 저장했어요.", {
-            description: IS_MOCK
-              ? "다른 화면에도 바로 반영됩니다. 서버에 저장하지는 않습니다."
-              : undefined,
-          });
+          toast.success("이용자 정보를 저장했어요.");
           navigate("/users");
         },
         onError: (error) => toast.error("저장하지 못했어요.", { description: errorMessage(error) }),
@@ -289,17 +278,12 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
           />
         </FormSection>
 
-        <DemoNote>
-          이용자 정보 수정 권한, 생년월일 입력 형식, 1:1 매칭 정책에서 이미 다른 이용자를 담당하는
-          직원의 선택 허용 여부는 모두 미확정 사항입니다(FR-87~FR-89). 생년월일은 U6 권장안인
-          YYYY-MM-DD를 썼습니다.
-        </DemoNote>
 
         <ConfirmDialog
           open={closeOpen}
           onOpenChange={setCloseOpen}
           title={user.name + " 님의 이용을 종결할까요?"}
-          description="현재 이용 중인 이용자 목록에서 빠져요. 기존 일지와 통계 기록은 그대로 남아요. 삭제가 아닙니다. 종결 절차와 사유 입력, 재활성화 정책은 회의 미확정 사항입니다."
+          description="현재 이용 중인 이용자 목록에서 빠져요. 기존 일지와 통계 기록은 그대로 남아요."
           confirmLabel="종결"
           onConfirm={() => {
             closeUser.mutate(user.id, {

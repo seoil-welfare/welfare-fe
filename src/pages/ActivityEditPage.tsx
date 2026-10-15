@@ -16,12 +16,10 @@ import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
 import { MultiChoiceGroup } from "@/components/common/ChoiceGroup";
 import { OtherInput } from "@/components/common/OtherInput";
-import { DemoNote } from "@/components/common/states";
 import {
   BEHAVIOR_TYPES,
   HOUR_OPTIONS,
   MINUTE_OPTIONS,
-  MINUTE_STEP_DEMO_ONLY,
   PARTICIPATION_OPTIONS,
   POSITIVE_SUPPORT_OPTIONS,
   PRE_SUPPORT_OPTIONS,
@@ -261,10 +259,6 @@ export function ActivityEditPage() {
               <FieldError>{timeError}</FieldError>
             </Field>
           </div>
-          <DemoNote>
-            분 단위 간격은 미확정이라 {MINUTE_STEP_DEMO_ONLY}분으로 두었습니다. 시간 역전·중복·자정
-            넘김 처리 기준은 U6 미확정 사항입니다.
-          </DemoNote>
         </FormSection>
 
         <FormSection title="참여 활동">
@@ -300,11 +294,6 @@ export function ActivityEditPage() {
             onOtherChange={(value) => patch({ preSupportOther: value })}
             // U2_REVIEW — '없음' 배타 동작. 계획서 FR-21에 정의되어 있으나 가이드 U2에서 재확인 필요
             exclusiveNone={flags.exclusiveNone}
-            demoNote={
-              flags.exclusiveNone
-                ? "‘없음’을 고르면 다른 항목이 모두 해제돼요. (U2 재확인 필요)"
-                : "‘없음’ 배타 동작을 끈 상태입니다. (U2 재확인 필요)"
-            }
           />
         </FormSection>
 
@@ -316,7 +305,6 @@ export function ActivityEditPage() {
             onChange={(values) => patch({ reaction: values })}
             otherValue={activity.reactionOther}
             onOtherChange={(value) => patch({ reactionOther: value })}
-            demoNote="선택 가능 개수는 미확정이라(FR-22) 시연에서는 여러 개 고를 수 있게 두었습니다."
           />
         </FormSection>
 
@@ -328,7 +316,6 @@ export function ActivityEditPage() {
             onChange={(values) => patch({ positiveSupport: values })}
             otherValue={activity.positiveSupportOther}
             onOtherChange={(value) => patch({ positiveSupportOther: value })}
-            demoNote="선택 가능 개수는 미확정입니다(FR-23)."
           />
         </FormSection>
 
@@ -427,10 +414,6 @@ export function ActivityEditPage() {
             </div>
           ) : null}
 
-          <DemoNote>
-            세부 행동 항목의 최종 목록과 ‘선택 0개로 완료’ 허용 여부는 미확정 사항입니다(FR-27, U3).
-            상세 화면의 항목은 모두 ‘예시 항목(확정 필요)’입니다.
-          </DemoNote>
         </FormSection>
       </div>
     </AppShell>

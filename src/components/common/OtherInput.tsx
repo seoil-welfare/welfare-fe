@@ -13,7 +13,6 @@ export function OtherInput({
   value,
   onChange,
   placeholder = "직접 적어 주세요",
-  guideText = "‘기타’를 고르면 직접 적을 수 있어요.",
   className,
 }: {
   id: string;
@@ -21,9 +20,10 @@ export function OtherInput({
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  guideText?: string;
   className?: string;
 }) {
+  if (!selected) return null;
+
   return (
     <div
       className={cn(
@@ -31,23 +31,16 @@ export function OtherInput({
         className,
       )}
     >
-      {selected ? (
-        <>
-          <label htmlFor={id} className="mb-2 block type-caption text-warning-foreground">
-            직접 입력
-          </label>
-          <Input
-            id={id}
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            className="bg-card"
-          />
-        </>
-      ) : (
-        // 안내 글자에 disabled opacity를 적용하지 않는다 (가이드 9장 4번)
-        <p className="type-caption text-warning-foreground">{guideText}</p>
-      )}
+      <label htmlFor={id} className="mb-2 block type-caption text-warning-foreground">
+        직접 입력
+      </label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="bg-card"
+      />
     </div>
   );
 }
