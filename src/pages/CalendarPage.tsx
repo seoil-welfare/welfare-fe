@@ -88,7 +88,7 @@ export function CalendarPage() {
             <ul className="flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground">
               <li className="tnum">
                 {flags.calendarIndicator === "completion"
-                  ? "숫자: 완료 일지 수 / 대상 이용자 " + users.length + "명"
+                  ? "숫자: 완료 일지 수 / 대상 이용자 " + users.length + "명 · 모두 완료면 '완료'"
                   : "원형 게이지: 완료 비율 (비교용)"}
               </li>
               <li className="flex items-center gap-1">

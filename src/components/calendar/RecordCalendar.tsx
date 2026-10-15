@@ -119,8 +119,11 @@ function DayCell({
   const outside = d.getMonth() + 1 !== month;
   const weekday = d.getDay();
 
+  // 대상 이용자 모두 완료한 날은 '3/3' 대신 '완료'로 표기한다
   const indicatorText = completion
-    ? completion.completed + "/" + completion.total
+    ? completion.total > 0 && completion.completed === completion.total
+      ? "완료"
+      : completion.completed + "/" + completion.total
     : null;
 
   const label =
