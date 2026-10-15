@@ -61,6 +61,8 @@ export function NewsPage() {
       <div className="flex flex-col gap-4">
         <PillToggle
           label="활동 내역 필터"
+          // 통계 화면의 이용자·기간 선택과 같은 옅은 테두리 (선택된 pill은 그대로 네이비)
+          itemClassName="border-input/40"
           value={filter}
           onValueChange={setFilter}
           options={[
