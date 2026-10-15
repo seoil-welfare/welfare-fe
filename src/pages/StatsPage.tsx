@@ -10,6 +10,8 @@ import { ChartSkeleton, EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { BehaviorDonut, HorizontalBars, TrendBars } from "@/components/stats/charts";
 import { PeriodPicker, UnitToggle } from "@/components/stats/PeriodPicker";
+// EXPERIMENT(statistics-scroll-animation) — 스크롤 위치 연동 카드 강조 시안
+import { ScrollFocusCard } from "@/experiments/scroll-focus/ScrollFocusCard";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
 import { useStatsDiaries } from "@/app/useStatsDiaries";
 import { useToday } from "@/lib/today";
@@ -137,13 +139,17 @@ export function StatsPage() {
                   />
                 </div>
 
-                <FormSection title="기간 추이" description={"단위: 건 · " + range.label + " 강조"}>
-                  <TrendBars points={trend} />
-                </FormSection>
+                <ScrollFocusCard>
+                  <FormSection title="기간 추이" description={"단위: 건 · " + range.label + " 강조"}>
+                    <TrendBars points={trend} />
+                  </FormSection>
+                </ScrollFocusCard>
 
-                <FormSection title="유형별 비율">
-                  <BehaviorDonut counts={typeCounts} />
-                </FormSection>
+                <ScrollFocusCard>
+                  <FormSection title="유형별 비율">
+                    <BehaviorDonut counts={typeCounts} />
+                  </FormSection>
+                </ScrollFocusCard>
               </section>
 
               <TopItemsSection
@@ -197,35 +203,37 @@ function TopItemsSection({
   const hasMore = items.length > 3;
 
   return (
-    <FormSection
-      title={title}
-      description={note}
-      action={
-        <Button variant="ghost" size="dense" asChild>
-          <Link to={to}>
-            자세히
-            <ChevronRight aria-hidden />
-          </Link>
-        </Button>
-      }
-    >
-      {items.length === 0 ? (
-        <EmptyState message="이 기간에는 기록이 없어요." />
-      ) : (
-        <>
-          <HorizontalBars items={items} maxVisible={expanded ? undefined : 3} />
-          {hasMore ? (
-            <Button
-              variant="ghost"
-              size="dense"
-              block
-              onClick={() => setExpanded((prev) => !prev)}
-            >
-              {expanded ? "접기" : "더 보기 (" + (items.length - 3) + "개)"}
-            </Button>
-          ) : null}
-        </>
-      )}
-    </FormSection>
+    <ScrollFocusCard>
+      <FormSection
+        title={title}
+        description={note}
+        action={
+          <Button variant="ghost" size="dense" asChild>
+            <Link to={to}>
+              자세히
+              <ChevronRight aria-hidden />
+            </Link>
+          </Button>
+        }
+      >
+        {items.length === 0 ? (
+          <EmptyState message="이 기간에는 기록이 없어요." />
+        ) : (
+          <>
+            <HorizontalBars items={items} maxVisible={expanded ? undefined : 3} />
+            {hasMore ? (
+              <Button
+                variant="ghost"
+                size="dense"
+                block
+                onClick={() => setExpanded((prev) => !prev)}
+              >
+                {expanded ? "접기" : "더 보기 (" + (items.length - 3) + "개)"}
+              </Button>
+            ) : null}
+          </>
+        )}
+      </FormSection>
+    </ScrollFocusCard>
   );
 }
