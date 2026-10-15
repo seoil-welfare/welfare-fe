@@ -65,12 +65,15 @@ export function PillToggle<T extends string>({
   options,
   label,
   className,
+  itemClassName,
 }: {
   value: T;
   onValueChange: (value: T) => void;
   options: readonly SegmentedOption<T>[];
   label: string;
   className?: string;
+  /** 각 pill에 덧붙일 클래스 (예: 화면별로 테두리를 옅게) */
+  itemClassName?: string;
 }) {
   return (
     <ToggleGroupPrimitive.Root
@@ -91,6 +94,7 @@ export function PillToggle<T extends string>({
             "type-body font-medium text-foreground transition-colors duration-150",
             "hover:bg-accent",
             "data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+            itemClassName,
           )}
         >
           <span>{option.label}</span>
