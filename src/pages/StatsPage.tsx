@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppShell } from "@/components/layout/AppShell";
+import { MainHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
 import { MetricCard } from "@/components/common/MetricCard";
 import { ChartSkeleton, EmptyState } from "@/components/common/states";
@@ -53,17 +54,18 @@ export function StatsPage() {
 
   if (usersQuery.isSuccess && users.length === 0) {
     return (
-      <AppShell>
+      <AppShell header={<MainHeader />}>
         <EmptyState message="통계를 볼 이용자가 없어요. 먼저 이용자를 등록해 주세요." />
       </AppShell>
     );
   }
 
   return (
-    <AppShell>
+    <AppShell header={<MainHeader />}>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 px-1">
-          <h1 className="type-title">통계</h1>
+          {/* 화면 이름은 하단 탭에 있어 화면 낭독기용으로만 남긴다 */}
+          <h1 className="sr-only">통계</h1>
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-40 flex-1">
               <Select value={userId} onValueChange={setUserId}>

@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bell, CalendarDays, ChevronRight, NotebookPen, SquarePen, UserPlus } from "lucide-react";
+import { CalendarDays, ChevronRight, NotebookPen, SquarePen, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Avatar } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
-import { BrandMark } from "@/components/layout/BrandMark";
+import { MainHeader } from "@/components/layout/AppHeader";
 import { HomeShortcuts, type Shortcut } from "@/components/home/HomeShortcuts";
 import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
@@ -149,7 +149,7 @@ export function HomePage() {
   );
 
   return (
-    <AppShell header={<HomeHeader hasNews={todayNews.length > 0} />}>
+    <AppShell header={<MainHeader />}>
       <div className="flex flex-col gap-4">
         <HomeShortcuts items={shortcuts} />
 
@@ -196,28 +196,6 @@ export function HomePage() {
         }}
       />
     </AppShell>
-  );
-}
-
-/** 모바일·태블릿 홈 헤더. 데스크톱은 Sidebar에 로고가 있어 숨긴다 */
-function HomeHeader({ hasNews }: { hasNews: boolean }) {
-  return (
-    <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-2 border-b border-border bg-card pl-4 pr-1 xl:hidden">
-      <h1>
-        <BrandMark />
-      </h1>
-      {/* 알림 기능이 없으므로 오늘의 소식으로 보낸다. 점은 오늘 소식이 있다는 뜻 */}
-      <Button variant="ghost" size="icon" asChild>
-        <Link to="/news" aria-label={hasNews ? "오늘의 소식 (새 소식 있음)" : "오늘의 소식"}>
-          <span className="relative">
-            <Bell className="fill-current" aria-hidden />
-            {hasNews ? (
-              <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-notice-dot ring-2 ring-card" />
-            ) : null}
-          </span>
-        </Link>
-      </Button>
-    </header>
   );
 }
 

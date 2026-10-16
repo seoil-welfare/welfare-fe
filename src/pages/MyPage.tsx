@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator, Switch } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
+import { MainHeader } from "@/components/layout/AppHeader";
 import { ListRowButton, ListRowLink, ListRowStatic } from "@/components/common/ListRow";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { useLogout, useServiceUsers, useStaffList } from "@/api/queries";
@@ -47,9 +48,10 @@ export function MyPage() {
   const canManageStaff = currentStaff?.role === "teamLead" || currentStaff?.role === "director";
 
   return (
-    <AppShell>
+    <AppShell header={<MainHeader />}>
       <div className="flex flex-col gap-3">
-        <h1 className="px-1 type-title">마이페이지</h1>
+        {/* 화면 이름은 하단 탭에 있어 화면 낭독기용으로만 남긴다 */}
+        <h1 className="sr-only">마이페이지</h1>
 
         <Card variant="list">
           <ListRowLink
