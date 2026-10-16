@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronRight, NotebookPen, Plus } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, NotebookPen, SquarePen, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
-import { Avatar, Separator } from "@/components/ui/misc";
+import { Avatar } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
+import { BrandMark } from "@/components/layout/BrandMark";
+import { HomeShortcuts, type Shortcut } from "@/components/home/HomeShortcuts";
 import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import {
@@ -23,17 +25,25 @@ import { useToday } from "@/lib/today";
 import {
   activeServiceUsers,
   eventKindLabel,
+  findServiceUser,
   newsItems,
   type NewsItem,
 } from "@/services/diaryService";
-import { formatDateTime, formatLongDate } from "@/lib/utils";
+import { addDays, formatShortDate, formatTime, weekdayLabel } from "@/lib/utils";
 import type { Diary } from "@/types";
+
+/** 홈에 보여 줄 오늘의 소식 개수 */
+const HOME_NEWS_LIMIT = 4;
+
+/** '이어서 작성하기'에 띄울 작성 중 일지를 찾는 기간 */
+const DRAFT_LOOKBACK_DAYS = 14;
 
 /**
  * 일지 홈 (FR-04~FR-07).
+ * - 상단 바로가기: ① 이어서 작성(쓰던 일지가 있을 때만) ② 일지 작성 ③ 이용자 등록
  * - 오늘 날짜와 로그인한 계정명을 표시한다
- * - 오늘의 소식은 최신순 최대 3건. 0건이면 안내 문구
- * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 당일 3건 이상일 때만 보인다
+ * - 오늘의 소식은 최신순 최대 4건 (FR-07 원안 3건에서 늘림). 0건이면 안내 문구
+ * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 당일 4건 이상일 때만 보인다
  * - '오늘 일지 작성'은 담당 이용자에게 오늘 일지가 이미 있으면 새로 만들지 않고 그 일지로 안내한다
  *   (이용자 1명당 하루 1건)
  */
@@ -44,6 +54,7 @@ export function HomePage() {
   const usersQuery = useServiceUsers();
   const staffQuery = useStaffList();
   const todayQuery = useDiaries({ from: today, to: today });
+  const recentQuery = useDiaries({ from: addDays(today, -DRAFT_LOOKBACK_DAYS), to: today });
   const newsQuery = useNews(today);
 
   const users = activeServiceUsers(usersQuery.data ?? []);
@@ -53,12 +64,13 @@ export function HomePage() {
     { serviceUsers: usersQuery.data ?? [], staff: staffQuery.data ?? [] },
     { filter: "all", sinceDate: today },
   );
-  const visibleNews = todayNews.slice(0, 3);
-  const showMore = todayNews.length >= 3;
+  const visibleNews = todayNews.slice(0, HOME_NEWS_LIMIT);
+  const showMore = todayNews.length >= HOME_NEWS_LIMIT;
 
-  const myDraft = todayDiaries.find(
-    (d) => d.status === "draft" && d.authorId === currentStaff?.id,
-  );
+  // 최근 2주 안에 내가 쓰다 만 일지 중 가장 최근 것 (① 이어서 작성하기)
+  const myDraft = (recentQuery.data ?? [])
+    .filter((d) => d.status === "draft" && d.authorId === currentStaff?.id)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 
   const { draft } = useDraft();
   // 오늘 이미 일지가 있어 새로 만들 수 없을 때 안내 팝업에 띄울 일지
@@ -86,77 +98,83 @@ export function HomePage() {
     navigate("/diaries/new?userId=" + target.id);
   }
 
+  const directory = { serviceUsers: usersQuery.data ?? [], staff: staffQuery.data ?? [] };
+  const shortcuts: Shortcut[] = [];
+  // ① 쓰던 일지가 있을 때만. 화면에 남은 입력(저장 전)이 서버의 작성 중 일지보다 우선한다
+  if (draft) {
+    const name = findServiceUser(directory.serviceUsers, draft.userId)?.name;
+    shortcuts.push({
+      id: "continue",
+      tone: "continue",
+      badge: "이어쓰기",
+      title: "이어서 작성하기",
+      description: (name ? name + "님 일지 · " : "") + "저장 전 작성 중",
+      Icon: SquarePen,
+      to: "/diaries/new",
+    });
+  } else if (myDraft) {
+    const name = findServiceUser(directory.serviceUsers, myDraft.userId)?.name;
+    shortcuts.push({
+      id: "continue",
+      tone: "continue",
+      badge: "이어쓰기",
+      title: "이어서 작성하기",
+      description:
+        (name ? name + "님 일지 · " : "") +
+        (myDraft.date === today
+          ? formatTime(myDraft.updatedAt) + "까지 작성함"
+          : formatShortDate(myDraft.date) + " 작성 중"),
+      Icon: SquarePen,
+      to: "/diaries/" + myDraft.id,
+    });
+  }
+  shortcuts.push(
+    {
+      id: "write",
+      tone: "write",
+      title: "일지 작성하기",
+      description: "오늘 일지 새로 쓰기",
+      Icon: NotebookPen,
+      onClick: handleWriteToday,
+      disabled: !usersQuery.isSuccess || !todayQuery.isSuccess,
+    },
+    {
+      id: "register",
+      tone: "register",
+      title: "이용자 등록하기",
+      description: "새 이용자 추가",
+      Icon: UserPlus,
+      to: "/users/new",
+    },
+  );
+
   return (
-    <AppShell gutter="home">
-      <div className="flex flex-col gap-6">
-        <header className="flex items-center justify-between gap-3">
-          <span className="type-brand text-primary">원광 일지</span>
-          {currentStaff ? <Avatar name={currentStaff.name} /> : null}
-        </header>
+    <AppShell header={<HomeHeader hasNews={todayNews.length > 0} />}>
+      <div className="flex flex-col gap-4">
+        <HomeShortcuts items={shortcuts} />
 
-        <Card variant="form" elevation="home" className="flex flex-col gap-1">
-          <p className="tnum type-caption text-muted-foreground">{formatLongDate(today)}</p>
-          <p className="type-heading">
-            {currentStaff?.name ?? "담당자"} 님, 오늘도 잘 부탁해요.
+        <Card
+          variant="form"
+          elevation="home"
+          className="flex items-center justify-between gap-3 py-3.5"
+        >
+          <p className="flex min-w-0 items-center gap-2 type-heading">
+            <CalendarDays className="size-5 shrink-0 text-brand-gold" aria-hidden />
+            <span className="tnum truncate">
+              {formatShortDate(today)} {weekdayLabel(today)}요일
+            </span>
           </p>
-          <p className="type-caption text-muted-foreground">
-            {currentStaff?.department} · {currentStaff?.position}
-          </p>
+          {currentStaff ? (
+            <p className="flex min-w-0 items-center gap-2 type-body">
+              <Avatar name={currentStaff.name} className="size-7" />
+              <span className="truncate">{currentStaff.name} 선생님</span>
+            </p>
+          ) : null}
         </Card>
 
-        {/* 홈 전용 hero 카드. 일반 Card/Button의 배경으로 확장하지 않는다 (가이드 2-3 7번) */}
-        <Card variant="hero" elevation="home" className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <span className="type-heading">오늘 일지</span>
-            <span className="type-caption text-primary-foreground/80">
-              {usersQuery.isSuccess && todayQuery.isSuccess
-                ? "대상 이용자 " + users.length + "명 · 오늘 저장된 일지 " + todayDiaries.length + "건"
-                : "오늘 기록을 불러오는 중…"}
-            </span>
-          </div>
-          {/* hero Card는 내용을 한 번 더 감싸므로 Card의 gap이 적용되지 않는다. 간격을 직접 준다 */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              className="border-transparent bg-white text-primary hover:bg-white/90"
-              disabled={!usersQuery.isSuccess || !todayQuery.isSuccess}
-              onClick={handleWriteToday}
-            >
-              <Plus aria-hidden />
-              오늘 일지 작성
-            </Button>
-            {myDraft ? (
-              <Button
-                variant="outline"
-                className="border-white/60 bg-transparent text-primary-foreground hover:bg-white/10"
-                asChild
-              >
-                <Link to={"/diaries/" + myDraft.id}>
-                  <NotebookPen aria-hidden />
-                  이어서 작성
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-        </Card>
-
-        <section className="flex flex-col gap-2">
-          {/* 소식 영역 전체가 0건일 때도 클릭 가능하다 (FR-07) */}
-          <Link
-            to="/news"
-            className="flex items-center justify-between gap-2 rounded-control px-1 py-1 hover:bg-accent"
-          >
-            <h2 className="type-heading">오늘의 소식</h2>
-            <span className="flex items-center gap-1 type-caption text-muted-foreground">
-              전체 보기
-              <ChevronRight className="size-4" aria-hidden />
-            </span>
-          </Link>
-
-          <QueryGate state={combineQueries([newsQuery, usersQuery, staffQuery])}>
-            {() => <TodayNewsCard items={visibleNews} showMore={showMore} />}
-          </QueryGate>
-        </section>
+        <QueryGate state={combineQueries([newsQuery, usersQuery, staffQuery])}>
+          {() => <TodayNewsCard items={visibleNews} showMore={showMore} />}
+        </QueryGate>
       </div>
 
       <ConfirmDialog
@@ -181,9 +199,46 @@ export function HomePage() {
   );
 }
 
+/** 모바일·태블릿 홈 헤더. 데스크톱은 Sidebar에 로고가 있어 숨긴다 */
+function HomeHeader({ hasNews }: { hasNews: boolean }) {
+  return (
+    <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-2 border-b border-border bg-card pl-4 pr-1 xl:hidden">
+      <h1>
+        <BrandMark />
+      </h1>
+      {/* 알림 기능이 없으므로 오늘의 소식으로 보낸다. 점은 오늘 소식이 있다는 뜻 */}
+      <Button variant="ghost" size="icon" asChild>
+        <Link to="/news" aria-label={hasNews ? "오늘의 소식 (새 소식 있음)" : "오늘의 소식"}>
+          <span className="relative">
+            <Bell className="fill-current" aria-hidden />
+            {hasNews ? (
+              <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-notice-dot ring-2 ring-card" />
+            ) : null}
+          </span>
+        </Link>
+      </Button>
+    </header>
+  );
+}
+
 function TodayNewsCard({ items: visibleNews, showMore }: { items: NewsItem[]; showMore: boolean }) {
   return (
     <Card variant="list" elevation="home">
+      {/* 소식 영역은 0건일 때도 눌러서 소식 화면으로 갈 수 있다 (FR-07) */}
+      <Link
+        to="/news"
+        className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 hover:bg-accent"
+      >
+        <h2 className="type-heading">오늘의 소식</h2>
+        {/* '더 보기'는 당일 활동 내역이 홈에 보이는 개수 이상일 때만 표시한다 (FR-07) */}
+        {showMore ? (
+          <span className="flex items-center gap-0.5 type-caption font-medium text-muted-foreground">
+            더 보기
+            <ChevronRight className="size-4" aria-hidden />
+          </span>
+        ) : null}
+      </Link>
+
       {visibleNews.length === 0 ? (
         <EmptyState
           message="오늘의 소식이 아직 없습니다"
@@ -199,40 +254,37 @@ function TodayNewsCard({ items: visibleNews, showMore }: { items: NewsItem[]; sh
             <li key={item.event.id}>
               <Link
                 to={"/diaries/" + item.diary.id}
-                className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-accent"
+                className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-accent"
               >
-                <Avatar name={item.actorName} />
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate type-body font-medium">
-                    {item.serviceUserName} 님 일지
+                <Avatar name={item.serviceUserName} className="size-10" />
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  {/* 첫 줄: 작성자 → 작업 유형 */}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate type-body font-medium text-primary">
+                      {item.actorName}
+                    </span>
+                    <Badge
+                      variant="soft"
+                      tone={item.event.kind === "created" ? "primary" : "warning"}
+                      className="shrink-0"
+                    >
+                      {eventKindLabel(item.event.kind)}
+                    </Badge>
                   </span>
-                  <span className="truncate type-caption text-muted-foreground">
-                    {item.actorName} · {formatDateTime(item.event.occurredAt)}
+                  <span className="truncate type-body">
+                    {item.serviceUserName}님 일지를{" "}
+                    {item.event.kind === "created" ? "작성했습니다." : "수정했습니다."}
                   </span>
                 </span>
-                <Badge
-                  variant="soft"
-                  tone={item.event.kind === "created" ? "primary" : "warning"}
-                >
-                  {eventKindLabel(item.event.kind)}
-                </Badge>
+                {/* 시간은 행 오른쪽, 세로 가운데 */}
+                <span className="shrink-0 tnum type-caption text-muted-foreground">
+                  {formatTime(item.event.occurredAt)}
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       )}
-
-      {/* '더 보기'는 당일 활동 내역이 3건 이상일 때만 표시한다 (FR-07) */}
-      {showMore ? (
-        <>
-          <Separator />
-          <div className="p-3">
-            <Button variant="ghost" block asChild>
-              <Link to="/news">더 보기</Link>
-            </Button>
-          </div>
-        </>
-      ) : null}
     </Card>
   );
 }
