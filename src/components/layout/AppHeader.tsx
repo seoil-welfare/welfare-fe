@@ -31,7 +31,7 @@ export function AppHeader({
     <header
       className={cn(
         "sticky top-0 z-30 flex min-h-14 items-center gap-1 border-b border-border bg-card px-1",
-        "shadow-[var(--shadow-app-header)] xl:min-h-[77px] xl:px-4",
+        "xl:min-h-[77px] xl:px-4",
         className,
       )}
     >
