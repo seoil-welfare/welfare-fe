@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { BarChart3, CalendarDays, Home, User } from "lucide-react";
+import { BrandMark } from "@/components/layout/BrandMark";
 import { cn } from "@/lib/utils";
 
 /** 메뉴 4개: 홈·달력·통계·마이페이지 (가이드 5-4) */
@@ -59,7 +60,7 @@ export function Sidebar() {
       style={{ width: 248 }}
     >
       <div className="flex h-[77px] items-center px-5">
-        <span className="type-brand text-primary">원광 일지</span>
+        <BrandMark />
       </div>
       <nav className="px-3 pb-4">
         <ul className="flex flex-col gap-1">

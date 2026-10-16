@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
+import { MainHeader } from "@/components/layout/AppHeader";
 import { RecordCalendar } from "@/components/calendar/RecordCalendar";
 import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
@@ -70,10 +71,11 @@ export function CalendarPage() {
   );
 
   return (
-    <AppShell width="full">
+    <AppShell width="full" header={<MainHeader />}>
       <div className="mx-auto flex w-full max-w-360 flex-col gap-6 lg:flex-row lg:items-start">
         <Card variant="form" className="min-w-0 flex-1 lg:min-w-120">
-          <h1 className="mb-3 type-title">달력</h1>
+          {/* 화면 이름은 하단 탭에 있어 화면 낭독기용으로만 남긴다 */}
+          <h1 className="sr-only">달력</h1>
           <RecordCalendar
             year={view.year}
             month={view.month}

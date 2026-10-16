@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * 반응형 구간 (가이드 5-1, D7).
- *  모바일 767 이하: BottomNav, 좌우 16 (홈 20)
+ *  모바일 767 이하: BottomNav, 좌우 16
  *  태블릿 768~1279: BottomNav, 좌우 24, 1열 최대 720 가운데
  *  데스크톱 1280+: Sidebar 248, Header 77, Body 좌우 32 상하 24
  *
@@ -21,7 +21,6 @@ export function AppShell({
   children,
   bottom = "nav",
   bottomBar,
-  gutter = "default",
   width = "body",
   className,
 }: {
@@ -30,7 +29,6 @@ export function AppShell({
   bottom?: BottomSlot;
   /** bottom === "action"일 때 렌더링할 바 */
   bottomBar?: ReactNode;
-  gutter?: "default" | "home";
   /** body 960px / form 720px (가이드 5-3, D8) */
   width?: "body" | "form" | "full";
   className?: string;
@@ -50,7 +48,7 @@ export function AppShell({
         <main
           className={cn(
             "flex-1",
-            gutter === "home" ? "px-5 md:px-6 xl:px-8" : "px-4 md:px-6 xl:px-8",
+            "px-4 md:px-6 xl:px-8",
             "pt-4 xl:pt-6",
             padBottom,
             className,

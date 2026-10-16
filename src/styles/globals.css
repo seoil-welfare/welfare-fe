@@ -50,6 +50,13 @@
   --warning-foreground: #854d0e;
   --calendar-sunday: #c62828;
   --calendar-saturday: #1d5fd1;
+
+  /* 홈 상단 바로가기 카드 (피그마 홈). 흰 글자 대비 4.5:1 이상 */
+  --home-continue-from: #24366f;
+  --home-continue-to: #152e63;
+  --home-write-from: #4259d6;
+  --home-write-to: #2e44b5;
+  --notice-dot: #e5484d;
 }
 
 @theme inline {
@@ -92,6 +99,11 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-calendar-sunday: var(--calendar-sunday);
   --color-calendar-saturday: var(--calendar-saturday);
+  --color-home-continue-from: var(--home-continue-from);
+  --color-home-continue-to: var(--home-continue-to);
+  --color-home-write-from: var(--home-write-from);
+  --color-home-write-to: var(--home-write-to);
+  --color-notice-dot: var(--notice-dot);
 
   /* radius는 --radius 비율 계산 대신 고정값을 쓴다 (가이드 11-1) */
   --radius-check: 6px;
@@ -102,8 +114,9 @@
   /* 간격 스케일 보강: 28px는 로그인 여백 보존값 (가이드 4-1) */
   --spacing-login: 28px;
 
-  --shadow-app-header: 0 1px 2px -1px rgb(0 0 0 / 0.1), 0 1px 3px 0 rgb(0 0 0 / 0.1);
   --shadow-home: 0 1px 2px rgb(21 46 99 / 0.08);
+  /* 홈 상단 바로가기 카드. 네이비 기운의 아래쪽 그림자로 띄운다 */
+  --shadow-shortcut: 0 8px 18px -6px rgb(21 46 99 / 0.35), 0 2px 4px rgb(21 46 99 / 0.08);
 }
 
 @layer base {
@@ -124,6 +137,18 @@
     font-size: 0.875rem;
     line-height: 1.25rem;
     overflow-x: hidden;
+  }
+
+  /* 모바일 구간(767 이하)에서는 페이지 스크롤바를 숨긴다. 스크롤 동작은 그대로다 */
+  @media (max-width: 767px) {
+    html,
+    body {
+      scrollbar-width: none;
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   /* 키보드 focus 표시를 전역에서 지우지 않는다 (가이드 8장) */
@@ -198,6 +223,14 @@
 
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 가로로 넘기는 영역. 스크롤은 유지하고 막대만 숨긴다 */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 

@@ -38,7 +38,7 @@ const todayNews = newsItems(toNewsEntries(events, diaries, DEMO_TODAY), director
   filter: "all",
   sinceDate: DEMO_TODAY,
 });
-expect("오늘 소식 3건 이상 ('더 보기' 조건)", todayNews.length >= 3, todayNews.length + "건");
+expect("오늘 소식 4건 이상 (홈 4건 + '더 보기' 조건)", todayNews.length >= 4, todayNews.length + "건");
 expect(
   "등록·수정 소식 모두 존재",
   todayNews.some((n) => n.event.kind === "created") &&
