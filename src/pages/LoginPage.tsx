@@ -64,7 +64,7 @@ export function LoginPage() {
       {IS_MOCK ? <DemoPanel /> : null}
       <div className="mx-auto flex w-full max-w-120 flex-1 flex-col justify-center px-7 py-8">
         <div className="mb-7 flex flex-col gap-2">
-          <span className="type-display text-primary">원광 일지</span>
+          <span className="type-display text-primary">케어로그</span>
           <p className="type-body text-muted-foreground">
             복지관 일지를 모바일에서 바로 작성해요.
           </p>
