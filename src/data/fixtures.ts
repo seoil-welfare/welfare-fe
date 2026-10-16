@@ -224,23 +224,24 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
    *  - usr-01: 작성 완료 + 등록·수정 소식
    *  - usr-02: 작성 완료 + 등록 소식
    *  - usr-03: 다른 담당자(stf-03)가 작성 중 (FR-71 상태 재현, 소식에는 올리지 않음)
-   * 이렇게 두면 오늘 소식이 3건이 되어 '더 보기' 표시 조건(3건 이상)도 시연할 수 있다 (FR-07).
+   * 아래에서 지난 일지 수정 소식 3건을 더해 오늘 소식은 6건이 된다 (홈 4건 + '더 보기', FR-07).
    */
-  function forceToday(
+  function forceDay(
+    day: string,
     userId: string,
     authorId: string,
     status: "completed" | "draft",
     hour: number,
     withUpdate: boolean,
   ) {
-    const id = "dry-" + today + "-" + userId;
-    const createdAt = atTime(today, hour, 15);
+    const id = "dry-" + day + "-" + userId;
+    const createdAt = atTime(day, hour, 15);
     let diary = diaries.find((d) => d.id === id);
     if (!diary) {
       diary = {
         id,
         userId,
-        date: today,
+        date: day,
         authorId,
         status,
         weather: "맑음",
@@ -274,7 +275,7 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
         occurredAt: createdAt,
       });
       if (withUpdate) {
-        const updatedAt = atTime(today, hour + 3, 40);
+        const updatedAt = atTime(day, hour + 3, 40);
         diary.lastEditorId = "stf-04";
         diary.updatedAt = updatedAt;
         events.push({
@@ -288,9 +289,38 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
     }
   }
 
-  forceToday("usr-01", "stf-01", "completed", 9, true);
-  forceToday("usr-02", "stf-02", "completed", 10, false);
-  forceToday("usr-03", "stf-03", "draft", 11, false);
+  forceDay(today, "usr-01", "stf-01", "completed", 9, true);
+  forceDay(today, "usr-02", "stf-02", "completed", 10, false);
+  forceDay(today, "usr-03", "stf-03", "draft", 11, false);
+
+  // 홈 '이어서 작성하기' 시연용: 바로 전 평일에 demo.staff1(stf-01)이 쓰다 만 일지
+  let lastWeekday = addDays(today, -1);
+  while ([0, 6].includes(parseISODate(lastWeekday).getDay())) lastWeekday = addDays(lastWeekday, -1);
+  forceDay(lastWeekday, "usr-01", "stf-01", "draft", 16, false);
+
+  // 홈 소식 5건 + '더 보기' 시연용: 지난 일지를 오늘 수정한 소식 3건 (소식은 발생 시각 기준)
+  const editedToday: Array<[editorId: string, hour: number, minute: number]> = [
+    ["stf-02", 13, 20],
+    ["stf-04", 14, 5],
+    ["stf-01", 15, 30],
+  ];
+  const pastCompleted = diaries
+    .filter((d) => d.date < lastWeekday && d.status === "completed")
+    .sort((a, b) => b.date.localeCompare(a.date) || a.userId.localeCompare(b.userId));
+  editedToday.forEach(([editorId, hour, minute], i) => {
+    const diary = pastCompleted[i];
+    if (!diary) return;
+    const occurredAt = atTime(today, hour, minute);
+    diary.lastEditorId = editorId;
+    diary.updatedAt = occurredAt;
+    events.push({
+      id: "evt-u-today-" + diary.id,
+      diaryId: diary.id,
+      kind: "updated",
+      actorId: editorId,
+      occurredAt,
+    });
+  });
 
   // 이용 종결된 이용자의 과거 기록도 보존한다 (FR-91)
   const closedDate = addDays(today, -40);
