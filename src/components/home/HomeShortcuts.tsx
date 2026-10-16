@@ -73,6 +73,8 @@ export function HomeShortcuts({ items }: { items: Shortcut[] }) {
         className={cn(
           // 본문 여백(16)을 넘어 화면 끝까지 넘길 수 있게 한다
           'scrollbar-none -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4',
+          // 가로 스크롤 영역은 세로로도 잘라내므로 그림자가 보일 자리를 위아래로 둔다
+          '-mt-2 -mb-5 pt-2 pb-5',
           'md:mx-0 md:grid md:auto-cols-fr md:grid-flow-col md:overflow-visible md:px-0',
         )}
       >
@@ -161,7 +163,7 @@ function ShortcutCard({ item }: { item: Shortcut }) {
 
   const className = cn(
     'relative flex min-h-44 w-full flex-col overflow-hidden rounded-card p-5 text-left',
-    'shadow-[var(--shadow-home)] transition-[filter,background-color] duration-150',
+    'shadow-[var(--shadow-shortcut)] transition-[filter,background-color] duration-150',
     'disabled:pointer-events-none disabled:opacity-60',
     toneClass[tone],
   );
