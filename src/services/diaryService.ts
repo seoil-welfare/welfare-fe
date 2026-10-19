@@ -1,6 +1,12 @@
 import { OTHER_LABEL } from "@/data/catalog";
-import { dateOf } from "@/lib/utils";
-import type { DiaryRef, NewsEntry, SaveDiaryInput } from "@/api/types";
+import { addDays, dateOf } from "@/lib/utils";
+import type {
+  CalendarClientStatus,
+  CalendarDayCount,
+  DiaryRef,
+  NewsEntry,
+  SaveDiaryInput,
+} from "@/api/types";
 import type {
   Activity,
   Diary,
@@ -62,6 +68,49 @@ export function dayCompletion(
     saved: saved.length,
     hasBehavior: saved.some((d) => countDiaryBehaviors(d) > 0),
   };
+}
+
+/** GET /calendar 응답과 같은 값. mock 구현이 쓴다 */
+export function calendarDayCounts(
+  diaries: readonly Diary[],
+  serviceUsers: readonly ServiceUser[],
+  from: string,
+  to: string,
+): CalendarDayCount[] {
+  const days: CalendarDayCount[] = [];
+  for (let date = from; date <= to; date = addDays(date, 1)) {
+    const completion = dayCompletion(diaries, serviceUsers, date);
+    if (!completion) continue;
+    days.push({
+      date,
+      completed: completion.completed,
+      draft: completion.saved - completion.completed,
+      target: completion.total,
+      hasBehavior: completion.hasBehavior,
+    });
+  }
+  return days;
+}
+
+/** GET /calendar/days/{date} 응답과 같은 값. mock 구현이 쓴다 */
+export function calendarClientStatuses(
+  diaries: readonly Diary[],
+  serviceUsers: readonly ServiceUser[],
+  date: string,
+): CalendarClientStatus[] {
+  const dayDiaries = diariesOnDate(diaries, date);
+  return activeServiceUsers(serviceUsers).map((user) => {
+    const diary = dayDiaries.find((d) => d.userId === user.id);
+    return {
+      clientId: user.id,
+      clientName: user.name,
+      status: diary ? diary.status : "none",
+      diaryId: diary?.id,
+      authorId: diary?.authorId,
+      behaviorCount: diary ? countDiaryBehaviors(diary) : 0,
+      canCreate: !diary,
+    };
+  });
 }
 
 /** 일지 1건의 도전적 행동 세부 항목 선택 건수 (FR-58) */

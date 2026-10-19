@@ -29,6 +29,10 @@ export const httpApi: Api = {
         ? request("/diaries/" + encodeURIComponent(diaryId), { method: "PUT", body })
         : request("/diaries", { method: "POST", body }),
   },
+  calendar: {
+    days: (query) => request("/calendar", { query: { ...query } }),
+    clientStatuses: (date) => request("/calendar/days/" + encodeURIComponent(date)),
+  },
   news: {
     list: (query) => request("/news", { query: { ...query } }),
   },

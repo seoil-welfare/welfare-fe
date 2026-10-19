@@ -2,7 +2,8 @@ import { ApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { readDb, writeDb } from "@/api/mock/mockDb";
 import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
-import { dateOf, uid } from "@/lib/utils";
+import { addDays, dateOf, uid } from "@/lib/utils";
+import { calendarClientStatuses, calendarDayCounts } from "@/services/diaryService";
 import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 
@@ -16,6 +17,9 @@ import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 export const MOCK_PASSWORD = "demo1234";
 
 const SLOW_DELAY_MS = 3000;
+
+/** 달력 6주. 백엔드 CalendarService.MAX_DAYS와 같다 */
+const CALENDAR_MAX_DAYS = 42;
 
 let latencyEnabled = true;
 
@@ -215,6 +219,24 @@ export const mockApi: Api = {
     async save(input) {
       await writeLatency();
       return saveDiary(input, requireSession());
+    },
+  },
+
+  calendar: {
+    async days({ from, to }) {
+      await readLatency();
+      if (!from || !to) throw new ApiError(400, "from과 to 날짜가 필요해요.", "VALIDATION_ERROR");
+      if (from > to) throw new ApiError(400, "from이 to보다 늦을 수 없어요.", "VALIDATION_ERROR");
+      if (addDays(from, CALENDAR_MAX_DAYS) <= to) {
+        throw new ApiError(400, "한 번에 " + CALENDAR_MAX_DAYS + "일까지만 조회할 수 있어요.", "VALIDATION_ERROR");
+      }
+      const db = readDb();
+      return calendarDayCounts(db.diaries, db.serviceUsers, from, to);
+    },
+    async clientStatuses(date) {
+      await readLatency();
+      const db = readDb();
+      return calendarClientStatuses(db.diaries, db.serviceUsers, date);
     },
   },
 
