@@ -8,6 +8,7 @@ import {
 import { api } from "@/api";
 import { isApiError } from "@/api/errors";
 import type {
+  CalendarQuery,
   DiaryQuery,
   LoginInput,
   SaveDiaryInput,
@@ -54,6 +55,9 @@ export const queryKeys = {
   diaries: ["diaries"] as const,
   diaryList: (query: DiaryQuery) => ["diaries", "list", query] as const,
   diary: (diaryId: string) => ["diaries", "detail", diaryId] as const,
+  calendar: ["calendar"] as const,
+  calendarDays: (query: CalendarQuery) => ["calendar", "days", query] as const,
+  calendarDay: (date: string) => ["calendar", "day", date] as const,
   news: ["news"] as const,
   newsSince: (since: string) => ["news", since] as const,
   serviceUsers: ["serviceUsers"] as const,
@@ -121,6 +125,23 @@ export function useDiary(diaryId: string | undefined) {
   });
 }
 
+export function useCalendarDays(query: CalendarQuery) {
+  return useQuery({
+    queryKey: queryKeys.calendarDays(query),
+    queryFn: () => api.calendar.days(query),
+    // 월을 옮기는 동안 이전 달 숫자를 유지해 달력이 깜빡이지 않게 한다
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useCalendarDay(date: string) {
+  return useQuery({
+    queryKey: queryKeys.calendarDay(date),
+    queryFn: () => api.calendar.clientStatuses(date),
+    placeholderData: (previous) => previous,
+  });
+}
+
 export function useNews(since: string) {
   return useQuery({
     queryKey: queryKeys.newsSince(since),
@@ -138,9 +159,11 @@ export function useSaveDiary() {
     onSuccess: (diary: Diary) => {
       client.setQueryData(queryKeys.diary(diary.id), diary);
       void client.invalidateQueries({ queryKey: queryKeys.diaries });
+      void client.invalidateQueries({ queryKey: queryKeys.calendar });
       void client.invalidateQueries({ queryKey: queryKeys.news });
     },
-    onError: () => refetchAfterFailure(client, [queryKeys.diaries, queryKeys.news]),
+    onError: () =>
+      refetchAfterFailure(client, [queryKeys.diaries, queryKeys.calendar, queryKeys.news]),
   });
 }
 
@@ -148,8 +171,8 @@ export function useCreateServiceUser() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: ServiceUserInput) => api.serviceUsers.create(input),
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.serviceUsers }),
-    onError: () => refetchAfterFailure(client, [queryKeys.serviceUsers]),
+    onSuccess: () => invalidateServiceUsers(client),
+    onError: () => refetchAfterFailure(client, [queryKeys.serviceUsers, queryKeys.calendar]),
   });
 }
 
@@ -158,7 +181,7 @@ export function useUpdateServiceUser() {
   return useMutation({
     mutationFn: ({ userId, input }: { userId: string; input: ServiceUserInput }) =>
       api.serviceUsers.update(userId, input),
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.serviceUsers }),
+    onSuccess: () => invalidateServiceUsers(client),
   });
 }
 
@@ -166,8 +189,14 @@ export function useCloseServiceUser() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) => api.serviceUsers.close(userId),
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.serviceUsers }),
+    onSuccess: () => invalidateServiceUsers(client),
   });
+}
+
+/** 달력은 이용자 이름·대상 인원을 서버에서 받으므로 이용자가 바뀌면 같이 다시 불러온다 */
+function invalidateServiceUsers(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: queryKeys.calendar });
+  return client.invalidateQueries({ queryKey: queryKeys.serviceUsers });
 }
 
 export function useCreateStaff() {

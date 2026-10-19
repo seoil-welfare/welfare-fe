@@ -58,6 +58,35 @@ export interface NewsEntry {
   diary: DiaryRef;
 }
 
+export interface CalendarQuery {
+  /** 포함. 최대 42일 */
+  from: string;
+  /** 포함 */
+  to: string;
+}
+
+/** 날짜별 일지 수. 일지가 없는 날은 응답에 없다 */
+export interface CalendarDayCount {
+  date: string;
+  completed: number;
+  draft: number;
+  /** 대상 이용자 수 (현재 이용 중) */
+  target: number;
+  hasBehavior: boolean;
+}
+
+/** 그날 이용자별 일지 상태. 현재 이용 중인 이용자만 */
+export interface CalendarClientStatus {
+  clientId: string;
+  clientName: string;
+  status: DiaryStatus | "none";
+  diaryId?: string;
+  authorId?: string;
+  behaviorCount: number;
+  /** 그날 일지가 없으면 true (이용자 1명당 하루 1건) */
+  canCreate: boolean;
+}
+
 export interface ServiceUserInput {
   name: string;
   birthDate: string;
@@ -87,6 +116,11 @@ export interface DiaryApi {
   save(input: SaveDiaryInput): Promise<Diary>;
 }
 
+export interface CalendarApi {
+  days(query: CalendarQuery): Promise<CalendarDayCount[]>;
+  clientStatuses(date: string): Promise<CalendarClientStatus[]>;
+}
+
 export interface NewsApi {
   /** 발생 시각 최신순 */
   list(query: NewsQuery): Promise<NewsEntry[]>;
@@ -109,6 +143,7 @@ export interface StaffApi {
 export interface Api {
   auth: AuthApi;
   diaries: DiaryApi;
+  calendar: CalendarApi;
   news: NewsApi;
   serviceUsers: ServiceUserApi;
   staff: StaffApi;

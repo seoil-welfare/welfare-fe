@@ -114,8 +114,27 @@
 | 화면 | 조회 |
 |---|---|
 | 홈·일지 작성 | `from=to=오늘(또는 작성 날짜)` |
-| 달력 | 화면에 보이는 6주 (`from`=그리드 첫날, `to`=마지막 날) |
 | 통계 | `userId` + `status=completed` + 추이 그래프 첫 구간부터 선택 기간 끝까지 |
+
+달력은 일지 목록 대신 아래 달력 API를 쓴다.
+
+### 달력
+
+| 메서드 · 경로 | 요청 | 응답 |
+|---|---|---|
+| `GET /calendar?from&to` | 화면에 보이는 6주 (`from`=그리드 첫날, `to`=마지막 날, 최대 42일) | `CalendarDayCount[]` · 일지가 없는 날은 빠짐 · 형식 오류·42일 초과는 400 |
+| `GET /calendar/days/:date` | – | `CalendarClientStatus[]` · 현재 이용 중인 이용자 전원 |
+
+```ts
+CalendarDayCount = { date, completed, draft, target, hasBehavior }
+CalendarClientStatus = { clientId, clientName, status: "completed" | "draft" | "none",
+                         diaryId?, authorId?, behaviorCount, canCreate }
+```
+
+- `target`(대상 이용자 수)은 현재 이용 중인 이용자 수다. 지난 날짜도 같은 값을 쓴다 (기준은 회의에서 확인)
+- 종결된 이용자의 일지는 세지 않는다
+- 도전적 행동 건수 규칙은 통계와 같다 (상위 '기타'는 내용이 있을 때만 1건, 작성 중 일지 포함)
+- `canCreate`는 그날 일지가 없을 때만 `true` (B-1)
 
 ### 오늘의 소식
 
