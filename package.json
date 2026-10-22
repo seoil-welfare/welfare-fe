@@ -5,6 +5,7 @@
   "type": "module",
   "description": "원광복지관 일지 관리 앱 · UI 시연 프로토타입 (Mock Data)",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",

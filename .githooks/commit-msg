@@ -1,0 +1,4 @@
+#!/bin/sh
+# 커밋 메시지 형식 검사 (docs/commit-convention.md)
+# npm install 때 package.json의 prepare 스크립트가 이 폴더를 git hook 경로로 설정한다.
+node scripts/check-commit-msg.mjs "$1"
