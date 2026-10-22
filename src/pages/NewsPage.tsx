@@ -41,6 +41,9 @@ import { addDays, dateGroupLabel, formatTime, relativeDayLabel } from "@/lib/uti
 /** '지난 소식 더 보기'로 거슬러 올라갈 수 있는 최대 기간(일) */
 const MAX_LOOKBACK_DAYS = 365;
 
+/** 통계 화면 선택 버튼과 같은 옅은 테두리 */
+const SOFT_BORDER = "border-input/40";
+
 type NewsFilter = "all" | "created" | "updated";
 
 export function NewsPage() {
@@ -93,6 +96,7 @@ export function NewsPage() {
       <div className="flex flex-col gap-4">
         <PillToggle
           label="활동 내역 필터"
+          itemClassName={SOFT_BORDER}
           value={filter}
           onValueChange={setFilter}
           options={[
@@ -115,7 +119,13 @@ export function NewsPage() {
           )}
         </QueryGate>
 
-        <Button variant="outline" block onClick={loadMore} disabled={loading || noMore}>
+        <Button
+          variant="outline"
+          block
+          className={SOFT_BORDER}
+          onClick={loadMore}
+          disabled={loading || noMore}
+        >
           {loading ? "불러오는 중…" : noMore ? "더 지난 소식이 없어요" : "지난 소식 더 보기"}
         </Button>
 
@@ -139,7 +149,7 @@ function NewsList({
         <EmptyState
           message="해당하는 활동 내역이 없어요."
           action={
-            <Button variant="outline" size="dense" onClick={onShowAll}>
+            <Button variant="outline" size="dense" className={SOFT_BORDER} onClick={onShowAll}>
               전체 보기
             </Button>
           }

@@ -221,7 +221,7 @@ function TodayNewsCard({ items: visibleNews, showMore }: { items: NewsItem[]; sh
         <EmptyState
           message="오늘의 소식이 아직 없습니다"
           action={
-            <Button variant="outline" size="dense" asChild>
+            <Button variant="outline" size="dense" className="border-input/40" asChild>
               <Link to="/news">지난 소식 보기</Link>
             </Button>
           }
