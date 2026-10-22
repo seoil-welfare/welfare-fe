@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,7 +11,14 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
-import { combineQueries, useNews, useServiceUsers, useStaffList } from "@/api/queries";
+import { errorMessage } from "@/api/errors";
+import {
+  combineQueries,
+  findOlderNewsDate,
+  useNews,
+  useServiceUsers,
+  useStaffList,
+} from "@/api/queries";
 import { useToday } from "@/lib/today";
 import {
   eventKindLabel,
@@ -22,26 +31,33 @@ import { addDays, dateGroupLabel, formatTime, relativeDayLabel } from "@/lib/uti
 /**
  * 오늘의 소식 (2.1.3/FR-08 ~ FR-12).
  * - 최초 진입 시 오늘과 어제의 내역을 표시한다
- * - '지난 소식 더 보기'로 2일 전 및 그 이전을 기존 목록에 추가로 불러온다
- *   (한 번에 불러올 날짜 범위는 미확정 — 시연은 3일씩)
- * - 전체 / 등록만 / 수정만 필터는 추가로 불러온 내역에도 유지된다
+ * - '지난 소식 더 보기'는 소식이 없는 날을 건너뛰고, 그 이전에 소식이 있는 가장 가까운 날까지
+ *   기존 목록에 추가로 불러온다. 1년 전까지 없으면 더 이상 없다고 알린다
+ *   (한 번에 불러올 범위는 미확정 — 소식이 있는 하루씩)
+ * - 전체 / 등록만 / 수정만 필터는 추가로 불러온 내역에도 유지된다.
+ *   다음 날짜를 찾을 때도 지금 고른 필터에 맞는 소식이 있는 날을 찾는다
  */
 
-const LOAD_STEP_DAYS_DEMO_ONLY = 3;
+/** '지난 소식 더 보기'로 거슬러 올라갈 수 있는 최대 기간(일) */
+const MAX_LOOKBACK_DAYS = 365;
 
 type NewsFilter = "all" | "created" | "updated";
 
 export function NewsPage() {
   const today = useToday();
+  const client = useQueryClient();
   const [filter, setFilter] = useState<NewsFilter>("all");
-  const [daysBack, setDaysBack] = useState(1); // 오늘 + 어제
+  const [sinceDate, setSinceDate] = useState(() => addDays(today, -1)); // 오늘 + 어제
+  const [searching, setSearching] = useState(false);
+  // 더 이전 소식이 없다고 확인된 필터. 'all'에서 없으면 어떤 필터로도 없다
+  const [exhausted, setExhausted] = useState<NewsFilter[]>([]);
 
-  const sinceDate = addDays(today, -daysBack);
   const newsQuery = useNews(sinceDate);
   const usersQuery = useServiceUsers();
   const staffQuery = useStaffList();
   // 더 불러오는 동안에는 이전 목록을 그대로 보여 준다 (placeholderData)
-  const loading = newsQuery.isFetching && newsQuery.isPlaceholderData;
+  const loading = searching || (newsQuery.isFetching && newsQuery.isPlaceholderData);
+  const noMore = exhausted.includes("all") || exhausted.includes(filter);
 
   const directory = { serviceUsers: usersQuery.data ?? [], staff: staffQuery.data ?? [] };
   const entries = newsQuery.data ?? [];
@@ -52,8 +68,24 @@ export function NewsPage() {
 
   const oldestLoaded = relativeDayLabel(sinceDate, today);
 
-  function loadMore() {
-    setDaysBack((prev) => prev + LOAD_STEP_DAYS_DEMO_ONLY);
+  async function loadMore() {
+    setSearching(true);
+    try {
+      const found = await findOlderNewsDate(client, {
+        before: sinceDate,
+        limit: addDays(today, -MAX_LOOKBACK_DAYS),
+        filter,
+      });
+      if (found) {
+        setSinceDate(found);
+      } else {
+        setExhausted((prev) => [...prev, filter]);
+      }
+    } catch (error) {
+      toast.error(errorMessage(error, "지난 소식을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
+    } finally {
+      setSearching(false);
+    }
   }
 
   return (
@@ -83,8 +115,8 @@ export function NewsPage() {
           )}
         </QueryGate>
 
-        <Button variant="outline" block onClick={loadMore} disabled={loading}>
-          {loading ? "불러오는 중…" : "지난 소식 더 보기"}
+        <Button variant="outline" block onClick={loadMore} disabled={loading || noMore}>
+          {loading ? "불러오는 중…" : noMore ? "더 지난 소식이 없어요" : "지난 소식 더 보기"}
         </Button>
 
       </div>

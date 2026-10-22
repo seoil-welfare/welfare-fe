@@ -14,6 +14,8 @@ import type {
   ServiceUserInput,
   StaffInput,
 } from "@/api/types";
+import { addDays, dateOf } from "@/lib/utils";
+import { latestNewsDateBefore } from "@/services/diaryService";
 import type { Diary } from "@/types";
 
 /**
@@ -127,6 +129,38 @@ export function useNews(since: string) {
     queryFn: () => api.news.list({ since }),
     placeholderData: (previous) => previous,
   });
+}
+
+/** 지난 소식을 찾을 때 한 번에 넓히는 범위(일). 소식이 없으면 다음 범위로 넓힌다 */
+const OLDER_NEWS_SPANS = [7, 14, 28, 56, 112, 224, 365];
+
+/**
+ * before(미포함)보다 앞서 소식이 있는 가장 가까운 날짜를 찾는다. limit(포함)까지 없으면 null.
+ * 지금 API는 since 이후 전체만 주므로, 범위를 넓혀 가며 서버에 묻는다.
+ * 찾으면 그 날짜부터의 목록을 캐시에 넣어 두어 화면이 같은 요청을 다시 보내지 않게 한다.
+ */
+export async function findOlderNewsDate(
+  client: QueryClient,
+  options: { before: string; limit: string; filter: "all" | "created" | "updated" },
+): Promise<string | null> {
+  for (const span of OLDER_NEWS_SPANS) {
+    const candidate = addDays(options.before, -span);
+    const since = candidate < options.limit ? options.limit : candidate;
+    const entries = await client.fetchQuery({
+      queryKey: queryKeys.newsSince(since),
+      queryFn: () => api.news.list({ since }),
+    });
+    const found = latestNewsDateBefore(entries, options.before, options.filter);
+    if (found) {
+      client.setQueryData(
+        queryKeys.newsSince(found),
+        entries.filter((entry) => dateOf(entry.event.occurredAt) >= found),
+      );
+      return found;
+    }
+    if (since === options.limit) return null;
+  }
+  return null;
 }
 
 /* ---------- 저장 ---------- */

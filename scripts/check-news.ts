@@ -1,8 +1,10 @@
 /** 오늘의 소식 날짜 구분 검증 (개발 검증용) */
 import { DEMO_TODAY, SERVICE_USERS, STAFF, generateFixtures } from "@/data/fixtures";
-import { toNewsEntries } from "@/api/mock/mockApi";
-import { groupNewsByDate, newsItems } from "@/services/diaryService";
-import { addDays, dateGroupLabel } from "@/lib/utils";
+import { QueryClient } from "@tanstack/react-query";
+import { setMockLatency, toNewsEntries } from "@/api/mock/mockApi";
+import { findOlderNewsDate } from "@/api/queries";
+import { groupNewsByDate, latestNewsDateBefore, newsItems } from "@/services/diaryService";
+import { addDays, dateGroupLabel, dateOf } from "@/lib/utils";
 
 const { diaries, events } = generateFixtures(DEMO_TODAY);
 const directory = { serviceUsers: SERVICE_USERS, staff: STAFF };
@@ -81,6 +83,67 @@ for (const filter of ["created", "updated"] as const) {
   );
 }
 
+// '지난 소식 더 보기': 소식이 없는 날을 건너뛰고 가장 가까운 날로 이동
 console.log("");
-console.log(problems.length === 0 ? "모든 검증 통과" : problems.length + "개 실패");
-process.exit(problems.length === 0 ? 0 : 1);
+console.log("[지난 소식 더 보기 — 다음 날짜 찾기]");
+for (const filter of ["all", "created", "updated"] as const) {
+  let mismatch = 0;
+  for (let back = 0; back <= 60; back++) {
+    const before = addDays(DEMO_TODAY, -back);
+    // 비교용: 조건에 맞는 날짜를 모두 모아 가장 큰 값
+    const dates = entries
+      .filter(({ event }) => filter === "all" || event.kind === filter)
+      .map(({ event }) => dateOf(event.occurredAt))
+      .filter((d) => d < before);
+    const expected = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+    if (latestNewsDateBefore(entries, before, filter) !== expected) mismatch++;
+  }
+  expect(filter + " 필터: 61개 기준일 모두 직접 계산과 같음", mismatch === 0, mismatch + "개 다름");
+}
+
+// 며칠 비어 있는 경우를 직접 만들어 확인한다
+const sample = entries[0];
+const at = (date: string) => ({ ...sample, event: { ...sample.event, occurredAt: date + "T10:00:00+09:00" } });
+const gap = [at("2026-10-20"), at("2026-10-11"), at("2026-10-02")];
+expect("9일 빈 구간을 한 번에 건너뜀", latestNewsDateBefore(gap, "2026-10-20", "all") === "2026-10-11", "2026-10-20 → 2026-10-11");
+expect("다음 구간도 이어서 찾음", latestNewsDateBefore(gap, "2026-10-11", "all") === "2026-10-02", "2026-10-11 → 2026-10-02");
+expect("더 이전이 없으면 null", latestNewsDateBefore(gap, "2026-10-02", "all") === null, "null");
+
+// 화면과 같은 방식으로 mock 서버에 범위를 넓혀 가며 묻기
+async function checkWithMockServer() {
+  setMockLatency(false);
+  const client = new QueryClient();
+  const limit = addDays(DEMO_TODAY, -365);
+  let cursor = addDays(DEMO_TODAY, -1);
+  const visited: string[] = [];
+  for (let i = 0; i < 400; i++) {
+    const found = await findOlderNewsDate(client, { before: cursor, limit, filter: "all" });
+    if (!found) break;
+    visited.push(found);
+    cursor = found;
+  }
+  const allDates = [...new Set(entries.map(({ event }) => dateOf(event.occurredAt)))]
+    .filter((d) => d < addDays(DEMO_TODAY, -1) && d >= limit)
+    .sort()
+    .reverse();
+  expect(
+    "버튼을 계속 누르면 소식이 있는 날만 빠짐없이 차례로 펼침",
+    JSON.stringify(visited) === JSON.stringify(allDates),
+    visited.length + "번 이동, 가장 오래된 " + (visited[visited.length - 1] ?? "-"),
+  );
+  expect(
+    "펼친 날짜의 캐시에는 그 날짜 이후 소식만 있음",
+    visited.every((d) =>
+      (client.getQueryData<typeof entries>(["news", d]) ?? []).every(
+        ({ event }) => dateOf(event.occurredAt) >= d,
+      ),
+    ),
+    "확인",
+  );
+}
+
+void checkWithMockServer().then(() => {
+  console.log("");
+  console.log(problems.length === 0 ? "모든 검증 통과" : problems.length + "개 실패");
+  process.exit(problems.length === 0 ? 0 : 1);
+});

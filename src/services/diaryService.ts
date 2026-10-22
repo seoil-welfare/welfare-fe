@@ -117,6 +117,24 @@ export function newsItems(
     .sort((a, b) => b.event.occurredAt.localeCompare(a.event.occurredAt));
 }
 
+/**
+ * before(미포함)보다 앞서 발생한 소식 중 가장 최근 날짜. 없으면 null.
+ * '지난 소식 더 보기'가 소식이 없는 날을 건너뛰고 이 날짜까지 바로 펼친다.
+ */
+export function latestNewsDateBefore(
+  entries: readonly NewsEntry[],
+  before: string,
+  filter: "all" | "created" | "updated",
+): string | null {
+  let latest: string | null = null;
+  for (const { event } of entries) {
+    if (filter !== "all" && event.kind !== filter) continue;
+    const date = dateOf(event.occurredAt);
+    if (date < before && (latest === null || date > latest)) latest = date;
+  }
+  return latest;
+}
+
 export interface NewsGroup {
   /** YYYY-MM-DD */
   date: string;
