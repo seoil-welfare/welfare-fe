@@ -26,6 +26,7 @@ import {
   activitySummary,
   countActivityBehaviors,
   diariesOnDate,
+  isUntouchedDraft,
   sortActivities,
 } from "@/services/diaryService";
 import { formatLongDate, formatTimeRange } from "@/lib/utils";
@@ -43,7 +44,7 @@ import type { Activity, Condition, DiaryStatus, Weather } from "@/types";
  */
 export function DiaryEditPage() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const today = useToday();
   const {
     draft,
@@ -65,6 +66,25 @@ export function DiaryEditPage() {
   const targetDate = draft?.date ?? requestedDate ?? today;
   // 이용자 1명당 하루 1건 규칙을 안내하려고 그 날짜의 일지를 불러온다
   const dayQuery = useDiaries({ from: targetDate, to: targetDate });
+
+  // 달력 등에서 이용자·날짜를 지정해 들어왔는데 쓰던 draft와 다른 경우 (날짜가 없으면 오늘)
+  const hasRequest = requestedUserId !== null || requestedDate !== null;
+  const requestMismatch =
+    draft !== null &&
+    hasRequest &&
+    ((requestedUserId !== null && requestedUserId !== draft.userId) ||
+      (requestedDate ?? today) !== draft.date);
+  const askReplace = draft !== null && requestMismatch && !isUntouchedDraft(draft); // 입력이 있으면 확인 팝업
+
+  // 입력한 게 없으면 바로 버린다. 아래 effect가 지정한 대상으로 새 draft를 만든다
+  useEffect(() => {
+    if (requestMismatch && !askReplace) discardDraft();
+  }, [requestMismatch, askReplace, discardDraft]);
+
+  // 지정한 대상을 반영했으면 주소에서 지운다. 화면에서 이용자를 바꿔도 다시 비교하지 않게 한다
+  useEffect(() => {
+    if (draft && hasRequest && !requestMismatch) setParams({}, { replace: true });
+  }, [draft, hasRequest, requestMismatch, setParams]);
 
   // 라우트 이동으로 입력이 사라지지 않게 draft를 유지한다. 없으면 새로 만든다.
   useEffect(() => {
@@ -353,6 +373,25 @@ export function DiaryEditPage() {
         onConfirm={() => {
           if (deleteTarget) removeActivity(deleteTarget.id);
           setDeleteTarget(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={askReplace}
+        onOpenChange={(open) => {
+          // 이어서 쓰기: 지정한 대상을 무시하고 쓰던 draft를 그대로 둔다
+          if (!open) setParams({}, { replace: true });
+        }}
+        title={
+          "작성 중인 " + (users.find((user) => user.id === draft.userId)?.name ?? "") + " 님 일지가 있어요"
+        }
+        description="새로 쓰면 저장하지 않은 입력이 사라져요."
+        confirmLabel="새로 쓰기"
+        cancelLabel="이어서 쓰기"
+        onConfirm={() => {
+          // 닫힐 때 주소가 지워지므로 여기서 바로 새 draft를 만든다
+          discardDraft();
+          startDraft(requestedUserId ?? draft.userId, requestedDate ?? today);
         }}
       />
     </AppShell>

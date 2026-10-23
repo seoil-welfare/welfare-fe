@@ -189,6 +189,19 @@ export function emptyDraft(userId: string, date: string): DiaryDraft {
   };
 }
 
+/** 새 일지를 연 뒤 아무것도 입력하지 않았는지. 이어 쓰는 일지는 버리기 전에 묻도록 false */
+export function isUntouchedDraft(draft: DiaryDraft): boolean {
+  if (draft.diaryId) return false;
+  const initial = emptyDraft(draft.userId, draft.date);
+  return (
+    draft.weather === initial.weather &&
+    draft.condition === initial.condition &&
+    !draft.conditionOther?.trim() &&
+    draft.activities.length === 0 &&
+    !draft.notes.trim()
+  );
+}
+
 export function draftFromDiary(diary: Diary): DiaryDraft {
   return {
     diaryId: diary.id,
