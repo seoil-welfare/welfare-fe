@@ -55,7 +55,8 @@ export const DEFAULT_FLAGS: DemoFlags = {
   forceEmptyStats: false,
   forceLoadFailure: false,
   slowLoading: false,
-  persist: false,
+  // 새로고침해도 로그인·작성 내용이 유지되게 기본으로 켠다 (목 데이터는 가짜라 브라우저 저장 무방)
+  persist: true,
 };
 
 /**
