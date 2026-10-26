@@ -12,7 +12,7 @@ export function BottomActionBar({ children, className }: { children: ReactNode; 
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-4 py-3 pb-safe",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-4 pt-3 pb-bar",
         className,
       )}
     >
@@ -35,7 +35,7 @@ export function BottomNoticeBar({
     <div
       role="status"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-warning-soft px-4 py-3 pb-safe",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-warning-soft px-4 pt-3 pb-bar",
         className,
       )}
     >

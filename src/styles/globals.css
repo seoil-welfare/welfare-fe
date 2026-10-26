@@ -225,6 +225,11 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  /* 하단 고정 바: 위와 같은 12px에 아이폰 홈 막대 영역을 더한다 (pb-safe만 쓰면 홈 막대가 없는 기기에서 0이 된다) */
+  .pb-bar {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
   /* 가로로 넘기는 영역. 스크롤은 유지하고 막대만 숨긴다 */
   .scrollbar-none {
     scrollbar-width: none;
