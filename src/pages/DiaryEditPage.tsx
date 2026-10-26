@@ -28,8 +28,9 @@ import {
   diariesOnDate,
   isUntouchedDraft,
   sortActivities,
+  toSaveInput,
 } from "@/services/diaryService";
-import { formatLongDate, formatTimeRange } from "@/lib/utils";
+import { formatLongDate, formatTime, formatTimeRange } from "@/lib/utils";
 import type { Activity, Condition, DiaryStatus, Weather } from "@/types";
 
 /**
@@ -37,7 +38,8 @@ import type { Activity, Condition, DiaryStatus, Weather } from "@/types";
  * - 이용자 변경 시 입력 내용은 유지되고, 저장 전까지 다른 이용자의 일지로 저장되지 않는다 (FR-09)
  * - 날씨 기본 '맑음', 컨디션 기본 '양호', 컨디션 '기타'는 직접 입력 (FR-10, FR-11)
  * - 활동 요약에 도전적 행동 표시, 항목 선택 시 수정 화면 이동 (FR-12)
- * - 상단 '임시저장'은 화면에 머무르며 알림만 띄운다 — DEMO_ONLY(U1)
+ * - 입력이 멈추거나 화면이 가려지면 '작성 중'으로 자동 임시저장한다 (DraftContext).
+ *   상단 '임시저장'은 그 저장을 바로 실행한다
  * - 하단 '나중에 이어서'(작성 중) / '작성 완료'(완료)는 서버에 저장한 뒤 상세로 이동한다
  * - 작성 완료된 일지를 수정할 때는 대상 이용자를 바꿀 수 없고, 하단 '수정 완료' 하나만 둔다
  *   ('나중에 이어서'로 완료 일지가 작성 중으로 되돌아가지 않게 한다)
@@ -54,6 +56,11 @@ export function DiaryEditPage() {
     removeActivity,
     editScrollY,
     setEditScrollY,
+    autosave,
+    saveNow,
+    beginCommit,
+    cancelCommit,
+    setAutosaveBlocked,
   } = useDraft();
   // 삭제 확인 팝업을 띄울 활동
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
@@ -125,7 +132,8 @@ export function DiaryEditPage() {
   }
 
   const activities = sortActivities(draft.activities);
-  const isContinuing = Boolean(draft.diaryId);
+  // 자동 임시저장으로 생긴 id는 '이어서 작성'이 아니다
+  const isContinuing = Boolean(draft.diaryId) && !draft.autosaved;
   const isEditingCompleted = Boolean(draft.editingCompleted);
   const saving = saveDiary.isPending ? saveDiary.variables?.status ?? null : null;
 
@@ -136,13 +144,21 @@ export function DiaryEditPage() {
   );
   const existingFor = (userId: string) => otherDiaries.find((diary) => diary.userId === userId);
   const existingForTarget = existingFor(draft.userId);
+  // 같은 값을 반복해 쓰는 ref 갱신이라 렌더 중에 불러도 안전하다 (이 아래는 early return 뒤라 훅을 쓸 수 없다)
+  setAutosaveBlocked(Boolean(existingForTarget));
 
-  function handleTempSave() {
-    // DEMO_ONLY(U1) — 원본 상단 '임시저장'. 화면에 머무르며 저장 알림만 띄운다.
-    toast.success("임시 저장했어요.");
+  async function handleTempSave() {
+    if (existingForTarget) {
+      toast.error("이 이용자는 이 날짜에 이미 일지가 있어요.", {
+        description: "일지는 이용자 한 명당 하루 한 건이에요.",
+      });
+      return;
+    }
+    await saveNow();
+    toast.success("임시 저장했어요.", { description: "홈의 '이어서 작성하기'에서 다시 열 수 있어요." });
   }
 
-  function handleCommit(status: DiaryStatus) {
+  async function handleCommit(status: DiaryStatus) {
     if (!draft || saveDiary.isPending) return; // 중복 제출 차단
     if (existingForTarget) {
       toast.error(
@@ -153,9 +169,11 @@ export function DiaryEditPage() {
       );
       return;
     }
-    const { editingCompleted: _editing, ...input } = draft;
+    // 자동 저장이 진행 중이면 기다렸다가, 거기서 만들어진 일지로 저장한다 (일지가 두 건 생기지 않게)
+    const autosavedId = await beginCommit();
+    const input = toSaveInput(draft, status);
     saveDiary.mutate(
-      { ...input, status },
+      { ...input, diaryId: input.diaryId ?? autosavedId },
       {
         onSuccess: (diary) => {
           discardDraft();
@@ -169,7 +187,8 @@ export function DiaryEditPage() {
           navigate("/diaries/" + diary.id, { replace: true });
         },
         // 실패하면 입력을 그대로 두고 다시 시도할 수 있게 한다 (가이드 6장)
-        onError: (error) =>
+        onError: (error) => {
+          cancelCommit();
           toast.error("저장하지 못했어요.", {
             // 응답을 받지 못한 경우는 서버에 저장됐을 수도 있다. 목록을 다시 불러오므로
             // 이미 저장된 일지가 있으면 그 이용자는 선택할 수 없게 바뀌어 확인할 수 있다.
@@ -177,7 +196,8 @@ export function DiaryEditPage() {
               isApiError(error) && error.status === NETWORK_ERROR_STATUS
                 ? "네트워크 문제로 저장 여부를 확인하지 못했어요. 이미 저장됐는지 확인한 뒤 다시 시도해 주세요."
                 : errorMessage(error),
-          }),
+          });
+        },
       },
     );
   }
@@ -190,9 +210,19 @@ export function DiaryEditPage() {
           backTo={isEditingCompleted ? "/diaries/" + draft.diaryId : "/home"}
           action={
             isEditingCompleted ? undefined : (
-              <Button variant="ghost" size="dense" onClick={handleTempSave}>
+              <Button
+                variant="ghost"
+                size="dense"
+                onClick={() => void handleTempSave()}
+                disabled={autosave.status === "saving"}
+                aria-live="polite"
+              >
                 <Save aria-hidden />
-                임시저장
+                {autosave.status === "saving"
+                  ? "저장 중…"
+                  : autosave.status === "saved" && autosave.savedAt
+                    ? "저장됨 " + formatClock(autosave.savedAt)
+                    : "임시저장"}
               </Button>
             )
           }
@@ -230,8 +260,8 @@ export function DiaryEditPage() {
             <FieldLabel htmlFor="diary-user">대상 이용자</FieldLabel>
             <Select
               value={draft.userId}
-              // 완료 일지를 다른 이용자의 일지로 옮기지 않는다
-              disabled={isEditingCompleted}
+              // 서버에 저장된 일지(완료·이어 쓰기·자동 임시저장)는 다른 이용자의 일지로 옮기지 않는다 (B-8)
+              disabled={Boolean(draft.diaryId)}
               onValueChange={(value) => updateDraft({ userId: value })}
             >
               <SelectTrigger id="diary-user" aria-label="대상 이용자">
@@ -397,4 +427,9 @@ export function DiaryEditPage() {
       />
     </AppShell>
   );
+}
+
+/** 자동 저장 시각 표시용 HH:mm */
+function formatClock(date: Date): string {
+  return formatTime(date.toISOString());
 }

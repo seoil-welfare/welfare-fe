@@ -1,12 +1,13 @@
 import { OTHER_LABEL } from "@/data/catalog";
 import { dateOf } from "@/lib/utils";
-import type { DiaryRef, NewsEntry } from "@/api/types";
+import type { DiaryRef, NewsEntry, SaveDiaryInput } from "@/api/types";
 import type {
   Activity,
   Diary,
   DiaryDraft,
   DiaryEvent,
   DiaryEventKind,
+  DiaryStatus,
   ServiceUser,
   Staff,
 } from "@/types";
@@ -199,6 +200,26 @@ export function isUntouchedDraft(draft: DiaryDraft): boolean {
     !draft.conditionOther?.trim() &&
     draft.activities.length === 0 &&
     !draft.notes.trim()
+  );
+}
+
+/** 작성 중 데이터를 저장 요청으로 바꾼다. 화면용 표시(editingCompleted·autosaved)는 보내지 않는다 */
+export function toSaveInput(draft: DiaryDraft, status: DiaryStatus): SaveDiaryInput {
+  const { editingCompleted: _editing, autosaved: _autosaved, ...input } = draft;
+  return { ...input, status };
+}
+
+/** 활동 화면에서 아직 '저장'을 누르지 않은 활동에 입력한 게 있는지 */
+export function hasActivityInput(activity: Activity): boolean {
+  return Boolean(
+    activity.startTime ||
+      activity.endTime ||
+      activity.detail.trim() ||
+      activity.participation.length ||
+      activity.preSupport.length ||
+      activity.reaction.length ||
+      activity.positiveSupport.length ||
+      activity.hasBehavior,
   );
 }
 
