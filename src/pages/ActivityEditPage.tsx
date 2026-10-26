@@ -264,6 +264,7 @@ export function ActivityEditPage() {
         <FormSection title="참여 활동">
           <MultiChoiceGroup
             label="참여 활동"
+            hideLabel
             options={PARTICIPATION_OPTIONS}
             values={activity.participation}
             onChange={(values) => patch({ participation: values })}
@@ -274,9 +275,9 @@ export function ActivityEditPage() {
 
         <FormSection title="활동 상세 내용">
           <Field>
-            <FieldLabel htmlFor="activity-detail">상세 내용</FieldLabel>
             <Textarea
               id="activity-detail"
+              aria-label="활동 상세 내용"
               value={activity.detail}
               placeholder="활동 중 관찰한 내용을 적어 주세요."
               onChange={(event) => patch({ detail: event.target.value })}
@@ -287,6 +288,7 @@ export function ActivityEditPage() {
         <FormSection title="사전 지원">
           <MultiChoiceGroup
             label="사전 지원"
+            hideLabel
             options={PRE_SUPPORT_OPTIONS}
             values={activity.preSupport}
             onChange={(values) => patch({ preSupport: values })}
@@ -300,6 +302,7 @@ export function ActivityEditPage() {
         <FormSection title="이용자 반응">
           <MultiChoiceGroup
             label="이용자 반응"
+            hideLabel
             options={REACTION_OPTIONS}
             values={activity.reaction}
             onChange={(values) => patch({ reaction: values })}
@@ -311,6 +314,7 @@ export function ActivityEditPage() {
         <FormSection title="긍정행동지원">
           <MultiChoiceGroup
             label="긍정행동지원"
+            hideLabel
             options={POSITIVE_SUPPORT_OPTIONS}
             values={activity.positiveSupport}
             onChange={(values) => patch({ positiveSupport: values })}

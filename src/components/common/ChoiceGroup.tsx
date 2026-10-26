@@ -15,6 +15,11 @@ interface BaseProps {
   label: string;
   options: readonly string[];
   description?: string;
+  /**
+   * 카드 제목이 이미 같은 이름일 때 소제목과 설명 줄을 화면에서 뺀다.
+   * 소제목은 화면 낭독기용으로 남긴다.
+   */
+  hideLabel?: boolean;
   /** '기타' 직접 입력 값 */
   otherValue?: string;
   onOtherChange?: (value: string) => void;
@@ -27,6 +32,7 @@ export function SingleChoiceGroup({
   value,
   onChange,
   description,
+  hideLabel = false,
   otherValue,
   onOtherChange,
   className,
@@ -34,8 +40,8 @@ export function SingleChoiceGroup({
   const name = useId();
   return (
     <fieldset className={cn("flex flex-col gap-2 border-0 p-0", className)}>
-      <legend className="mb-2 type-body font-medium text-foreground">{label}</legend>
-      {description ? <FieldDescription className="-mt-1 mb-1">{description}</FieldDescription> : null}
+      <legend className={hideLabel ? "sr-only" : "mb-2 type-body font-medium text-foreground"}>{label}</legend>
+      {description && !hideLabel ? <FieldDescription className="-mt-1 mb-1">{description}</FieldDescription> : null}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <Chip
@@ -67,6 +73,7 @@ export function MultiChoiceGroup({
   values,
   onChange,
   description = "여러 개 고를 수 있어요",
+  hideLabel = false,
   otherValue,
   onOtherChange,
   /** U2_REVIEW — '없음' 배타 선택. 글자가 '없음'이라는 이유로 모든 그룹에 적용하지 않는다 */
@@ -92,11 +99,13 @@ export function MultiChoiceGroup({
 
   return (
     <fieldset className={cn("flex flex-col gap-2 border-0 p-0", className)}>
-      <legend className="mb-2 type-body font-medium text-foreground">{label}</legend>
-      <FieldDescription className="-mt-1 mb-1">
-        {description}
-        {values.length > 0 ? <span className="ml-1 tnum">· {values.length}개 선택됨</span> : null}
-      </FieldDescription>
+      <legend className={hideLabel ? "sr-only" : "mb-2 type-body font-medium text-foreground"}>{label}</legend>
+      {hideLabel ? null : (
+        <FieldDescription className="-mt-1 mb-1">
+          {description}
+          {values.length > 0 ? <span className="ml-1 tnum">· {values.length}개 선택됨</span> : null}
+        </FieldDescription>
+      )}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <Chip

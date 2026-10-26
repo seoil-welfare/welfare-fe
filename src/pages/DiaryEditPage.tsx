@@ -346,9 +346,10 @@ export function DiaryEditPage() {
 
         <FormSection title="특이사항">
           <Field>
-            <FieldLabel htmlFor="diary-notes">전달 사항</FieldLabel>
+            {/* 섹션 제목이 곧 입력란 이름이라 소제목 없이 화면 낭독기용 이름만 둔다 */}
             <Textarea
               id="diary-notes"
+              aria-label="특이사항"
               value={draft.notes}
               placeholder="보호자 전달 사항이나 특이사항을 적어 주세요."
               onChange={(event) => updateDraft({ notes: event.target.value })}
