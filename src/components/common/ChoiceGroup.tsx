@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { Check } from "lucide-react";
 import { EXCLUSIVE_NONE_LABEL, OTHER_LABEL } from "@/data/catalog";
 import { OtherInput } from "@/components/common/OtherInput";
 import { FieldDescription } from "@/components/ui/field";
@@ -156,8 +155,10 @@ function Chip({
         onChange={onChange}
         className="absolute size-0 opacity-0"
       />
-      {/* 색만으로 선택을 전달하지 않는다 (가이드 2-3 8번) */}
-      {checked ? <Check className="size-3.5 shrink-0" strokeWidth={3} aria-hidden /> : null}
+      {/*
+        선택하면 칩 너비가 바뀌어 줄바꿈이 일어나지 않도록 체크 아이콘을 쓰지 않는다.
+        선택은 색이 아니라 '채움(남색 바탕) / 테두리만'의 명암 차이로 구분된다 (가이드 2-3 8번)
+      */}
       <span className="break-keep">{label}</span>
     </label>
   );
