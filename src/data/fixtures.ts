@@ -105,7 +105,8 @@ function buildBehaviors(rand: () => number): BehaviorSelection[] {
 }
 
 function buildActivity(rand: () => number, index: number): Activity {
-  const startHour = 9 + index * 2;
+  // 활동 시간 선택 범위(10~17시) 안에서 2시간 간격
+  const startHour = 10 + index * 2;
   const participation = pickSome(PARTICIPATION_OPTIONS, rand, 1, 2);
   const preSupport = pickSome(
     PRE_SUPPORT_OPTIONS.filter((o) => o !== "없음"),

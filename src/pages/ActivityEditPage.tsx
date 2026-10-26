@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ChevronRight, Download } from "lucide-react";
@@ -6,9 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -16,10 +15,12 @@ import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
 import { MultiChoiceGroup } from "@/components/common/ChoiceGroup";
 import { OtherInput } from "@/components/common/OtherInput";
+import { ExpandSelect } from "@/components/common/ExpandSelect";
 import {
+  ACTIVITY_SLOTS,
+  ACTIVITY_SLOT_MINUTES,
   BEHAVIOR_TYPES,
-  HOUR_OPTIONS,
-  MINUTE_OPTIONS,
+  addActivityMinutes,
   PARTICIPATION_OPTIONS,
   POSITIVE_SUPPORT_OPTIONS,
   PRE_SUPPORT_OPTIONS,
@@ -30,12 +31,13 @@ import { useDraft } from "@/app/DraftContext";
 import { useDemo } from "@/demo/DemoContext";
 import { emptyActivity, sortActivities } from "@/services/diaryService";
 import { uid } from "@/lib/utils";
+import type { ActivitySlot } from "@/data/catalog";
 import type { Activity, BehaviorType } from "@/types";
 
 /**
  * 활동 내용 입력/수정 (2.1.5/FR-17 ~ FR-25).
  * - 제목은 신규 '활동 입력', 수정 '활동 수정' (FR-17)
- * - 시작 시간 선택 전에는 종료 시간이 비활성, 선택 후에는 더 늦은 시간만 표시 (FR-18)
+ * - 활동 시간은 30분 칸 하나를 고른다. 같은 일지의 다른 활동이 쓴 칸은 목록에서 뺀다 (FR-18)
  * - 참여활동·사전지원·반응·긍정행동지원은 복수 선택 칩, '기타'는 직접 입력 (FR-19~FR-23)
  * - 도전적 행동은 '있음'을 켜면 타해/자해/파괴행동/기타가 나타나고, 앞 3종은 상세 화면으로 이동 (FR-24)
  * - '저장하고 다음 활동'은 임시 활동 목록만 갱신하고 서버에 저장하지 않는다 (FR-25)
@@ -45,7 +47,6 @@ export function ActivityEditPage() {
   const { activityId } = useParams();
   const { flags } = useDemo();
   const { draft, pendingActivity, setPendingActivity, upsertActivity } = useDraft();
-  const [timeError, setTimeError] = useState<string | null>(null);
 
   const isNew = activityId === "new" || activityId === undefined;
 
@@ -85,25 +86,19 @@ export function ActivityEditPage() {
     setPendingActivity({ ...activity!, ...partial });
   }
 
-  const [startHour, startMinute] = splitTime(activity.startTime);
-  const [endHour, endMinute] = splitTime(activity.endTime);
+  // 같은 일지의 다른 활동이 이미 쓴 시간과 겹치는 칸은 고를 수 없다
+  const otherActivities = draft.activities.filter((a) => a.id !== activity.id);
+  const freeSlots = ACTIVITY_SLOTS.filter(
+    (slot) =>
+      !otherActivities.some(
+        (other) => other.startTime && other.endTime && slot.start < other.endTime && slot.end > other.startTime,
+      ),
+  );
 
-  function setStart(hour: string, minute: string) {
-    const next = hour && minute ? hour + ":" + minute : undefined;
-    // 시작 시간이 종료 시간보다 늦어지면 종료를 비운다
-    const keepEnd = next && activity!.endTime && activity!.endTime > next ? activity!.endTime : undefined;
-    patch({ startTime: next, endTime: keepEnd });
-    setTimeError(null);
-  }
-
-  function setEnd(hour: string, minute: string) {
-    const next = hour && minute ? hour + ":" + minute : undefined;
-    patch({ endTime: next });
-    if (next && activity!.startTime && next <= activity!.startTime) {
-      setTimeError("종료 시간이 시작 시간보다 빨라요. 종료 시간을 다시 골라 주세요.");
-    } else {
-      setTimeError(null);
-    }
+  function setSlot(start: string) {
+    // 지금 값을 다시 고르면 그대로 둔다 (예전에 30분이 아닌 길이로 저장된 활동)
+    if (start === activity!.startTime) return;
+    patch({ startTime: start, endTime: addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) });
   }
 
   function toggleHasBehavior(value: boolean) {
@@ -147,10 +142,6 @@ export function ActivityEditPage() {
   }
 
   function save() {
-    if (timeError) {
-      toast.error("시간을 다시 확인해 주세요.");
-      return;
-    }
     // FR-25 — 임시 활동 목록만 갱신하고 서버에 저장하지 않는다
     upsertActivity(activity!);
     setPendingActivity(null);
@@ -208,57 +199,12 @@ export function ActivityEditPage() {
         ) : null}
 
         <FormSection title="활동 시간">
-          <div className="flex flex-col gap-4">
-            <Field>
-              <FieldLabel>시작 시간</FieldLabel>
-              <div className="flex gap-3">
-                <TimeSelect
-                  label="시작 시"
-                  options={HOUR_OPTIONS}
-                  value={startHour}
-                  onChange={(value) => setStart(value, startMinute || "00")}
-                  suffix="시"
-                />
-                <TimeSelect
-                  label="시작 분"
-                  options={MINUTE_OPTIONS}
-                  value={startMinute}
-                  onChange={(value) => setStart(startHour || "09", value)}
-                  suffix="분"
-                />
-              </div>
-            </Field>
-
-            <Field>
-              <FieldLabel>종료 시간</FieldLabel>
-              <div className="flex gap-3">
-                <TimeSelect
-                  label="종료 시"
-                  options={HOUR_OPTIONS.filter((h) => !startHour || h >= startHour)}
-                  value={endHour}
-                  onChange={(value) => setEnd(value, endMinute || "00")}
-                  suffix="시"
-                  disabled={!activity.startTime}
-                />
-                <TimeSelect
-                  label="종료 분"
-                  options={MINUTE_OPTIONS.filter(
-                    (m) => !(startHour && endHour === startHour) || m > startMinute,
-                  )}
-                  value={endMinute}
-                  onChange={(value) => setEnd(endHour || startHour || "10", value)}
-                  suffix="분"
-                  disabled={!activity.startTime}
-                />
-              </div>
-              {!activity.startTime ? (
-                <FieldDescription>
-                  시작 시간을 먼저 고르면 종료 시간을 고를 수 있어요.
-                </FieldDescription>
-              ) : null}
-              <FieldError>{timeError}</FieldError>
-            </Field>
-          </div>
+          <ActivitySlotSelect
+            slots={freeSlots}
+            start={activity.startTime}
+            end={activity.endTime}
+            onChange={setSlot}
+          />
         </FormSection>
 
         <FormSection title="참여 활동">
@@ -424,40 +370,42 @@ export function ActivityEditPage() {
   );
 }
 
-function splitTime(time?: string): [string, string] {
-  if (!time) return ["", ""];
-  const [hour, minute] = time.split(":");
-  return [hour ?? "", minute ?? ""];
+/**
+ * 활동 시간 선택. "10:00 ~ 10:30"처럼 시작과 종료를 함께 보여 주고, 한 번에 약 4칸이 보인다.
+ * 지금 값이 목록에 없으면(다른 길이로 저장된 예전 활동) 맨 위에 그대로 보여 준다.
+ */
+function ActivitySlotSelect({
+  slots,
+  start,
+  end,
+  onChange,
+}: {
+  slots: readonly ActivitySlot[];
+  start?: string;
+  end?: string;
+  onChange: (start: string) => void;
+}) {
+  const current = start ? { start, end: end ?? addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) } : null;
+  const shown =
+    current && !slots.some((slot) => slot.start === current.start && slot.end === current.end)
+      ? [current, ...slots.filter((slot) => slot.start !== current.start)]
+      : slots;
+  const label = (slot: ActivitySlot) => timeLabel(slot.start) + " ~ " + timeLabel(slot.end);
+
+  return (
+    <ExpandSelect
+      label="활동 시간"
+      options={shown.map((slot) => ({ value: slot.start, label: label(slot) }))}
+      value={start}
+      onChange={onChange}
+      placeholder={shown.length === 0 ? "고를 수 있는 시간이 없어요" : "시간을 골라 주세요"}
+      disabled={shown.length === 0}
+    />
+  );
 }
 
-function TimeSelect({
-  label,
-  options,
-  value,
-  onChange,
-  suffix,
-  disabled,
-}: {
-  label: string;
-  options: readonly string[];
-  value: string;
-  onChange: (value: string) => void;
-  suffix: string;
-  disabled?: boolean;
-}) {
-  return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger aria-label={label} className="flex-1">
-        <SelectValue placeholder={suffix} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
-            {suffix}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
+/** 10:30 → 10시 30분 */
+function timeLabel(time: string): string {
+  const [hour, minute] = time.split(":");
+  return hour + "시 " + minute + "분";
 }
