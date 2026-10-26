@@ -5,7 +5,7 @@
  */
 import { DEMO_TODAY, SERVICE_USERS, generateFixtures } from "@/data/fixtures";
 import { activeServiceUsers, dayCompletion, diariesOnDate } from "@/services/diaryService";
-import { addDays } from "@/lib/utils";
+import { addDays, parseISODate } from "@/lib/utils";
 
 const { diaries } = generateFixtures(DEMO_TODAY);
 const problems: string[] = [];
@@ -47,31 +47,42 @@ for (const date of fullDays.slice(0, 3)) {
   );
 }
 
-// 2) 오늘은 완료 2 + 작성 중 1 = 전원 → CTA 없어야 한다 (작성 중도 '있음'으로 센다)
+// 2) 오늘은 일지가 없다 → 전원 작성 가능, 지표 없음
 console.log("");
 console.log("[오늘: " + DEMO_TODAY + "]");
-const todayDay = diariesOnDate(diaries, DEMO_TODAY);
-const todayCompletion = dayCompletion(diaries, SERVICE_USERS, DEMO_TODAY);
 expect(
-  "오늘 CTA 숨김 (작성 중도 포함해 전원)",
-  usersWithoutDiary(DEMO_TODAY).length === 0,
+  "오늘은 대상 이용자 전원이 새로 작성 가능",
+  usersWithoutDiary(DEMO_TODAY).length === activeCount,
+  "남은 " + usersWithoutDiary(DEMO_TODAY).length + "명 / 대상 " + activeCount + "명",
+);
+expect("오늘 달력 지표 없음", dayCompletion(diaries, SERVICE_USERS, DEMO_TODAY) === null, "일지 0건");
+
+// 3) 바로 전 평일은 완료 1 + 작성 중 2 = 전원 → CTA 없어야 한다 (작성 중도 '있음'으로 센다)
+let lastWeekday = addDays(DEMO_TODAY, -1);
+while ([0, 6].includes(parseISODate(lastWeekday).getDay())) lastWeekday = addDays(lastWeekday, -1);
+console.log("");
+console.log("[바로 전 평일: " + lastWeekday + "]");
+const lastDay = diariesOnDate(diaries, lastWeekday);
+const lastCompletion = dayCompletion(diaries, SERVICE_USERS, lastWeekday);
+expect(
+  "전 평일 CTA 숨김 (작성 중도 포함해 전원)",
+  usersWithoutDiary(lastWeekday).length === 0,
   "완료 " +
-    todayDay.filter((d) => d.status === "completed").length +
+    lastDay.filter((d) => d.status === "completed").length +
     "건 + 작성 중 " +
-    todayDay.filter((d) => d.status === "draft").length +
+    lastDay.filter((d) => d.status === "draft").length +
     "건, 달력 지표 " +
-    todayCompletion?.completed +
+    lastCompletion?.completed +
     "/" +
-    todayCompletion?.total,
+    lastCompletion?.total,
 );
 expect(
-  "완료 2건이지만 지표가 3/3이 아니어도 CTA는 숨김",
-  todayCompletion?.completed !== activeCount &&
-    usersWithoutDiary(DEMO_TODAY).length === 0,
-  "완료 " + todayCompletion?.completed + " != 대상 " + activeCount + " 인데도 숨김",
+  "완료가 전원이 아니어도 CTA는 숨김",
+  lastCompletion?.completed !== activeCount && usersWithoutDiary(lastWeekday).length === 0,
+  "완료 " + lastCompletion?.completed + " != 대상 " + activeCount + " 인데도 숨김",
 );
 
-// 3) 일부만 일지가 있는 날짜 → CTA 있고, 대상은 일지 없는 이용자
+// 4) 일부만 일지가 있는 날짜 → CTA 있고, 대상은 일지 없는 이용자
 console.log("");
 console.log("[일부만 일지 있는 날짜]");
 let partialChecked = 0;

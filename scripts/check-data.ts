@@ -4,6 +4,7 @@
  */
 import { DEMO_TODAY, SERVICE_USERS, generateFixtures } from "@/data/fixtures";
 import { countDiaryBehaviors } from "@/services/diaryService";
+import { addDays } from "@/lib/utils";
 import {
   activityFieldCounts,
   behaviorCountsByType,
@@ -36,9 +37,12 @@ expect(
     diaries.filter((d) => d.status === "draft").length +
     "건",
 );
+expect("오늘은 일지 없음 (새로 작성 시연용)", !diaries.some((d) => d.date === DEMO_TODAY), "0건");
 expect(
-  "오늘 타인 작성 중 일지",
-  diaries.some((d) => d.date === DEMO_TODAY && d.status === "draft" && d.authorId === "stf-03"),
+  "최근 평일 타인 작성 중 일지",
+  diaries.some(
+    (d) => d.date < DEMO_TODAY && d.date >= addDays(DEMO_TODAY, -3) && d.status === "draft" && d.authorId === "stf-03",
+  ),
   "stf-03 작성 중",
 );
 expect(
