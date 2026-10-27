@@ -1,4 +1,4 @@
-import { DEMO_TODAY, SERVICE_USERS, STAFF, generateFixtures } from "@/data/fixtures";
+import { SERVICE_USERS, STAFF } from "@/data/fixtures";
 import { DEMO_KEYS, clearDemo, readDemo, writeDemo } from "@/demo/demoStorage";
 import { getFlags, subscribeFlags } from "@/demo/flagStore";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
@@ -19,11 +19,14 @@ export interface MockState {
 
 let state: MockState | null = null;
 
+/**
+ * 일지·소식은 비운 채 시작한다. 직접 써 보며 화면을 확인하기 위해서다.
+ * 직원 계정(로그인)과 이용자는 남긴다. 검증 스크립트는 generateFixtures로 샘플을 따로 만든다.
+ */
 function buildInitialState(): MockState {
-  const { diaries, events } = generateFixtures(DEMO_TODAY);
   return {
-    diaries,
-    events,
+    diaries: [],
+    events: [],
     serviceUsers: SERVICE_USERS.map((u) => ({ ...u })),
     staff: STAFF.map((s) => ({ ...s })),
     session: { currentStaffId: null },

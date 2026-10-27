@@ -26,6 +26,7 @@ import {
   activeServiceUsers,
   eventKindLabel,
   findServiceUser,
+  isUntouchedDraft,
   newsItems,
   type NewsItem,
 } from "@/services/diaryService";
@@ -72,7 +73,9 @@ export function HomePage() {
     .filter((d) => d.status === "draft" && d.authorId === currentStaff?.id)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 
-  const { draft } = useDraft();
+  const { draft: rawDraft } = useDraft();
+  // 아무것도 입력하지 않은 빈 일지는 '쓰던 일지'로 치지 않는다
+  const draft = rawDraft && !isUntouchedDraft(rawDraft) ? rawDraft : null;
   // 오늘 이미 일지가 있어 새로 만들 수 없을 때 안내 팝업에 띄울 일지
   const [blockedDiary, setBlockedDiary] = useState<Diary | null>(null);
 

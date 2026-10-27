@@ -7,7 +7,8 @@
 const PREFIX = "wonkwang-demo:";
 
 export const DEMO_KEYS = {
-  state: PREFIX + "state",
+  // v2: 목 일지·소식을 비운 버전. 예전에 저장된 샘플 일지가 남지 않게 키를 바꾼다
+  state: PREFIX + "state-v2",
   flags: PREFIX + "flags",
   session: PREFIX + "session",
 } as const;

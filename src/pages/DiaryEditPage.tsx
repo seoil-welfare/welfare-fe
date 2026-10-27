@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Save, X } from "lucide-react";
@@ -93,8 +93,12 @@ export function DiaryEditPage() {
     if (draft && hasRequest && !requestMismatch) setParams({}, { replace: true });
   }, [draft, hasRequest, requestMismatch, setParams]);
 
+  // 저장을 마치고 상세로 넘어가는 중이다. 이때 draft가 비어도 새 일지를 만들지 않는다
+  const committedRef = useRef(false);
+
   // 라우트 이동으로 입력이 사라지지 않게 draft를 유지한다. 없으면 새로 만든다.
   useEffect(() => {
+    if (committedRef.current) return;
     // 이전 날짜의 결과(placeholder)로 기본 이용자를 고르지 않는다
     if (draft || users.length === 0 || !dayQuery.data || dayQuery.isPlaceholderData) return;
     // 일지는 이용자 1명당 하루 1건이다. 대상이 지정되지 않았다면
@@ -176,6 +180,8 @@ export function DiaryEditPage() {
       { ...input, diaryId: input.diaryId ?? autosavedId },
       {
         onSuccess: (diary) => {
+          // draft를 비우면 위 effect가 다음 이용자로 빈 일지를 만들 수 있어 먼저 막는다
+          committedRef.current = true;
           discardDraft();
           toast.success(
             isEditingCompleted

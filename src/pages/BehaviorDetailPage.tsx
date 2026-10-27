@@ -125,9 +125,6 @@ export function BehaviorDetailPage() {
                     >
                       {option.label}
                     </span>
-                    <span className="shrink-0 type-caption text-muted-foreground">
-                      예시 항목(확정 필요)
-                    </span>
                   </label>
                 </li>
               );
