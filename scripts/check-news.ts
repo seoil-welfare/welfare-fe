@@ -2,6 +2,7 @@
 import { DEMO_TODAY, SERVICE_USERS, STAFF, generateFixtures } from "@/data/fixtures";
 import { QueryClient } from "@tanstack/react-query";
 import { setMockLatency, toNewsEntries } from "@/api/mock/mockApi";
+import { writeDb } from "@/api/mock/mockDb";
 import { findOlderNewsDate } from "@/api/queries";
 import { groupNewsByDate, latestNewsDateBefore, newsItems } from "@/services/diaryService";
 import { addDays, dateGroupLabel, dateOf } from "@/lib/utils";
@@ -112,6 +113,8 @@ expect("더 이전이 없으면 null", latestNewsDateBefore(gap, "2026-10-02", "
 // 화면과 같은 방식으로 mock 서버에 범위를 넓혀 가며 묻기
 async function checkWithMockServer() {
   setMockLatency(false);
+  // 앱의 목 서버는 일지 없이 시작하므로, 위에서 만든 샘플 일지·소식을 넣고 묻는다
+  writeDb((db) => ({ ...db, diaries, events }));
   const client = new QueryClient();
   const limit = addDays(DEMO_TODAY, -365);
   let cursor = addDays(DEMO_TODAY, -1);
