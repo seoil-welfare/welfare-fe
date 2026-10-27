@@ -281,7 +281,10 @@ export function ActivityEditPage() {
 
           {activity.hasBehavior ? (
             <div className="flex flex-col gap-1">
-              {BEHAVIOR_TYPES.map((meta) => {
+              {/* 상위 '기타' 유형은 고르지 않는다. 세부 항목마다 '기타'가 있다. 예전에 고른 기록이면 지울 수 있게 보여 준다 */}
+              {BEHAVIOR_TYPES.filter(
+                (meta) => meta.type !== "other" || Boolean(behaviorSelectionOf("other")),
+              ).map((meta) => {
                 const selection = behaviorSelectionOf(meta.type);
                 const checked = Boolean(selection);
                 const summary = selection
