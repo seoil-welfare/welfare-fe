@@ -202,13 +202,7 @@ export function CalendarPage() {
                       </span>
                     </Link>
                   </Button>
-                ) : (
-                  // 전원이 일지를 가지고 있으면 작성 CTA를 두지 않고 이유를 알린다 (가이드 9장 14번)
-                  <p className="rounded-control bg-muted px-3 py-3 text-center type-caption text-muted-foreground break-keep">
-                    이 날짜는 대상 이용자 {users.length}명 모두 일지가 있어요. 일지는 이용자 한 명당
-                    하루 한 건이라 새로 작성할 수 없어요.
-                  </p>
-                )}
+                ) : null /* 전원이 일지를 가지고 있으면 작성 버튼을 두지 않는다. 목록의 상태 배지로 알 수 있다 */}
               </div>
             )}
           </QueryGate>
