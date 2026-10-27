@@ -105,7 +105,8 @@ function buildBehaviors(rand: () => number): BehaviorSelection[] {
 }
 
 function buildActivity(rand: () => number, index: number): Activity {
-  const startHour = 9 + index * 2;
+  // 활동 시간 선택 범위(10~17시) 안에서 2시간 간격
+  const startHour = 10 + index * 2;
   const participation = pickSome(PARTICIPATION_OPTIONS, rand, 1, 2);
   const preSupport = pickSome(
     PRE_SUPPORT_OPTIONS.filter((o) => o !== "없음"),
@@ -158,8 +159,8 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
     const date = addDays(today, -back);
     // parseISODate를 쓴다. new Date("YYYY-MM-DD")는 UTC로 해석돼 시간대에 따라 요일이 밀린다.
     const weekday = parseISODate(date).getDay();
-    // 주말에는 일지가 없다. 단 '오늘'은 회의 시연을 위해 항상 기록이 있게 둔다.
-    if (back !== 0 && (weekday === 0 || weekday === 6)) continue;
+    // 주말에는 일지가 없다. '오늘'은 직접 새 일지를 써 볼 수 있게 비워 둔다.
+    if (back === 0 || weekday === 0 || weekday === 6) continue;
 
     for (const user of activeUsers) {
       const roll = rand();
@@ -220,11 +221,8 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
   }
 
   /**
-   * 오늘 날짜의 상태를 시연에 맞춰 고정한다.
-   *  - usr-01: 작성 완료 + 등록·수정 소식
-   *  - usr-02: 작성 완료 + 등록 소식
-   *  - usr-03: 다른 담당자(stf-03)가 작성 중 (FR-71 상태 재현, 소식에는 올리지 않음)
-   * 아래에서 지난 일지 수정 소식 3건을 더해 오늘 소식은 6건이 된다 (홈 4건 + '더 보기', FR-07).
+   * 특정 날짜의 일지 상태를 시연에 맞춰 고정한다.
+   * 오늘은 일지를 비워 두고, 시연 상태는 바로 전 평일에 둔다 (아래 호출부).
    */
   function forceDay(
     day: string,
@@ -289,17 +287,23 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
     }
   }
 
-  forceDay(today, "usr-01", "stf-01", "completed", 9, true);
-  forceDay(today, "usr-02", "stf-02", "completed", 10, false);
-  forceDay(today, "usr-03", "stf-03", "draft", 11, false);
-
-  // 홈 '이어서 작성하기' 시연용: 바로 전 평일에 demo.staff1(stf-01)이 쓰다 만 일지
+  /**
+   * 바로 전 평일의 시연 상태
+   *  - usr-01: demo.staff1(stf-01)이 쓰다 만 일지 (홈 '이어서 작성하기')
+   *  - usr-02: 작성 완료 + 등록·수정 소식
+   *  - usr-03: 다른 담당자(stf-03)가 작성 중 (FR-71 상태 재현, 소식에는 올리지 않음)
+   */
   let lastWeekday = addDays(today, -1);
   while ([0, 6].includes(parseISODate(lastWeekday).getDay())) lastWeekday = addDays(lastWeekday, -1);
   forceDay(lastWeekday, "usr-01", "stf-01", "draft", 16, false);
+  forceDay(lastWeekday, "usr-02", "stf-02", "completed", 10, true);
+  forceDay(lastWeekday, "usr-03", "stf-03", "draft", 11, false);
 
-  // 홈 소식 5건 + '더 보기' 시연용: 지난 일지를 오늘 수정한 소식 3건 (소식은 발생 시각 기준)
+  // 홈 소식 4건 + '더 보기' 시연용: 지난 일지를 오늘 수정한 소식 5건 (소식은 발생 시각 기준).
+  // 오늘 날짜 일지는 없지만 소식은 수정이 일어난 시각을 따르므로 오늘 소식으로 보인다.
   const editedToday: Array<[editorId: string, hour: number, minute: number]> = [
+    ["stf-04", 9, 10],
+    ["stf-02", 10, 25],
     ["stf-02", 13, 20],
     ["stf-04", 14, 5],
     ["stf-01", 15, 30],

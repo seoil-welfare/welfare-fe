@@ -1,4 +1,4 @@
-/** 오늘 날짜의 시연 상태 검증 (개발 검증용) */
+/** 오늘 날짜의 시연 상태 검증 (개발 검증용). 오늘은 일지를 비워 두고 소식만 있다 */
 import { DEMO_TODAY, generateFixtures, SERVICE_USERS, STAFF } from "@/data/fixtures";
 import { toNewsEntries } from "@/api/mock/mockApi";
 import { dayCompletion, newsItems } from "@/services/diaryService";
@@ -21,29 +21,18 @@ console.log(
       .join(", "),
 );
 
-expect("오늘 일지 3건", todayDiaries.length === 3, todayDiaries.length + "건");
-expect(
-  "완료 2건 / 작성 중 1건",
-  todayDiaries.filter((d) => d.status === "completed").length === 2 &&
-    todayDiaries.filter((d) => d.status === "draft").length === 1,
-  "완료 " + todayDiaries.filter((d) => d.status === "completed").length + "건",
-);
-expect(
-  "타인(stf-03) 작성 중 일지",
-  todayDiaries.some((d) => d.status === "draft" && d.authorId === "stf-03"),
-  "FR-71 상태 재현",
-);
+expect("오늘 일지 없음 (직접 새로 작성 가능)", todayDiaries.length === 0, todayDiaries.length + "건");
 
 const todayNews = newsItems(toNewsEntries(events, diaries, DEMO_TODAY), directory, {
   filter: "all",
   sinceDate: DEMO_TODAY,
 });
 expect("오늘 소식 4건 이상 (홈 4건 + '더 보기' 조건)", todayNews.length >= 4, todayNews.length + "건");
+// 오늘 날짜 일지는 없으므로 오늘 소식은 지난 일지를 오늘 수정한 내역이다
 expect(
-  "등록·수정 소식 모두 존재",
-  todayNews.some((n) => n.event.kind === "created") &&
-    todayNews.some((n) => n.event.kind === "updated"),
-  todayNews.map((n) => n.event.kind).join(","),
+  "오늘 소식은 지난 일지 수정 내역",
+  todayNews.every((n) => n.event.kind === "updated" && n.diary.date < DEMO_TODAY),
+  todayNews.map((n) => n.event.kind + "(" + n.diary.date + ")").join(", "),
 );
 expect(
   "작성 중 일지는 소식에 없음",
@@ -51,11 +40,10 @@ expect(
   "작성 중 제외 확인",
 );
 
-const completion = dayCompletion(diaries, SERVICE_USERS, DEMO_TODAY);
 expect(
-  "달력 오늘 지표 2/3",
-  completion?.completed === 2 && completion?.total === 3,
-  completion ? completion.completed + "/" + completion.total : "없음",
+  "달력 오늘 지표 없음 (일지 0건)",
+  dayCompletion(diaries, SERVICE_USERS, DEMO_TODAY) === null,
+  "없음",
 );
 
 // 일지가 전혀 없는 날짜에는 지표가 없어야 한다

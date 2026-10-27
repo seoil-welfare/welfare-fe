@@ -113,6 +113,11 @@ export interface DiaryDraft {
   diaryId?: string;
   /** 작성 완료된 일지를 수정하는 중이다. 저장 요청에는 넣지 않는다 */
   editingCompleted?: boolean;
+  /**
+   * 자동 임시저장으로 서버에 처음 만들어진 일지다 (diaryId는 그때 받은 값).
+   * 이어 쓰는 일지와 구분하려고 둔다. 저장 요청에는 넣지 않는다
+   */
+  autosaved?: boolean;
   userId: string;
   date: string;
   weather: Weather;

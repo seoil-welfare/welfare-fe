@@ -12,6 +12,7 @@ import { setMockLatency } from "@/api/mock/mockApi";
 import { DraftProvider } from "@/app/DraftContext";
 import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
+import { DEMO_TODAY, generateFixtures } from "@/data/fixtures";
 
 // mock 서버가 localStorage에서 세션을 복원하도록 persist 상태를 주입한다.
 const store = new Map<string, string>([
@@ -31,14 +32,10 @@ const store = new Map<string, string>([
 
 setMockLatency(false);
 
-const today = new Date();
-const iso =
-  today.getFullYear() +
-  "-" +
-  String(today.getMonth() + 1).padStart(2, "0") +
-  "-" +
-  String(today.getDate()).padStart(2, "0");
-const diaryId = "dry-" + iso + "-usr-03";
+// 상세 화면용: 가장 최근 일지 (오늘 날짜에는 일지가 없다)
+const diaryId = [...generateFixtures(DEMO_TODAY).diaries].sort((a, b) =>
+  b.date.localeCompare(a.date),
+)[0].id;
 
 const ROUTES = [
   "/",
