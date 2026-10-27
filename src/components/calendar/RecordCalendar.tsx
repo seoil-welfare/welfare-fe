@@ -150,8 +150,9 @@ function DayCell({
           : cn(
               "hover:bg-accent",
               isToday && "border-2 border-primary",
+              // 달 바깥 날짜는 이번 달 날짜와 한눈에 구분되게 옅게 둔다 (지표·점까지 함께)
               outside
-                ? "text-muted-foreground"
+                ? "text-muted-foreground opacity-45"
                 : weekday === 0
                   ? "text-calendar-sunday"
                   : weekday === 6
