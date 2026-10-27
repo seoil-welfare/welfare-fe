@@ -186,7 +186,7 @@ function DiaryDetail({
             description="도전적 행동"
             tone={behaviorCount > 0 ? "behavior" : "default"}
           />
-          <MetricCard value={diary.weather} description="날씨" />
+          <MetricCard value={diary.weather} description="날씨" size="compact" />
         </div>
 
         <FormSection title="이용자 컨디션">
