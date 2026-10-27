@@ -100,28 +100,44 @@ export interface BehaviorDetailOption {
 }
 
 /**
- * EXAMPLE_ONLY — 세부 행동 항목의 최종 목록은 개발계획서 FR-27 미확정 사항이다.
- * 첨부 문서에 목록이 명시되어 있지 않으므로, 실제 복지관 정식 항목이 아닌
- * '예시 항목(확정 필요)'으로 화면에 표시한다 (지시서 4.2).
+ * 도전적 행동 세부 항목 (FR-27). 복지관 확정 목록이며 순서도 그대로다 (복지관 답변 2, '타인' 표현 제외).
+ * id는 백엔드 behavior_item.code와 같다. '기타'는 내용을 직접 적는다.
  */
 export const BEHAVIOR_DETAILS: Record<BehaviorType, readonly BehaviorDetailOption[]> = {
   otherHarm: [
-    { id: "oh-1", label: "예시 항목 A" },
-    { id: "oh-2", label: "예시 항목 B" },
-    { id: "oh-3", label: "예시 항목 C" },
-    { id: "oh-4", label: "예시 항목 D" },
+    { id: "oh-1", label: "때리기" },
+    { id: "oh-2", label: "발로 차기" },
+    { id: "oh-3", label: "물기" },
+    { id: "oh-4", label: "꼬집기" },
+    { id: "oh-5", label: "할퀴기" },
+    { id: "oh-6", label: "밀치기" },
+    { id: "oh-7", label: "침뱉기" },
+    { id: "oh-8", label: "머리카락 잡아당기기" },
+    { id: "oh-9", label: "물건을 던져 위협 또는 상해를 가하는 행동" },
     { id: "oh-other", label: "기타" },
   ],
   selfHarm: [
-    { id: "sh-1", label: "예시 항목 A" },
-    { id: "sh-2", label: "예시 항목 B" },
-    { id: "sh-3", label: "예시 항목 C" },
+    { id: "sh-1", label: "머리 때리기" },
+    { id: "sh-2", label: "얼굴 때리기" },
+    { id: "sh-3", label: "손 물기" },
+    { id: "sh-4", label: "신체 부위 깨물기" },
+    { id: "sh-5", label: "머리 쥐어뜯기" },
+    { id: "sh-6", label: "머리 박기" },
+    { id: "sh-7", label: "피부 뜯기 및 상처 파기" },
+    { id: "sh-8", label: "신체를 벽이나 바닥 등에 부딪히기" },
+    { id: "sh-9", label: "꼬집기" },
+    { id: "sh-10", label: "귀·눈·코·입 등 신체 부위 파기" },
     { id: "sh-other", label: "기타" },
   ],
   destruction: [
-    { id: "ds-1", label: "예시 항목 A" },
-    { id: "ds-2", label: "예시 항목 B" },
-    { id: "ds-3", label: "예시 항목 C" },
+    { id: "ds-1", label: "물건 던지기" },
+    { id: "ds-2", label: "물건 내리치기" },
+    { id: "ds-3", label: "물건 밟거나 짓누르기" },
+    { id: "ds-4", label: "물건 찢기" },
+    { id: "ds-5", label: "물건 부수기" },
+    { id: "ds-6", label: "가구·시설물 손상시키기" },
+    { id: "ds-7", label: "물건을 잡아당기거나 뜯어내기" },
+    { id: "ds-8", label: "물건을 뒤엎거나 쏟기" },
     { id: "ds-other", label: "기타" },
   ],
   other: [],
