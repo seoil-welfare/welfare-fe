@@ -21,6 +21,8 @@ export function ExpandSelect({
   onChange,
   placeholder,
   disabled,
+  invalid,
+  describedBy,
   className,
 }: {
   /** 화면 낭독기용 이름 */
@@ -30,6 +32,10 @@ export function ExpandSelect({
   onChange: (value: string) => void;
   placeholder: string;
   disabled?: boolean;
+  /** 필수 값이 비었을 때 오류 테두리를 보여 준다 */
+  invalid?: boolean;
+  /** 오류 문구 id (화면 낭독기가 함께 읽는다) */
+  describedBy?: string;
   className?: string;
 }) {
   const id = useId();
@@ -122,6 +128,8 @@ export function ExpandSelect({
         aria-expanded={open}
         aria-controls={listId}
         disabled={disabled}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(event) => {
           if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
@@ -131,6 +139,8 @@ export function ExpandSelect({
         }}
         className={cn(
           "flex h-12 w-full items-center justify-between gap-2 rounded-control border border-input bg-muted px-3",
+          // 오류 상태: 테두리 2px + 아래 문구 (가이드 8장)
+          "aria-[invalid=true]:border-2 aria-[invalid=true]:border-destructive",
           "text-left type-input disabled:cursor-not-allowed disabled:opacity-50",
           selected ? "text-foreground" : "text-muted-foreground",
         )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ChevronRight, Download } from "lucide-react";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field } from "@/components/ui/field";
+import { Field, FieldError } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Alert } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
@@ -47,6 +47,9 @@ export function ActivityEditPage() {
   const { activityId } = useParams();
   const { flags } = useDemo();
   const { draft, pendingActivity, setPendingActivity, upsertActivity } = useDraft();
+  // 활동 시간은 필수다. '저장'을 눌렀는데 비어 있으면 표시한다
+  const [timeMissing, setTimeMissing] = useState(false);
+  const timeSectionRef = useRef<HTMLDivElement>(null);
 
   const isNew = activityId === "new" || activityId === undefined;
 
@@ -99,6 +102,7 @@ export function ActivityEditPage() {
     // 지금 값을 다시 고르면 그대로 둔다 (예전에 30분이 아닌 길이로 저장된 활동)
     if (start === activity!.startTime) return;
     patch({ startTime: start, endTime: addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) });
+    setTimeMissing(false);
   }
 
   function toggleHasBehavior(value: boolean) {
@@ -142,6 +146,12 @@ export function ActivityEditPage() {
   }
 
   function save() {
+    if (!activity!.startTime) {
+      setTimeMissing(true);
+      timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast.error("활동 시간을 골라 주세요.");
+      return;
+    }
     // FR-25 — 임시 활동 목록만 갱신하고 서버에 저장하지 않는다
     upsertActivity(activity!);
     setPendingActivity(null);
@@ -198,14 +208,22 @@ export function ActivityEditPage() {
           </Alert>
         ) : null}
 
-        <FormSection title="활동 시간">
-          <ActivitySlotSelect
-            slots={freeSlots}
-            start={activity.startTime}
-            end={activity.endTime}
-            onChange={setSlot}
-          />
-        </FormSection>
+        <div ref={timeSectionRef}>
+          <FormSection title="활동 시간">
+            <Field>
+              <ActivitySlotSelect
+                slots={freeSlots}
+                start={activity.startTime}
+                end={activity.endTime}
+                onChange={setSlot}
+                invalid={timeMissing}
+              />
+              <FieldError id="activity-time-error">
+                {timeMissing ? "활동 시간을 골라 주세요." : null}
+              </FieldError>
+            </Field>
+          </FormSection>
+        </div>
 
         <FormSection title="참여 활동">
           <MultiChoiceGroup
@@ -382,11 +400,13 @@ function ActivitySlotSelect({
   start,
   end,
   onChange,
+  invalid,
 }: {
   slots: readonly ActivitySlot[];
   start?: string;
   end?: string;
   onChange: (start: string) => void;
+  invalid?: boolean;
 }) {
   const current = start ? { start, end: end ?? addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) } : null;
   const shown =
@@ -403,6 +423,8 @@ function ActivitySlotSelect({
       onChange={onChange}
       placeholder={shown.length === 0 ? "고를 수 있는 시간이 없어요" : "시간을 골라 주세요"}
       disabled={shown.length === 0}
+      invalid={invalid}
+      describedBy={invalid ? "activity-time-error" : undefined}
     />
   );
 }
