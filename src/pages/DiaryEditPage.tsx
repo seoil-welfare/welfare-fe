@@ -20,6 +20,7 @@ import { CONDITIONS, WEATHERS } from "@/data/catalog";
 import { errorMessage, isApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { combineQueries, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
 import { useDraft } from "@/app/DraftContext";
+import { getLastPage } from "@/app/lastPage";
 import { useToday } from "@/lib/today";
 import {
   activeServiceUsers,
@@ -190,7 +191,8 @@ export function DiaryEditPage() {
                 ? "작성을 완료했어요."
                 : "작성 중으로 저장했어요.",
           );
-          navigate("/diaries/" + diary.id, { replace: true });
+          // 완료 일지를 고쳤으면 수정을 시작한 화면(통계·달력 등)으로 돌아간다. 그 외에는 저장한 일지 상세로
+          navigate((isEditingCompleted && getLastPage()) || "/diaries/" + diary.id, { replace: true });
         },
         // 실패하면 입력을 그대로 두고 다시 시도할 수 있게 한다 (가이드 6장)
         onError: (error) => {

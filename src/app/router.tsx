@@ -6,6 +6,7 @@ import { useDiary } from "@/api/queries";
 import { errorMessage } from "@/api/errors";
 import { RequireAuth } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
+import { useRememberLastPage } from "@/app/lastPage";
 import { StatsProvider } from "@/app/StatsContext";
 import { LoginPage } from "@/pages/LoginPage";
 import { HomePage } from "@/pages/HomePage";
@@ -59,6 +60,7 @@ function DiaryActivityEditEntry() {
 }
 
 export function AppRoutes() {
+  useRememberLastPage();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
