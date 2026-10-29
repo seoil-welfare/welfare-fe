@@ -152,6 +152,11 @@ export function BehaviorDonut({
     count: counts[type],
     color: behaviorTypeMeta(type).chartVar,
   }));
+  // 0건 조각은 그리지 않는다. 남겨 두면 그 자리에 틈 선만 그어진다
+  const slices =
+    total > 0
+      ? data.filter((entry) => entry.count > 0)
+      : [{ label: "기록 없음", count: 1, color: "var(--secondary)" }];
 
   return (
     <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-center", className)}>
@@ -160,19 +165,20 @@ export function BehaviorDonut({
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={total > 0 ? data : [{ label: "기록 없음", count: 1, color: "var(--secondary)" }]}
+              data={slices}
               dataKey="count"
               nameKey="label"
               innerRadius={44}
               outerRadius={74}
-              paddingAngle={total > 0 ? 5 : 0}
-              stroke="none"
+              // 조각 사이 틈은 카드 배경색 테두리로 낸다. paddingAngle은 각도라서
+              // 바깥은 넓고 안쪽은 좁은 쐐기 모양 틈이 된다. 테두리는 어디서나 같은 폭이다
+              stroke="var(--card)"
+              // 조각이 하나면 고리 전체라 틈이 없다 (테두리를 그리면 이음새 선이 생긴다)
+              strokeWidth={slices.length > 1 ? 3 : 0}
+              strokeLinejoin="round"
               isAnimationActive={false}
             >
-              {(total > 0
-                ? data
-                : [{ label: "기록 없음", count: 1, color: "var(--secondary)" }]
-              ).map((entry) => (
+              {slices.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} />
               ))}
             </Pie>
