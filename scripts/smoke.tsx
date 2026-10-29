@@ -40,6 +40,7 @@ const diaryId = [...generateFixtures(DEMO_TODAY).diaries].sort((a, b) =>
 const ROUTES = [
   "/",
   "/login",
+  "/signup",
   "/home",
   "/news",
   "/diaries/new",

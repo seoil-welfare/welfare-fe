@@ -3,6 +3,7 @@ import { readDb, writeDb } from "@/api/mock/mockDb";
 import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { dateOf, uid } from "@/lib/utils";
+import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 
 /**
@@ -141,8 +142,9 @@ export const mockApi: Api = {
   auth: {
     async login({ loginId, password }) {
       await writeLatency();
-      const member = readDb().staff.find((s) => s.loginId === loginId.trim());
-      if (!member || password !== MOCK_PASSWORD) {
+      const db = readDb();
+      const member = db.staff.find((s) => s.loginId === loginId.trim().toLowerCase());
+      if (!member || password !== (db.passwords?.[member.id] ?? MOCK_PASSWORD)) {
         throw new ApiError(
           401,
           "아이디 또는 비밀번호가 일치하지 않아요. 데모 계정을 확인해 주세요.",
@@ -151,6 +153,28 @@ export const mockApi: Api = {
       }
       writeDb((db) => ({ ...db, session: { currentStaffId: member.id } }));
       return clone(member);
+    },
+    async signup({ loginId, password, name, birthDate, role }) {
+      await writeLatency();
+      const id = loginId.trim().toLowerCase();
+      if (readDb().staff.some((s) => s.loginId === id)) {
+        throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
+      }
+      const created: Staff = {
+        id: uid("stf"),
+        name: name.trim(),
+        department: "주간활동지원팀",
+        position: ROLE_POSITION[role],
+        role,
+        loginId: id,
+        birthDate,
+      };
+      writeDb((db) => ({
+        ...db,
+        staff: [...db.staff, created],
+        passwords: { ...db.passwords, [created.id]: password },
+      }));
+      return clone(created);
     },
     async logout() {
       writeDb((db) => ({ ...db, session: { currentStaffId: null } }));

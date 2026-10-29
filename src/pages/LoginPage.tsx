@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,8 +11,7 @@ import { MOCK_PASSWORD } from "@/api/mock/mockApi";
 import { useLogin } from "@/api/queries";
 import { IS_MOCK } from "@/config";
 import { DemoPanel } from "@/demo/DemoPanel";
-import { cn } from "@/lib/utils";
-import logoUrl from "@/assets/logo-128.png";
+import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
 
 /**
  * 로그인 (FR-01~FR-03).
@@ -24,8 +23,10 @@ export function LoginPage() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
 
-  const [loginId, setLoginId] = useState(IS_MOCK ? "demo.staff1" : "");
-  const [password, setPassword] = useState(IS_MOCK ? MOCK_PASSWORD : "");
+  // 회원가입을 마치고 오면 가입한 아이디를 채워 둔다
+  const signedUpId = (useLocation().state as { loginId?: string } | null)?.loginId;
+  const [loginId, setLoginId] = useState(signedUpId ?? (IS_MOCK ? "demo.staff1" : ""));
+  const [password, setPassword] = useState(signedUpId ? "" : IS_MOCK ? MOCK_PASSWORD : "");
   const [showPassword, setShowPassword] = useState(false);
   const [autoLogin, setAutoLogin] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
@@ -62,29 +63,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       {IS_MOCK ? <DemoPanel /> : null}
-      {/*
-        휴대폰: 배경 위에 바로 놓고 큰 로고·알약 모양 입력칸.
-        데스크톱(md 이상): 가운데 흰 카드 안에 담고, 로고는 작은 타일·입력칸은 얇은 테두리 사각형.
-      */}
-      <div
-        className={cn(
-          "mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-10",
-          "md:my-auto md:max-w-[26rem] md:flex-none md:rounded-[1.5rem] md:border md:border-border",
-          "md:bg-card md:px-10 md:py-12 md:shadow-[0_1px_2px_rgb(21_46_99/0.04)]",
-        )}
-      >
-        <div className="mb-10 flex flex-col items-center gap-3 md:mb-8 md:gap-2">
-          <span className="md:mb-3 md:rounded-2xl md:border md:border-border md:bg-card md:p-2.5 md:shadow-[0_4px_12px_-4px_rgb(21_46_99/0.15)]">
-            <img src={logoUrl} alt="" width={88} height={88} className="size-22 md:size-10" />
-          </span>
-          <h1 className="text-[1.75rem] font-bold leading-9 tracking-tight text-primary md:text-2xl md:leading-8">
-            케어로그
-          </h1>
-          <p className="hidden type-body text-muted-foreground md:block">
-            담당자 계정으로 로그인해 주세요.
-          </p>
-        </div>
-
+      <AuthLayout title="케어로그" description="담당자 계정으로 로그인해 주세요.">
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 md:gap-3">
           <div>
             <PillField invalid={Boolean(idError)} icon={<User aria-hidden />}>
@@ -157,10 +136,7 @@ export function LoginPage() {
             size="lg"
             block
             disabled={submitting}
-            className={cn(
-              "mt-2 h-14 rounded-full text-base shadow-[0_10px_20px_-8px_rgb(21_46_99/0.45)]",
-              "md:mt-1 md:h-12 md:rounded-control md:shadow-none",
-            )}
+            className={authButtonClass}
           >
             {submitting ? <Spinner label="로그인 중…" /> : "로그인"}
           </Button>
@@ -184,37 +160,14 @@ export function LoginPage() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
-    </div>
-  );
-}
 
-const pillInputClass =
-  "h-full min-w-0 flex-1 bg-transparent type-input text-foreground outline-none placeholder:text-muted-foreground/70";
-
-/** 아이콘이 붙은 둥근 흰 입력칸. 포커스는 칸 전체 테두리로 보여 준다 (가이드 8장) */
-function PillField({
-  icon,
-  invalid,
-  children,
-}: {
-  icon: React.ReactNode;
-  invalid?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex h-14 items-center gap-3 rounded-full bg-card px-5 shadow-[0_6px_16px_-6px_rgb(21_46_99/0.18)]",
-        // 데스크톱: 카드 안이라 그림자 대신 얇은 테두리의 사각형 칸
-        "md:h-12 md:rounded-control md:border md:border-input/50 md:px-4 md:shadow-none",
-        "ring-primary transition-shadow duration-150 focus-within:ring-2",
-        "[&_svg]:size-5 [&>svg]:shrink-0 [&>svg]:text-muted-foreground",
-        invalid && "ring-2 ring-destructive focus-within:ring-destructive",
-      )}
-    >
-      {icon}
-      {children}
+        <p className="mt-2 flex items-center justify-center gap-1 type-caption text-muted-foreground">
+          계정이 없으신가요?
+          <Button variant="ghost" size="dense" className="font-bold text-primary" asChild>
+            <Link to="/signup">회원가입</Link>
+          </Button>
+        </p>
+      </AuthLayout>
     </div>
   );
 }

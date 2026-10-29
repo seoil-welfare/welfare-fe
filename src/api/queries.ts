@@ -12,6 +12,7 @@ import type {
   LoginInput,
   SaveDiaryInput,
   ServiceUserInput,
+  SignupInput,
   StaffInput,
 } from "@/api/types";
 import { addDays, dateOf } from "@/lib/utils";
@@ -77,6 +78,15 @@ export function useLogin() {
       client.clear();
       client.setQueryData(queryKeys.me, staff);
     },
+  });
+}
+
+export function useSignup() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SignupInput) => api.auth.signup(input),
+    // 담당자 목록에 바로 보이게 한다
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.staff }),
   });
 }
 
