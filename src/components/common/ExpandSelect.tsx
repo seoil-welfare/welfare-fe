@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { Collapse } from "@/components/motion/Collapse";
 import { cn } from "@/lib/utils";
 
 export interface ExpandSelectOption {
@@ -10,7 +11,8 @@ export interface ExpandSelectOption {
 /**
  * ExpandSelect (프로젝트 컴포넌트).
  * 값이 보이는 칸은 그대로 두고, 그 아래에 목록 상자가 내려왔다 올라간다.
- * 목록은 화면 위에 뜨지 않고 아래 내용을 밀어낸다. 한 번에 약 4칸이 보이고 나머지는 상자 안에서 스크롤한다.
+ * 기본은 아래 내용을 밀어내고, overlay면 아래 내용 위에 뜬다(좁은 칸이 한 줄에 여럿일 때).
+ * 한 번에 약 4칸이 보이고 나머지는 상자 안에서 스크롤한다. 펼침 효과는 공통 Collapse를 쓴다.
  *
  * 키보드: 열린 상태에서 ↑↓로 이동, Enter·Space로 선택, Esc로 닫기 (listbox 패턴)
  */
@@ -23,7 +25,10 @@ export function ExpandSelect({
   disabled,
   invalid,
   describedBy,
+  overlay,
+  onClose,
   className,
+  triggerClassName,
 }: {
   /** 화면 낭독기용 이름 */
   label: string;
@@ -36,7 +41,13 @@ export function ExpandSelect({
   invalid?: boolean;
   /** 오류 문구 id (화면 낭독기가 함께 읽는다) */
   describedBy?: string;
+  /** 목록을 아래 내용 위에 띄운다 */
+  overlay?: boolean;
+  /** 목록이 닫힌 뒤 부른다 (칸을 벗어날 때의 검사용). 고른 값이 반영된 뒤에 불린다 */
+  onClose?: () => void;
   className?: string;
+  /** 값 칸 모양을 화면에 맞게 바꿀 때 */
+  triggerClassName?: string;
 }) {
   const id = useId();
   const listId = id + "-list";
@@ -60,6 +71,13 @@ export function ExpandSelect({
     scrollListTo(index, "center");
     listRef.current?.focus({ preventScroll: true });
     // 열리는 순간만 맞춘다. 열린 동안 목록이 바뀌어도 위치를 다시 잡지 않는다
+  }, [open]);
+
+  // 닫힌 뒤 알린다. 효과에서 불러야 방금 고른 값이 반영된 onClose를 쓴다
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) onClose?.();
+    wasOpen.current = open;
   }, [open]);
 
   // 칸 바깥을 누르면 닫는다
@@ -119,7 +137,7 @@ export function ExpandSelect({
   }
 
   return (
-    <div ref={rootRef} className={cn("flex flex-col", className)}>
+    <div ref={rootRef} className={cn("relative flex flex-col", className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -143,6 +161,7 @@ export function ExpandSelect({
           "aria-[invalid=true]:border-2 aria-[invalid=true]:border-destructive",
           "text-left type-input disabled:cursor-not-allowed disabled:opacity-50",
           selected ? "text-foreground" : "text-muted-foreground",
+          triggerClassName,
         )}
       >
         <span className="truncate tnum">{selected ? selected.label : placeholder}</span>
@@ -155,61 +174,46 @@ export function ExpandSelect({
         />
       </button>
 
-      {/*
-        목록 상자. 높이(0fr → 1fr)와 투명도·위치를 같은 곡선으로 함께 움직여
-        열 때와 닫을 때가 같은 속도로 보이게 한다. 닫힌 동안에는 화면 낭독기·키보드에서 숨긴다
-      */}
-      <div
-        inert={!open}
-        className={cn(
-          "grid transition-[grid-template-rows] duration-250 ease-[cubic-bezier(0.2,0,0,1)]",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        )}
+      {/* 목록 상자. 닫힌 동안에는 화면 낭독기·키보드에서 숨긴다 */}
+      <Collapse
+        open={open}
+        className={overlay ? "absolute inset-x-0 top-full z-20" : undefined}
+        panelClassName="mt-1.5 rounded-control border border-border bg-card shadow-[var(--shadow-home)]"
       >
-        <div className="min-h-0 overflow-hidden">
-          <div
-            className={cn(
-              "mt-1.5 rounded-control border border-border bg-card shadow-[var(--shadow-home)]",
-              "transition-[opacity,translate] duration-250 ease-[cubic-bezier(0.2,0,0,1)]",
-              open ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0",
-            )}
-          >
-            <ul
-              ref={listRef}
-              id={listId}
-              role="listbox"
-              aria-label={label}
-              aria-activedescendant={open && options[active] ? id + "-opt-" + active : undefined}
-              tabIndex={-1}
-              onKeyDown={onListKeyDown}
-              className="scrollbar-none relative max-h-[11.5rem] overflow-y-auto overscroll-contain p-1 outline-none"
-            >
-              {options.map((option, index) => {
-                const isSelected = option.value === value;
-                return (
-                  <li
-                    key={option.value}
-                    id={id + "-opt-" + index}
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => choose(option)}
-                    onPointerMove={() => setActive(index)}
-                    className={cn(
-                      "flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-control px-3",
-                      "type-body tnum transition-colors duration-100",
-                      index === active && "bg-accent",
-                      isSelected ? "font-medium text-primary" : "text-foreground",
-                    )}
-                  >
-                    <span>{option.label}</span>
-                    {isSelected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
-      </div>
+        <ul
+          ref={listRef}
+          id={listId}
+          role="listbox"
+          aria-label={label}
+          aria-activedescendant={open && options[active] ? id + "-opt-" + active : undefined}
+          tabIndex={-1}
+          onKeyDown={onListKeyDown}
+          className="scrollbar-none relative max-h-[11.5rem] overflow-y-auto overscroll-contain p-1 outline-none"
+        >
+          {options.map((option, index) => {
+            const isSelected = option.value === value;
+            return (
+              <li
+                key={option.value}
+                id={id + "-opt-" + index}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => choose(option)}
+                onPointerMove={() => setActive(index)}
+                className={cn(
+                  "flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-control px-3",
+                  "type-body tnum transition-colors duration-100",
+                  index === active && "bg-accent",
+                  isSelected ? "font-medium text-primary" : "text-foreground",
+                )}
+              >
+                <span>{option.label}</span>
+                {isSelected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
+              </li>
+            );
+          })}
+        </ul>
+      </Collapse>
     </div>
   );
 }
