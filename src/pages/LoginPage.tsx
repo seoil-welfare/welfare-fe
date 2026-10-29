@@ -12,6 +12,7 @@ import { useLogin } from "@/api/queries";
 import { IS_MOCK } from "@/config";
 import { DemoPanel } from "@/demo/DemoPanel";
 import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
+import { cn } from "@/lib/utils";
 
 /**
  * 로그인 (FR-01~FR-03).
@@ -140,6 +141,21 @@ export function LoginPage() {
           >
             {submitting ? <Spinner label="로그인 중…" /> : "로그인"}
           </Button>
+
+          {/* 로그인과 같은 모양, 색만 반대(흰 바탕·남색 테두리). 로그인 버튼보다 눈에 덜 띄게 그림자를 옅게 둔다 */}
+          <Button
+            variant="outline"
+            size="lg"
+            block
+            asChild
+            className={cn(
+              authButtonClass,
+              "mt-0 border-primary bg-card text-primary hover:bg-accent md:mt-0",
+              "shadow-[0_6px_16px_-6px_rgb(21_46_99/0.18)] md:shadow-none",
+            )}
+          >
+            <Link to="/signup">회원가입</Link>
+          </Button>
         </form>
 
         <div className="mt-8 flex flex-col items-center gap-0.5 md:mt-6 md:flex-row md:justify-center md:gap-1">
@@ -161,12 +177,6 @@ export function LoginPage() {
           </Dialog>
         </div>
 
-        <p className="mt-2 flex items-center justify-center gap-1 type-caption text-muted-foreground">
-          계정이 없으신가요?
-          <Button variant="ghost" size="dense" className="font-bold text-primary" asChild>
-            <Link to="/signup">회원가입</Link>
-          </Button>
-        </p>
       </AuthLayout>
     </div>
   );

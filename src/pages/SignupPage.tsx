@@ -1,25 +1,39 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarDays, Eye, EyeOff, IdCard, LockKeyhole, User } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/misc";
 import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
-import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
+import { ExpandSelect } from "@/components/common/ExpandSelect";
+import { AuthLayout, authButtonClass } from "@/components/auth/AuthLayout";
 import { errorMessage, isApiError } from "@/api/errors";
 import { useSignup } from "@/api/queries";
 import { useToday } from "@/lib/today";
+import { cn } from "@/lib/utils";
 import { ROLE_POSITION, type UserRole } from "@/types";
 
 /** 직위 선택지. 화면에는 직위 이름을, 저장에는 권한(role)을 쓴다 */
 const ROLE_OPTIONS: readonly UserRole[] = ["staff", "teamLead", "director"];
 
+const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+
 type FieldKey = "loginId" | "password" | "passwordConfirm" | "name" | "birthDate";
+
+/** 칸에서 벗어났을 때 오류가 나면 그 칸으로 포커스를 옮긴다. 생년월일은 '년' 칸으로 */
+const FOCUS_ID: Record<FieldKey, string> = {
+  loginId: "signup-loginId",
+  password: "signup-password",
+  passwordConfirm: "signup-passwordConfirm",
+  name: "signup-name",
+  birthDate: "signup-birthYear",
+};
 
 /**
  * 회원가입.
- * 아이디·비밀번호·이름·생년월일과 직위(담당자·팀장·국장)를 받는다.
+ * 칸마다 위에 이름을 두는 배치다 (네이버 회원가입 참고).
+ * 아이디·비밀번호·이름·생년월일(년은 직접 입력, 월·일은 선택)과 직위(담당자·팀장·국장)를 받는다.
  * 아이디·비밀번호 규칙은 백엔드(AuthService, PasswordPolicy)와 같다. 가입만 하고 로그인은 따로 한다.
  */
 export function SignupPage() {
@@ -31,20 +45,43 @@ export function SignupPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthDay, setBirthDay] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
 
-  const values = { loginId, password, passwordConfirm, name, birthDate };
+  const birthDate =
+    birthYear.length === 4 && birthMonth && birthDay
+      ? birthYear + "-" + birthMonth.padStart(2, "0") + "-" + birthDay.padStart(2, "0")
+      : "";
+  const values = { loginId, password, passwordConfirm, name, birthDate, birthYear, birthMonth, birthDay };
+
+  // 고른 달의 날 수만큼 일을 보여 준다 (년을 모르면 2월은 29일까지)
+  const dayCount = daysInMonth(birthYear.length === 4 ? Number(birthYear) : 2000, Number(birthMonth) || 1);
+  const days = Array.from({ length: dayCount }, (_, i) => String(i + 1));
 
   function check(key: FieldKey): string | undefined {
     return validate(key, values, today);
   }
 
+  /**
+   * 고치기 시작한 칸의 오류는 바로 지운다. 다른 곳을 누르는 순간(포커스가 빠질 때) 오류 줄이 사라지면
+   * 화면이 당겨져 누르려던 버튼에서 클릭이 빗나가기 때문이다. 여전히 틀렸으면 칸을 벗어날 때 다시 알린다.
+   */
+  function editing(key: FieldKey) {
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
   /** 입력 중에는 오류를 띄우지 않고 칸을 벗어날 때 검사한다 (가이드 9장 8번) */
   function checkOnBlur(key: FieldKey) {
-    setErrors((prev) => ({ ...prev, [key]: check(key) }));
+    let message = check(key);
+    // 생년월일은 년·월·일 칸을 옮겨 다니는 중이라, 아직 비어 있는 칸은 '가입하기' 때만 알린다
+    if (key === "birthDate" && (!birthYear || !birthMonth || !birthDay) && !(birthYear && birthYear.length !== 4)) {
+      message = undefined;
+    }
+    setErrors((prev) => ({ ...prev, [key]: message }));
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -55,7 +92,7 @@ export function SignupPage() {
     setErrors(next);
     const firstError = keys.find((key) => next[key]);
     if (firstError) {
-      document.getElementById("signup-" + firstError)?.focus();
+      document.getElementById(FOCUS_ID[firstError])?.focus();
       return;
     }
 
@@ -69,7 +106,7 @@ export function SignupPage() {
         onError: (error) => {
           if (isApiError(error) && error.code === "DUPLICATE_LOGIN_ID") {
             setErrors((prev) => ({ ...prev, loginId: "이미 사용 중인 아이디예요." }));
-            document.getElementById("signup-loginId")?.focus();
+            document.getElementById(FOCUS_ID.loginId)?.focus();
           } else if (isApiError(error) && error.code === "PASSWORD_POLICY") {
             setErrors((prev) => ({ ...prev, password: error.message }));
           } else {
@@ -83,86 +120,151 @@ export function SignupPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <AuthLayout title="회원가입" description="케어로그에서 쓸 계정을 만들어요." logoSize="small">
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 md:gap-3">
-          <TextField
-            id="signup-loginId"
-            label="아이디"
-            icon={<User aria-hidden />}
-            autoComplete="username"
-            placeholder="아이디"
-            hint="영문 소문자·숫자와 . _ - 를 써서 4자 이상"
-            value={loginId}
-            onChange={setLoginId}
-            onBlur={() => checkOnBlur("loginId")}
-            error={errors.loginId}
-          />
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+          <FieldBlock label="아이디" htmlFor={FOCUS_ID.loginId} error={errors.loginId}>
+            <Box invalid={Boolean(errors.loginId)}>
+              <input
+                id={FOCUS_ID.loginId}
+                autoComplete="username"
+                value={loginId}
+                onChange={(event) => {
+                  setLoginId(event.target.value);
+                  editing("loginId");
+                }}
+                onBlur={() => checkOnBlur("loginId")}
+                {...fieldA11y(FOCUS_ID.loginId, errors.loginId)}
+                className={inputClass}
+              />
+            </Box>
+          </FieldBlock>
 
-          <TextField
-            id="signup-password"
-            label="비밀번호"
-            icon={<LockKeyhole aria-hidden />}
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            placeholder="비밀번호"
-            hint="영문과 숫자를 섞어 8자 이상"
-            value={password}
-            onChange={setPassword}
-            onBlur={() => checkOnBlur("password")}
-            error={errors.password}
-            trailing={
+          <FieldBlock label="비밀번호" htmlFor={FOCUS_ID.password} error={errors.password}>
+            <Box invalid={Boolean(errors.password)}>
+              <input
+                id={FOCUS_ID.password}
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  editing("password");
+                }}
+                onBlur={() => checkOnBlur("password")}
+                {...fieldA11y(FOCUS_ID.password, errors.password)}
+                className={inputClass}
+              />
               <Button
                 variant="ghost"
                 size="icon"
-                className="-mr-3 shrink-0 rounded-full text-muted-foreground"
+                className="-mr-2 shrink-0 text-muted-foreground"
                 aria-pressed={showPassword}
                 aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                 onClick={() => setShowPassword((prev) => !prev)}
               >
                 {showPassword ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
               </Button>
-            }
-          />
+            </Box>
+          </FieldBlock>
 
-          <TextField
-            id="signup-passwordConfirm"
-            label="비밀번호 확인"
-            icon={<LockKeyhole aria-hidden />}
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            placeholder="비밀번호 확인"
-            value={passwordConfirm}
-            onChange={setPasswordConfirm}
-            onBlur={() => checkOnBlur("passwordConfirm")}
-            error={errors.passwordConfirm}
-          />
+          <FieldBlock label="비밀번호 재확인" htmlFor={FOCUS_ID.passwordConfirm} error={errors.passwordConfirm}>
+            <Box invalid={Boolean(errors.passwordConfirm)}>
+              <input
+                id={FOCUS_ID.passwordConfirm}
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(event) => {
+                  setPasswordConfirm(event.target.value);
+                  editing("passwordConfirm");
+                }}
+                onBlur={() => checkOnBlur("passwordConfirm")}
+                {...fieldA11y(FOCUS_ID.passwordConfirm, errors.passwordConfirm)}
+                className={inputClass}
+              />
+              <LockKeyhole
+                aria-hidden
+                className={cn(
+                  "size-5 shrink-0",
+                  passwordConfirm && passwordConfirm === password ? "text-primary" : "text-muted-foreground/60",
+                )}
+              />
+            </Box>
+          </FieldBlock>
 
-          <TextField
-            id="signup-name"
-            label="이름"
-            icon={<IdCard aria-hidden />}
-            autoComplete="name"
-            placeholder="이름"
-            value={name}
-            onChange={setName}
-            onBlur={() => checkOnBlur("name")}
-            error={errors.name}
-          />
+          <FieldBlock label="이름" htmlFor={FOCUS_ID.name} error={errors.name}>
+            <Box invalid={Boolean(errors.name)}>
+              <input
+                id={FOCUS_ID.name}
+                autoComplete="name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  editing("name");
+                }}
+                onBlur={() => checkOnBlur("name")}
+                {...fieldA11y(FOCUS_ID.name, errors.name)}
+                className={inputClass}
+              />
+            </Box>
+          </FieldBlock>
 
-          <TextField
-            id="signup-birthDate"
-            label="생년월일"
-            icon={<CalendarDays aria-hidden />}
-            type="date"
-            max={today}
-            value={birthDate}
-            onChange={setBirthDate}
-            onBlur={() => checkOnBlur("birthDate")}
-            error={errors.birthDate}
-            // 날짜 칸은 값이 없을 때 브라우저 기본 형식(연-월-일)이 흐리게 보인다
-            inputClassName={birthDate ? undefined : "text-muted-foreground/70"}
-          />
+          {/* 생년월일: 년은 직접 입력, 월·일은 선택 */}
+          <fieldset className="border-0 p-0">
+            <legend className="mb-1.5 type-body font-bold text-foreground">생년월일</legend>
+            <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
+              <Box invalid={Boolean(errors.birthDate)}>
+                <input
+                  id={FOCUS_ID.birthDate}
+                  inputMode="numeric"
+                  autoComplete="bday-year"
+                  maxLength={4}
+                  placeholder="연도(4자)"
+                  aria-label="태어난 해 (4자리)"
+                  value={birthYear}
+                  onChange={(event) => {
+                    setBirthYear(event.target.value.replace(/\D/g, "").slice(0, 4));
+                    editing("birthDate");
+                  }}
+                  onBlur={() => checkOnBlur("birthDate")}
+                  {...fieldA11y("signup-birthDate", errors.birthDate)}
+                  className={cn(inputClass, "tnum")}
+                />
+              </Box>
+              <SelectBox
+                label="태어난 달"
+                placeholder="월"
+                value={birthMonth}
+                options={MONTHS}
+                suffix="월"
+                invalid={Boolean(errors.birthDate)}
+                onChange={(value) => {
+                  setBirthMonth(value);
+                  editing("birthDate");
+                  // 고른 달에 없는 날이면 일을 비운다 (예: 31일 → 2월)
+                  if (Number(birthDay) > daysInMonth(Number(birthYear) || 2000, Number(value))) setBirthDay("");
+                }}
+                onBlur={() => checkOnBlur("birthDate")}
+              />
+              <SelectBox
+                label="태어난 날"
+                placeholder="일"
+                value={birthDay}
+                options={days}
+                suffix="일"
+                invalid={Boolean(errors.birthDate)}
+                onChange={(value) => {
+                  setBirthDay(value);
+                  editing("birthDate");
+                }}
+                onBlur={() => checkOnBlur("birthDate")}
+              />
+            </div>
+            <FieldError id="signup-birthDate-error" className="px-1">
+              {errors.birthDate}
+            </FieldError>
+          </fieldset>
 
-          <div className="px-1 pt-1">
+          <div className="px-1">
             <SingleChoiceGroup
               label="직위"
               options={ROLE_OPTIONS.map((r) => ROLE_POSITION[r])}
@@ -190,69 +292,107 @@ export function SignupPage() {
   );
 }
 
-function TextField({
-  id,
+const inputClass =
+  "h-full min-w-0 flex-1 bg-transparent type-input text-foreground outline-none placeholder:text-muted-foreground/70";
+
+/** 칸 위에 이름, 아래에 오류 */
+function FieldBlock({
   label,
-  icon,
-  value,
-  onChange,
-  onBlur,
+  htmlFor,
   error,
-  hint,
-  trailing,
-  inputClassName,
-  type = "text",
-  ...rest
+  children,
 }: {
-  id: string;
   label: string;
-  icon: React.ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
+  htmlFor: string;
   error?: string;
-  /** 규칙 안내. 오류가 없을 때만 칸 아래에 보인다 */
-  hint?: string;
-  trailing?: React.ReactNode;
-  inputClassName?: string;
-  type?: string;
-  autoComplete?: string;
-  placeholder?: string;
-  max?: string;
+  children: ReactNode;
 }) {
-  const errorId = id + "-error";
-  const hintId = id + "-hint";
   return (
     <div>
-      <PillField invalid={Boolean(error)} icon={icon}>
-        {/* 칸 안의 안내 글씨로 이름을 보여 주고, 화면 낭독기용 이름은 따로 둔다 */}
-        <label htmlFor={id} className="sr-only">
-          {label}
-        </label>
-        <input
-          id={id}
-          type={type}
-          value={value}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : hint ? hintId : undefined}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={onBlur}
-          className={inputClassName ? pillInputClass + " " + inputClassName : pillInputClass}
-          {...rest}
-        />
-        {trailing}
-      </PillField>
-      {error ? (
-        <FieldError id={errorId} className="px-5 md:px-1">
-          {error}
-        </FieldError>
-      ) : hint ? (
-        <p id={hintId} className="mt-1 px-5 type-caption text-muted-foreground md:px-1">
-          {hint}
-        </p>
-      ) : null}
+      <label htmlFor={htmlFor} className="mb-1.5 block type-body font-bold text-foreground">
+        {label}
+      </label>
+      {children}
+      <FieldError id={htmlFor + "-error"} className="px-1">
+        {error}
+      </FieldError>
     </div>
   );
+}
+
+/** 얇은 테두리의 흰 사각형 칸. 포커스는 남색 테두리, 오류는 빨간 테두리 (가이드 8장) */
+function Box({ invalid, children }: { invalid?: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        // min-w-0: 생년월일처럼 여러 칸을 한 줄에 놓을 때 칸이 글자 폭보다 줄어들 수 있게 한다
+        "flex h-12 min-w-0 items-center gap-2 rounded-control border bg-card px-3.5 transition-shadow duration-150",
+        invalid
+          ? "border-destructive ring-1 ring-destructive"
+          : "border-input/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * 월·일 선택. 일지 작성의 시간 선택과 같은 ExpandSelect를 쓰고, 칸 모양만 회원가입 칸(Box)에 맞춘다.
+ * 좁은 칸 셋이 한 줄에 있어 목록이 아래 내용을 밀면 줄이 출렁이므로, 목록을 위에 띄운다.
+ */
+function SelectBox({
+  label,
+  placeholder,
+  value,
+  options,
+  suffix,
+  invalid,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: readonly string[];
+  suffix: string;
+  invalid?: boolean;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+}) {
+  return (
+    <ExpandSelect
+      overlay
+      label={label}
+      placeholder={placeholder}
+      value={value}
+      options={options.map((option) => ({ value: option, label: option + suffix }))}
+      onChange={onChange}
+      // 목록을 닫을 때가 칸을 벗어나는 때다
+      onClose={onBlur}
+      invalid={invalid}
+      describedBy={invalid ? "signup-birthDate-error" : undefined}
+      className="min-w-0"
+      triggerClassName={cn(
+        "border-input/50 bg-card px-3.5 transition-shadow duration-150",
+        "focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none",
+        "aria-expanded:border-primary aria-expanded:ring-1 aria-expanded:ring-primary",
+        "aria-[invalid=true]:border aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive",
+      )}
+    />
+  );
+}
+
+/** 오류 문구를 화면 낭독기가 칸과 함께 읽게 연결한다 */
+function fieldA11y(id: string, error?: string) {
+  return {
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? id + "-error" : undefined,
+  } as const;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
 }
 
 const LOGIN_ID_PATTERN = /^[a-z0-9._-]{4,50}$/;
@@ -260,7 +400,7 @@ const LOGIN_ID_PATTERN = /^[a-z0-9._-]{4,50}$/;
 /** 백엔드(AuthService.LOGIN_ID, PasswordPolicy)와 같은 규칙 */
 function validate(
   key: FieldKey,
-  v: Record<FieldKey, string>,
+  v: Record<FieldKey | "birthYear" | "birthMonth" | "birthDay", string>,
   today: string,
 ): string | undefined {
   switch (key) {
@@ -285,9 +425,13 @@ function validate(
     case "name":
       if (!v.name.trim()) return "이름을 입력해 주세요.";
       return v.name.trim().length > 50 ? "이름이 너무 길어요." : undefined;
-    case "birthDate":
-      if (!v.birthDate) return "생년월일을 입력해 주세요.";
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v.birthDate)) return "생년월일을 다시 확인해 주세요.";
+    case "birthDate": {
+      if (!v.birthYear && !v.birthMonth && !v.birthDay) return "생년월일을 입력해 주세요.";
+      if (v.birthYear.length !== 4) return "태어난 해를 4자리로 입력해 주세요. (예: 1995)";
+      const year = Number(v.birthYear);
+      if (year < 1900 || year > Number(today.slice(0, 4))) return "태어난 해를 다시 확인해 주세요.";
+      if (!v.birthMonth || !v.birthDay) return "태어난 달과 날을 골라 주세요.";
       return v.birthDate > today ? "오늘 이후 날짜는 고를 수 없어요." : undefined;
+    }
   }
 }

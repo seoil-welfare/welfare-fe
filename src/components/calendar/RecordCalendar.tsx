@@ -163,27 +163,30 @@ function DayCell({
     >
       <span className="tnum type-body font-medium">{d.getDate()}</span>
 
-      {/* 일지가 전혀 저장되지 않은 날짜에는 지표를 표시하지 않는다 (지시서 4.3) */}
-      {completion ? (
-        indicator === "completion" ? (
-          <span
-            className={cn(
-              "tnum type-caption leading-none",
-              selected ? "text-primary-foreground/90" : "text-muted-foreground",
-            )}
-          >
-            {indicatorText}
-          </span>
-        ) : (
-          <Gauge
-            completed={completion.completed}
-            total={completion.total}
-            selected={selected}
-          />
-        )
-      ) : (
-        <span className="h-3" aria-hidden />
-      )}
+      {/*
+        일지가 전혀 저장되지 않은 날짜에는 지표를 표시하지 않는다 (지시서 4.3).
+        지표 자리는 내용이 없어도 같은 높이로 둔다. 높이가 달라지면 날짜 숫자가 칸마다 들쭉날쭉해진다
+      */}
+      <span aria-hidden className="flex h-4 items-center justify-center">
+        {completion ? (
+          indicator === "completion" ? (
+            <span
+              className={cn(
+                "tnum text-xs leading-none",
+                selected ? "text-primary-foreground/90" : "text-muted-foreground",
+              )}
+            >
+              {indicatorText}
+            </span>
+          ) : (
+            <Gauge
+              completed={completion.completed}
+              total={completion.total}
+              selected={selected}
+            />
+          )
+        ) : null}
+      </span>
 
       {/* 행동 유무는 진행률·선택과 독립적인 점으로 표시한다 */}
       <span
