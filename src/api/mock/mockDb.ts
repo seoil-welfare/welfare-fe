@@ -14,6 +14,8 @@ export interface MockState {
   events: DiaryEvent[];
   serviceUsers: ServiceUser[];
   staff: Staff[];
+  /** 회원가입한 계정의 비밀번호 (직원 id → 비밀번호). 없으면 데모 비밀번호를 쓴다 */
+  passwords?: Record<string, string>;
   session: { currentStaffId: string | null };
 }
 

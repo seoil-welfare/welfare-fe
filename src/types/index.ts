@@ -5,6 +5,13 @@
 
 export type UserRole = "staff" | "teamLead" | "director";
 
+/** 직위는 국장·팀장·담당자 세 가지다 (회의 결정). 권한(role)에서 정해진다 */
+export const ROLE_POSITION: Record<UserRole, string> = {
+  staff: "담당자",
+  teamLead: "팀장",
+  director: "국장",
+};
+
 export interface Staff {
   id: string;
   /** 가상 직원 이름 — 실존 직원이 아니다 */
@@ -14,6 +21,8 @@ export interface Staff {
   position: string;
   role: UserRole;
   loginId: string;
+  /** YYYY-MM-DD. 회원가입 때 받는다 */
+  birthDate?: string;
   /** U4 미확정 예시 직위임을 화면에서 표시하기 위한 플래그 */
   unconfirmedPosition?: boolean;
 }

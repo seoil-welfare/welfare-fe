@@ -26,6 +26,16 @@ export interface LoginInput {
   autoLogin: boolean;
 }
 
+/** 회원가입. 가입만 하고 로그인은 따로 한다 */
+export interface SignupInput {
+  loginId: string;
+  password: string;
+  name: string;
+  /** YYYY-MM-DD */
+  birthDate: string;
+  role: UserRole;
+}
+
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
@@ -74,6 +84,8 @@ export interface StaffInput {
 
 export interface AuthApi {
   login(input: LoginInput): Promise<Staff>;
+  /** 아이디가 겹치면 409 DUPLICATE_LOGIN_ID, 비밀번호 규칙 위반이면 400 PASSWORD_POLICY */
+  signup(input: SignupInput): Promise<Staff>;
   logout(): Promise<void>;
   /** 로그인 상태가 아니면 null */
   me(): Promise<Staff | null>;

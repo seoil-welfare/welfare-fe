@@ -6,8 +6,10 @@ import { useDiary } from "@/api/queries";
 import { errorMessage } from "@/api/errors";
 import { RequireAuth } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
+import { useRememberLastPage } from "@/app/lastPage";
 import { StatsProvider } from "@/app/StatsContext";
 import { LoginPage } from "@/pages/LoginPage";
+import { SignupPage } from "@/pages/SignupPage";
 import { HomePage } from "@/pages/HomePage";
 import { NewsPage } from "@/pages/NewsPage";
 import { DiaryEditPage } from "@/pages/DiaryEditPage";
@@ -59,10 +61,12 @@ function DiaryActivityEditEntry() {
 }
 
 export function AppRoutes() {
+  useRememberLastPage();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
 
       <Route element={<RequireAuth />}>
         <Route path="/home" element={<HomePage />} />
