@@ -91,6 +91,19 @@ function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
     if (input.diaryId && index < 0) throw notFound("일지");
 
     const previous = index >= 0 ? db.diaries[index] : null;
+    // 불러온 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않는다 (명세 4.6, 백엔드와 같은 규칙)
+    if (input.diaryId && previous) {
+      if (!input.updatedAt) {
+        throw new ApiError(400, "일지를 다시 불러온 뒤 저장해 주세요.", "VALIDATION_ERROR");
+      }
+      if (input.updatedAt !== previous.updatedAt) {
+        throw new ApiError(
+          409,
+          "다른 분이 먼저 수정했어요. 최신 내용을 다시 불러와 주세요.",
+          "DIARY_UPDATED_BY_OTHER",
+        );
+      }
+    }
     // 작성 완료된 일지를 다시 저장하면 수정 이력이 된다 (일지 상세 공통 규칙 3)
     const kind: DiaryEvent["kind"] = previous?.status === "completed" ? "updated" : "created";
 

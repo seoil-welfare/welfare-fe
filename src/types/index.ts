@@ -127,6 +127,11 @@ export interface DiaryDraft {
    * 이어 쓰는 일지와 구분하려고 둔다. 저장 요청에는 넣지 않는다
    */
   autosaved?: boolean;
+  /**
+   * 불러오거나 마지막으로 저장한 일지의 updatedAt. 수정(PUT)할 때 그대로 보낸다.
+   * 그사이 다른 사람이 저장했으면 서버가 409 DIARY_UPDATED_BY_OTHER로 거절한다 (명세 4.6)
+   */
+  updatedAt?: string;
   userId: string;
   date: string;
   weather: Weather;

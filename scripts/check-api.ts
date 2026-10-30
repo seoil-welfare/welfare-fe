@@ -76,6 +76,7 @@ async function main() {
   const completed = await mockApi.diaries.save({
     ...emptyDraft(user.id, date),
     diaryId: draft.id,
+    updatedAt: draft.updatedAt,
     activities: [activity],
     status: "completed",
   });
@@ -93,6 +94,7 @@ async function main() {
   const edited = await mockApi.diaries.save({
     ...emptyDraft(user.id, date),
     diaryId: draft.id,
+    updatedAt: completed.updatedAt,
     activities: [activity],
     notes: "수정",
     status: "completed",
@@ -107,6 +109,20 @@ async function main() {
     readDb().events.filter((e) => e.diaryId === draft.id).some((e) => e.kind === "updated"),
     "updated 존재",
   );
+
+  console.log("\n[동시 수정]");
+  const stale = await rejects(() =>
+    mockApi.diaries.save({
+      ...emptyDraft(user.id, date),
+      diaryId: draft.id,
+      updatedAt: draft.updatedAt,
+      notes: "오래된 내용으로 덮어쓰기",
+      status: "completed",
+    }),
+  );
+  expect("불러온 뒤 다른 사람이 저장했으면 409", stale === 409, "DIARY_UPDATED_BY_OTHER");
+  const kept = (await mockApi.diaries.get(draft.id)).notes;
+  expect("먼저 저장한 내용 유지", kept === "수정", kept);
 
   console.log("\n[응답 유실 후 같은 내용으로 다시 저장 (diaryId 없음)]");
   const retry = await mockApi.diaries.save({ ...emptyDraft(user.id, date), status: "completed" });
