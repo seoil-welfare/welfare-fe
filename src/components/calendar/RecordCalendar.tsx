@@ -149,7 +149,8 @@ function DayCell({
           ? "bg-primary text-primary-foreground"
           : cn(
               "hover:bg-accent",
-              isToday && "border-2 border-primary",
+              // 테두리(border)는 칸 크기에 더해져 안 내용이 밀린다. 안쪽 링은 크기에 영향이 없다
+              isToday && "ring-2 ring-inset ring-primary",
               // 달 바깥 날짜는 이번 달 날짜와 한눈에 구분되게 옅게 둔다 (지표·점까지 함께)
               outside
                 ? "text-muted-foreground opacity-45"
