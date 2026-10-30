@@ -1,4 +1,6 @@
+import type { StatsBehaviorRecord, StatsSummary } from "@/api/types";
 import {
+  BEHAVIOR_DETAILS,
   BEHAVIOR_TYPES,
   CATEGORY_ORDER,
   OTHER_LABEL,
@@ -253,45 +255,6 @@ export function behaviorCountsByType(
   return result;
 }
 
-/** 세부 행동별 건수 (FR-48) */
-export function behaviorDetailCounts(
-  diaries: readonly Diary[],
-  typeFilter: BehaviorType | "all",
-): CountItem[] {
-  const map = new Map<string, number>();
-  const types = typeFilter === "all" ? BEHAVIOR_TYPES.map((t) => t.type) : [typeFilter];
-
-  for (const type of types) {
-    if (type === "other") {
-      let count = 0;
-      for (const diary of diaries) {
-        for (const activity of diary.activities) {
-          if (!activity.hasBehavior) continue;
-          const sel = activity.behaviors.find((b) => b.type === "other");
-          if (sel?.otherText?.trim()) count += 1;
-        }
-      }
-      if (typeFilter !== "all" || count > 0) map.set("기타 (직접 입력)", count);
-      continue;
-    }
-    for (const diary of diaries) {
-      for (const activity of diary.activities) {
-        if (!activity.hasBehavior) continue;
-        for (const sel of activity.behaviors.filter((b) => b.type === type)) {
-          for (const detailId of new Set(sel.detailIds)) {
-            const label = behaviorDetailLabel(type, detailId);
-            const key = typeFilter === "all" ? labelWithType(type, label) : label;
-            map.set(key, (map.get(key) ?? 0) + 1);
-          }
-        }
-      }
-    }
-  }
-  return [...map.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-}
-
 function labelWithType(type: BehaviorType, label: string): string {
   return (BEHAVIOR_TYPES.find((t) => t.type === type)?.label ?? "") + " · " + label;
 }
@@ -525,4 +488,192 @@ function addDaysDate(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
+}
+
+/* ---------- GET /stats/summary ---------- */
+
+/**
+ * GET /stats/summary 응답과 같은 값. mock 구현이 쓴다.
+ * 백엔드 StatsService가 같은 규칙으로 SQL 집계한다. 규칙을 바꿀 때는 두 곳을 함께 바꾼다.
+ */
+export function statsSummary(
+  diaries: readonly Diary[],
+  userId: string,
+  period: StatisticPeriod,
+): StatsSummary {
+  const range = periodRange(period);
+  const completed = completedDiaries(diaries, userId, range);
+  const previous = completedDiaries(diaries, userId, periodRange(previousPeriod(period)));
+  const prevByType = behaviorCountsByType(previous);
+  const typeSummary = {} as StatsSummary["behavior"]["typeSummary"];
+  for (const meta of BEHAVIOR_TYPES) {
+    const current = behaviorSummary(diaries, userId, period, meta.type);
+    typeSummary[meta.type] = {
+      count: current.count,
+      days: current.days,
+      delta: current.count - prevByType[meta.type],
+    };
+  }
+  const summary = behaviorSummary(diaries, userId, period);
+  return {
+    period: { unit: period.unit, ...range },
+    completedDiaries: completed.length,
+    behavior: {
+      ...summary,
+      byType: behaviorCountsByType(completed),
+      typeSummary,
+      trend: behaviorTrend(diaries, userId, period),
+      details: behaviorDetailIdCounts(completed),
+      records: behaviorRecordRows(completed),
+    },
+    participation: activityFieldCounts(completed, "participation", { includeZero: true }),
+    reaction: activityFieldCounts(completed, "reaction", { includeZero: true }),
+    preSupport: activityFieldCounts(completed, "preSupport", { includeZero: true }),
+    positiveSupport: activityFieldCounts(completed, "positiveSupport", { includeZero: true }),
+    condition: conditionCounts(completed, { includeZero: true }),
+    activities: {
+      ...participationSummary(completed),
+      behaviorByParticipation: behaviorCountsByParticipation(completed),
+      reactionByParticipation: (CATEGORY_ORDER.participation ?? []).map((label) => ({
+        label,
+        reaction: reactionCountsForParticipation(completed, label),
+      })),
+    },
+  };
+}
+
+/** 세부 행동 코드별 건수 (1건 이상만, 유형 순서 → 목록 순서) */
+function behaviorDetailIdCounts(diaries: readonly Diary[]): StatsSummary["behavior"]["details"] {
+  const counts = new Map<string, number>();
+  const key = (type: BehaviorType, detailId: string) => type + "|" + detailId;
+  for (const diary of diaries) {
+    for (const activity of diary.activities) {
+      if (!activity.hasBehavior) continue;
+      for (const sel of activity.behaviors) {
+        if (sel.type === "other") {
+          if (sel.otherText?.trim()) counts.set(key("other", "other"), (counts.get(key("other", "other")) ?? 0) + 1);
+          continue;
+        }
+        for (const detailId of new Set(sel.detailIds)) {
+          counts.set(key(sel.type, detailId), (counts.get(key(sel.type, detailId)) ?? 0) + 1);
+        }
+      }
+    }
+  }
+  const out: StatsSummary["behavior"]["details"] = [];
+  for (const meta of BEHAVIOR_TYPES) {
+    const ids = meta.type === "other" ? ["other"] : BEHAVIOR_DETAILS[meta.type].map((d) => d.id);
+    for (const detailId of ids) {
+      const count = counts.get(key(meta.type, detailId));
+      if (count) out.push({ type: meta.type, detailId, count });
+    }
+  }
+  return out;
+}
+
+/** 발생 기록 (활동 1개 = 1줄, 날짜·시작 시각 최신순) */
+function behaviorRecordRows(diaries: readonly Diary[]): StatsBehaviorRecord[] {
+  const records: StatsBehaviorRecord[] = [];
+  for (const diary of diaries) {
+    for (const activity of diary.activities) {
+      if (!activity.hasBehavior) continue;
+      const behaviors: StatsBehaviorRecord["behaviors"] = [];
+      for (const meta of BEHAVIOR_TYPES) {
+        for (const sel of activity.behaviors.filter((b) => b.type === meta.type)) {
+          if (sel.type === "other") {
+            const text = sel.otherText?.trim();
+            if (text) behaviors.push({ type: "other", detailId: "other", otherText: text });
+            continue;
+          }
+          const order = BEHAVIOR_DETAILS[sel.type].map((d) => d.id);
+          [...new Set(sel.detailIds)]
+            .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+            .forEach((detailId) => behaviors.push({ type: sel.type, detailId }));
+        }
+      }
+      if (behaviors.length === 0) continue;
+      records.push({
+        diaryId: diary.id,
+        date: diary.date,
+        startTime: activity.startTime,
+        endTime: activity.endTime,
+        activityId: activity.id,
+        behaviors,
+      });
+    }
+  }
+  return records.sort(
+    (a, b) => b.date.localeCompare(a.date) || (b.startTime ?? "").localeCompare(a.startTime ?? ""),
+  );
+}
+
+/* ---------- 통계 응답 → 화면 값 ---------- */
+
+/** 상단 요약. 유형을 고르면 그 유형만 센다 (FR-47). '이전 기록 없음'은 전체 기준 */
+export function summaryFor(summary: StatsSummary, filter: BehaviorType | "all"): BehaviorSummary {
+  const { behavior } = summary;
+  if (filter === "all") {
+    return {
+      count: behavior.count,
+      days: behavior.days,
+      delta: behavior.delta,
+      previousEmpty: behavior.previousEmpty,
+    };
+  }
+  return { ...behavior.typeSummary[filter], previousEmpty: behavior.previousEmpty };
+}
+
+/** 세부 행동별 건수 막대 (FR-48). '전체'에서는 '유형 · 행동' 이름으로 보여 준다 */
+export function detailItemsFor(summary: StatsSummary, filter: BehaviorType | "all"): CountItem[] {
+  const items: CountItem[] = [];
+  for (const detail of summary.behavior.details) {
+    if (filter !== "all" && detail.type !== filter) continue;
+    if (detail.type === "other") {
+      items.push({ label: OTHER_DIRECT_LABEL, count: detail.count });
+      continue;
+    }
+    const label = behaviorDetailLabel(detail.type, detail.detailId);
+    items.push({ label: filter === "all" ? labelWithType(detail.type, label) : label, count: detail.count });
+  }
+  // '기타'만 고른 경우에는 0건이어도 막대 하나를 보여 준다
+  if (filter === "other" && items.length === 0) items.push({ label: OTHER_DIRECT_LABEL, count: 0 });
+  return items.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+const OTHER_DIRECT_LABEL = "기타 (직접 입력)";
+
+/** 발생 기록 (FR-49). 고른 유형의 행동이 없는 활동은 뺀다 */
+export function recordsFor(summary: StatsSummary, filter: BehaviorType | "all"): BehaviorRecord[] {
+  const records: BehaviorRecord[] = [];
+  for (const record of summary.behavior.records) {
+    const labels = record.behaviors
+      .filter((b) => filter === "all" || b.type === filter)
+      .map((b) =>
+        b.type === "other"
+          ? "기타 · " + (b.otherText ?? "")
+          : labelWithType(b.type, behaviorDetailLabel(b.type, b.detailId)),
+      );
+    if (labels.length === 0) continue;
+    records.push({
+      diaryId: record.diaryId,
+      date: record.date,
+      startTime: record.startTime,
+      endTime: record.endTime,
+      labels,
+      activityId: record.activityId,
+    });
+  }
+  return records;
+}
+
+/** 이용자 반응 막대 (FR-56) — 고른 참여 활동 기준 */
+export function reactionItemsFor(summary: StatsSummary, participationLabel: string): CountItem[] {
+  return (
+    summary.activities.reactionByParticipation.find((p) => p.label === participationLabel)?.reaction ?? []
+  );
+}
+
+/** 통계 메인 카드는 0건 항목을 빼고 보여 준다 */
+export function nonZero(items: readonly CountItem[]): CountItem[] {
+  return items.filter((item) => item.count > 0);
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,19 +12,10 @@ import { QueryGate } from "@/components/common/QueryGate";
 import { BehaviorDonut, HorizontalBars, TrendBars } from "@/components/stats/charts";
 import { PeriodPicker, UnitToggle } from "@/components/stats/PeriodPicker";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
-import { useStatsDiaries } from "@/app/useStatsDiaries";
+import { useStatsSummary } from "@/app/useStatsSummary";
 import { useToday } from "@/lib/today";
 import { activeServiceUsers } from "@/services/diaryService";
-import {
-  activityFieldCounts,
-  behaviorCountsByType,
-  behaviorSummary,
-  behaviorTrend,
-  completedDiaries,
-  conditionCounts,
-  currentPeriod,
-  periodRange,
-} from "@/services/statsService";
+import { currentPeriod, nonZero, periodRange, summaryFor } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
 import type { CountItem } from "@/types";
 
@@ -39,18 +30,13 @@ export function StatsPage() {
   const today = useToday();
   const usersQuery = useServiceUsers();
   const { userId, setUserId, period, setPeriod, unit, setUnit } = useStatsContext();
-  const { query: diariesQuery, diaries } = useStatsDiaries(userId, period);
+  const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const users = activeServiceUsers(usersQuery.data ?? []);
 
   const range = periodRange(period);
-  const completed = useMemo(
-    () => completedDiaries(diaries, userId, range),
-    [diaries, userId, range],
-  );
-
-  const summary = behaviorSummary(diaries, userId, period);
-  const typeCounts = behaviorCountsByType(completed);
-  const trend = behaviorTrend(diaries, userId, period);
+  const summary = summaryFor(stats, "all");
+  const typeCounts = stats.behavior.byType;
+  const trend = stats.behavior.trend;
 
   if (usersQuery.isSuccess && users.length === 0) {
     return (
@@ -91,14 +77,14 @@ export function StatsPage() {
             }}
           />
           <p className="tnum type-caption text-muted-foreground">
-            {range.label} · 작성 완료 일지 {completed.length}건 기준 (임시 저장 제외)
+            {range.label} · 작성 완료 일지 {stats.completedDiaries}건 기준 (임시 저장 제외)
           </p>
         </div>
 
         {/* 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다 */}
         <QueryGate
-          state={treatPlaceholderAsPending(combineQueries([usersQuery, diariesQuery]), [
-            diariesQuery,
+          state={treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
+            statsQuery,
           ])}
           skeleton={
             <div className="flex flex-col gap-3">
@@ -151,27 +137,27 @@ export function StatsPage() {
               <TopItemsSection
                 title="참여 활동"
                 to="/stats/activities"
-                items={activityFieldCounts(completed, "participation")}
+                items={nonZero(stats.participation)}
               />
               <TopItemsSection
                 title="이용자 반응"
                 to="/stats/reaction"
-                items={activityFieldCounts(completed, "reaction")}
+                items={nonZero(stats.reaction)}
               />
               <TopItemsSection
                 title="사전 지원"
                 to="/stats/preSupport"
-                items={activityFieldCounts(completed, "preSupport")}
+                items={nonZero(stats.preSupport)}
               />
               <TopItemsSection
                 title="긍정행동지원"
                 to="/stats/positiveSupport"
-                items={activityFieldCounts(completed, "positiveSupport")}
+                items={nonZero(stats.positiveSupport)}
               />
               <TopItemsSection
                 title="컨디션"
                 to="/stats/condition"
-                items={conditionCounts(completed)}
+                items={nonZero(stats.condition)}
                 note="컨디션은 일지별 선택 건수로 셉니다."
               />
             </>

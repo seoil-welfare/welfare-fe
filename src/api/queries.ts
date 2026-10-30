@@ -12,6 +12,7 @@ import type {
   DiaryQuery,
   LoginInput,
   SaveDiaryInput,
+  StatsQuery,
   ServiceUserInput,
   SignupInput,
   StaffInput,
@@ -61,6 +62,8 @@ export const queryKeys = {
   calendar: ["calendar"] as const,
   calendarDays: (query: CalendarQuery) => ["calendar", "days", query] as const,
   calendarDay: (date: string) => ["calendar", "day", date] as const,
+  stats: ["stats"] as const,
+  statsSummary: (query: StatsQuery) => ["stats", "summary", query] as const,
   news: ["news"] as const,
   newsSince: (since: string) => ["news", since] as const,
   serviceUsers: ["serviceUsers"] as const,
@@ -154,6 +157,15 @@ export function useCalendarDay(date: string) {
   });
 }
 
+export function useStatsSummary(query: StatsQuery) {
+  return useQuery({
+    queryKey: queryKeys.statsSummary(query),
+    queryFn: () => api.stats.summary(query),
+    enabled: Boolean(query.userId),
+    placeholderData: (previous) => previous,
+  });
+}
+
 export function useNews(since: string) {
   return useQuery({
     queryKey: queryKeys.newsSince(since),
@@ -204,10 +216,16 @@ export function useSaveDiary() {
       client.setQueryData(queryKeys.diary(diary.id), diary);
       void client.invalidateQueries({ queryKey: queryKeys.diaries });
       void client.invalidateQueries({ queryKey: queryKeys.calendar });
+      void client.invalidateQueries({ queryKey: queryKeys.stats });
       void client.invalidateQueries({ queryKey: queryKeys.news });
     },
     onError: () =>
-      refetchAfterFailure(client, [queryKeys.diaries, queryKeys.calendar, queryKeys.news]),
+      refetchAfterFailure(client, [
+        queryKeys.diaries,
+        queryKeys.calendar,
+        queryKeys.stats,
+        queryKeys.news,
+      ]),
   });
 }
 

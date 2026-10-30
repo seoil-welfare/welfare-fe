@@ -227,16 +227,20 @@ GET /categories
 
 ### 7-2. 통계 집계 (B-11 관련)
 
+**구현됨.** 통계 화면 4개가 아래 응답 하나를 함께 씁니다. 타입은 [`api/types.ts`](../src/api/types.ts)의 `StatsSummary`입니다.
+
 ```
 GET /stats/summary?userId&unit=week|month|quarter|year&year&month&quarter&week
-→ { behavior: { count, days, delta, previousEmpty, byType, trend[] },
+→ { period, completedDiaries,
+    behavior: { count, days, delta, previousEmpty, byType, typeSummary, trend[], details[], records[] },
     participation: CountItem[], reaction: CountItem[], preSupport: CountItem[],
-    positiveSupport: CountItem[], condition: CountItem[] }
-GET /stats/behaviors?…&type=all|selfHarm|…   → 세부 행동 건수 + 발생 기록(페이지네이션)
-GET /stats/activities?…&focus=일상생활훈련   → FR-53~56 수치
+    positiveSupport: CountItem[], condition: CountItem[],
+    activities: { totalCount, kindCount, otherCount, behaviorByParticipation[], reactionByParticipation[] } }
 ```
 
-필드 이름은 프론트 [`statsService.ts`](../src/services/statsService.ts)의 반환 타입과 같게 맞추면 화면 수정이 가장 적습니다.
+- 항목 목록은 0건까지 들어 있고, 통계 메인은 0건을 빼고 보여 줍니다.
+- 유형 필터(도전적 행동 상세)와 기준 참여 활동(참여 활동 상세)은 화면이 이 응답에서 골라 그립니다. 처음 제안한 `/stats/behaviors`·`/stats/activities`는 만들지 않았습니다.
+- mock은 [`statsService.ts`](../src/services/statsService.ts)의 `statsSummary`로 같은 응답을 만듭니다. 백엔드 `StatsService`와 규칙이 같아야 하며, 같은 DB 일지로 비교해 값이 같음을 확인했습니다.
 
 ### 7-3. 파일 출력 (B-12 관련)
 
@@ -247,20 +251,19 @@ GET /stats/activities?…&focus=일상생활훈련   → FR-53~56 수치
 | 동기 다운로드 | `POST /exports/{diaries\|monthly\|excel}` `{ userIds, from, to }` → 파일 바이너리(`Content-Disposition`) | 작은 파일, 엑셀 |
 | 비동기 작업 | `POST /exports/...` → `{ jobId }`, `GET /exports/:jobId` → `{ status, downloadUrl }` | 여러 이용자·긴 기간의 PDF·HWPX처럼 생성에 시간이 걸리는 경우 |
 
-## 8. 통계 [프론트 가정]
+## 8. 통계
 
-- **집계 위치**: 프론트. 서버는 완료 일지 목록만 주면 됩니다([`useStatsDiaries.ts`](../src/app/useStatsDiaries.ts)).
-- **조회 범위**: 선택한 이용자의 작성 완료 일지를, 추이 그래프 첫 구간부터 선택 기간 끝까지 받습니다. 이전 동기간 비교(FR-34)는 이 범위 안에 들어 있습니다.
+- **집계 위치**: 서버(`GET /stats/summary`, 7-2). 화면은 [`useStatsSummary.ts`](../src/app/useStatsSummary.ts)로 숫자만 받습니다.
+- **집계 범위**: 선택한 이용자의 작성 완료 일지. 추이 그래프는 아래 구간 수만큼, 이전 동기간 비교(FR-34)는 바로 앞 같은 단위 기간입니다.
 
-| 조회 단위 | 추이 구간 (FR-35 제안값) | 한 번에 받는 기간 |
+| 조회 단위 | 추이 구간 (FR-35 제안값) | 추이 그래프가 덮는 기간 |
 |---|---|---|
 | 주 | 6주 | 약 6주 |
 | 월 | 6개월 | 6개월 |
 | 분기 | 4분기 | 1년 |
 | 연 | 5년 | **5년** |
 
-- **성능 위험**: 연 단위에서는 이용자 1명의 5년치 일지(근무일 기준 약 1,200건, 활동 포함)를 한 번에 받습니다. 응답이 수 MB가 될 수 있어 모바일에서 느릴 수 있습니다. 서버 집계(7-2)로 바꾸는 것을 권장합니다.
-- **전환 구조**: 집계 함수가 순수 함수로 분리되어 있어, 서버 집계로 바꿀 때는 `useStatsDiaries`와 통계 화면 4개의 계산 부분만 고치면 됩니다.
+- 예전에는 일지 목록을 받아 프론트가 계산해서, 연 단위에서는 5년치 일지를 한 번에 받아야 했습니다. 서버 집계로 바꿔 숫자만 받습니다.
 
 ## 9. 파일 출력 현황
 

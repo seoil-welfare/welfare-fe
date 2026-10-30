@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -13,17 +13,10 @@ import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
 import { BEHAVIOR_TYPES } from "@/data/catalog";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
-import { useStatsDiaries } from "@/app/useStatsDiaries";
+import { useStatsSummary } from "@/app/useStatsSummary";
 import { useDemo } from "@/demo/DemoContext";
 import { findServiceUser } from "@/services/diaryService";
-import {
-  behaviorCountsByType,
-  behaviorDetailCounts,
-  behaviorRecords,
-  behaviorSummary,
-  completedDiaries,
-  periodRange,
-} from "@/services/statsService";
+import { detailItemsFor, recordsFor, summaryFor } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
 import { formatShortDate, formatTimeRange, weekdayLabel } from "@/lib/utils";
 import type { BehaviorType } from "@/types";
@@ -43,28 +36,23 @@ export function StatsBehaviorsPage() {
   const { flags } = useDemo();
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
-  const { query: diariesQuery, diaries } = useStatsDiaries(userId, period);
+  const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleRecords, setVisibleRecords] = useState(RECORDS_PAGE_SIZE_DEMO_ONLY);
 
-  const range = periodRange(period);
-  const completed = useMemo(
-    () => completedDiaries(diaries, userId, range),
-    [diaries, userId, range],
-  );
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
-  const typeCounts = behaviorCountsByType(completed);
+  const typeCounts = stats.behavior.byType;
 
   // 유형 필터가 상단 요약까지 갱신하는지는 미확정이다 (FR-47). 데모 패널에서 켜고 끌 수 있다.
   const summaryFilter: Filter = flags.behaviorFilterUpdatesSummary ? filter : "all";
-  const summary = behaviorSummary(diaries, userId, period, summaryFilter);
+  const summary = summaryFor(stats, summaryFilter);
 
-  const details = behaviorDetailCounts(completed, filter);
-  const records = behaviorRecords(completed, filter);
+  const details = detailItemsFor(stats, filter);
+  const records = recordsFor(stats, filter);
 
   // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
-  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, diariesQuery]), [
-    diariesQuery,
+  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
+    statsQuery,
   ]);
   if (loadState.isPending || loadState.isError) {
     return (

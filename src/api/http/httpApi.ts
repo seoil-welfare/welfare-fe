@@ -33,6 +33,9 @@ export const httpApi: Api = {
     days: (query) => request("/calendar", { query: { ...query } }),
     clientStatuses: (date) => request("/calendar/days/" + encodeURIComponent(date)),
   },
+  stats: {
+    summary: (query) => request("/stats/summary", { query: { ...query } }),
+  },
   news: {
     list: (query) => request("/news", { query: { ...query } }),
   },

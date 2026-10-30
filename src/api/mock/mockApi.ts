@@ -4,6 +4,7 @@ import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
 import { calendarClientStatuses, calendarDayCounts } from "@/services/diaryService";
+import { statsSummary } from "@/services/statsService";
 import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 
@@ -237,6 +238,15 @@ export const mockApi: Api = {
       await readLatency();
       const db = readDb();
       return calendarClientStatuses(db.diaries, db.serviceUsers, date);
+    },
+  },
+
+
+  stats: {
+    async summary({ userId, ...period }) {
+      await readLatency();
+      if (!userId) throw new ApiError(400, "userId가 필요해요.", "VALIDATION_ERROR");
+      return statsSummary(readDb().diaries, userId, period);
     },
   },
 
