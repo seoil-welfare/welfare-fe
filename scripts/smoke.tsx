@@ -87,7 +87,10 @@ function render(client: QueryClient, route: string): string {
   );
 }
 
-/** 렌더링 중 등록된 조회를 모두 불러온다. 앞 조회 결과에 따라 새 조회가 생기므로 몇 번 반복한다 */
+/**
+ * 렌더링 중 등록된 조회를 모두 불러온다. 앞 조회 결과에 따라 새 조회가 생기므로 몇 번 반복한다.
+ * 꺼 둔 조회(enabled: false, 예: 이용자를 고르기 전의 통계)는 앱에서도 부르지 않으므로 건너뛴다.
+ */
 async function renderWithData(route: string): Promise<{ html: string; failedQueries: number }> {
   const client = createQueryClient();
   let html = render(client, route);
@@ -95,7 +98,7 @@ async function renderWithData(route: string): Promise<{ html: string; failedQuer
     const pending = client
       .getQueryCache()
       .getAll()
-      .filter((query) => query.state.status === "pending" && query.options.queryFn);
+      .filter((query) => query.state.status === "pending" && query.options.queryFn && query.options.enabled !== false);
     if (pending.length === 0) break;
     await Promise.allSettled(pending.map((query) => query.fetch()));
     html = render(client, route);
