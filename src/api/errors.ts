@@ -15,6 +15,11 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
 
+/** 일지를 불러온 뒤 다른 사람이 먼저 저장함 (409, 명세 4.6) */
+export function isUpdatedByOther(error: unknown): boolean {
+  return isApiError(error) && error.code === "DIARY_UPDATED_BY_OTHER";
+}
+
 /** 네트워크 끊김 등 응답 자체를 받지 못한 경우 status 0 */
 export const NETWORK_ERROR_STATUS = 0;
 

@@ -2,7 +2,9 @@ import { ApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { readDb, writeDb } from "@/api/mock/mockDb";
 import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
-import { dateOf, uid } from "@/lib/utils";
+import { addDays, dateOf, uid } from "@/lib/utils";
+import { calendarClientStatuses, calendarDayCounts } from "@/services/diaryService";
+import { statsSummary } from "@/services/statsService";
 import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 
@@ -16,6 +18,9 @@ import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 export const MOCK_PASSWORD = "demo1234";
 
 const SLOW_DELAY_MS = 3000;
+
+/** 달력 6주. 백엔드 CalendarService.MAX_DAYS와 같다 */
+const CALENDAR_MAX_DAYS = 42;
 
 let latencyEnabled = true;
 
@@ -86,6 +91,19 @@ function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
     if (input.diaryId && index < 0) throw notFound("일지");
 
     const previous = index >= 0 ? db.diaries[index] : null;
+    // 불러온 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않는다 (명세 4.6, 백엔드와 같은 규칙)
+    if (input.diaryId && previous) {
+      if (!input.updatedAt) {
+        throw new ApiError(400, "일지를 다시 불러온 뒤 저장해 주세요.", "VALIDATION_ERROR");
+      }
+      if (input.updatedAt !== previous.updatedAt) {
+        throw new ApiError(
+          409,
+          "다른 분이 먼저 수정했어요. 최신 내용을 다시 불러와 주세요.",
+          "DIARY_UPDATED_BY_OTHER",
+        );
+      }
+    }
     // 작성 완료된 일지를 다시 저장하면 수정 이력이 된다 (일지 상세 공통 규칙 3)
     const kind: DiaryEvent["kind"] = previous?.status === "completed" ? "updated" : "created";
 
@@ -102,7 +120,7 @@ function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
       activities: clone(input.activities),
       notes: input.notes,
       createdAt: previous?.createdAt ?? now,
-      updatedAt: now,
+      updatedAt: nextUpdatedAt(previous?.updatedAt, now),
     };
     saved = next;
 
@@ -122,6 +140,15 @@ function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
   });
 
   return clone(saved!);
+}
+
+/**
+ * 저장할 때마다 updatedAt이 반드시 바뀌게 한다. 동시 수정 비교(409)에 쓰므로
+ * 같은 밀리초에 연달아 저장해도 이전 값과 겹치면 안 된다 (서버는 마이크로초까지 저장한다)
+ */
+function nextUpdatedAt(previous: string | undefined, now: string): string {
+  if (!previous || now > previous) return now;
+  return new Date(Date.parse(previous) + 1).toISOString();
 }
 
 function updateServiceUser(userId: string, patch: Partial<ServiceUser>): ServiceUser {
@@ -215,6 +242,33 @@ export const mockApi: Api = {
     async save(input) {
       await writeLatency();
       return saveDiary(input, requireSession());
+    },
+  },
+
+  calendar: {
+    async days({ from, to }) {
+      await readLatency();
+      if (!from || !to) throw new ApiError(400, "from과 to 날짜가 필요해요.", "VALIDATION_ERROR");
+      if (from > to) throw new ApiError(400, "from이 to보다 늦을 수 없어요.", "VALIDATION_ERROR");
+      if (addDays(from, CALENDAR_MAX_DAYS) <= to) {
+        throw new ApiError(400, "한 번에 " + CALENDAR_MAX_DAYS + "일까지만 조회할 수 있어요.", "VALIDATION_ERROR");
+      }
+      const db = readDb();
+      return calendarDayCounts(db.diaries, db.serviceUsers, from, to);
+    },
+    async clientStatuses(date) {
+      await readLatency();
+      const db = readDb();
+      return calendarClientStatuses(db.diaries, db.serviceUsers, date);
+    },
+  },
+
+
+  stats: {
+    async summary({ userId, ...period }) {
+      await readLatency();
+      if (!userId) throw new ApiError(400, "userId가 필요해요.", "VALIDATION_ERROR");
+      return statsSummary(readDb().diaries, userId, period);
     },
   },
 

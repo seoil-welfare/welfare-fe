@@ -1,10 +1,13 @@
 import type {
+  BehaviorType,
+  CountItem,
   Diary,
   DiaryDraft,
   DiaryEvent,
   DiaryStatus,
   ServiceUser,
   Staff,
+  StatisticPeriod,
   UserRole,
 } from "@/types";
 
@@ -68,6 +71,35 @@ export interface NewsEntry {
   diary: DiaryRef;
 }
 
+export interface CalendarQuery {
+  /** 포함. 최대 42일 */
+  from: string;
+  /** 포함 */
+  to: string;
+}
+
+/** 날짜별 일지 수. 일지가 없는 날은 응답에 없다 */
+export interface CalendarDayCount {
+  date: string;
+  completed: number;
+  draft: number;
+  /** 대상 이용자 수 (현재 이용 중) */
+  target: number;
+  hasBehavior: boolean;
+}
+
+/** 그날 이용자별 일지 상태. 현재 이용 중인 이용자만 */
+export interface CalendarClientStatus {
+  clientId: string;
+  clientName: string;
+  status: DiaryStatus | "none";
+  diaryId?: string;
+  authorId?: string;
+  behaviorCount: number;
+  /** 그날 일지가 없으면 true (이용자 1명당 하루 1건) */
+  canCreate: boolean;
+}
+
 export interface ServiceUserInput {
   name: string;
   birthDate: string;
@@ -99,6 +131,74 @@ export interface DiaryApi {
   save(input: SaveDiaryInput): Promise<Diary>;
 }
 
+export interface StatsQuery extends StatisticPeriod {
+  userId: string;
+}
+
+/** 통계 한 기간의 집계. 통계 화면 4개가 이 응답 하나로 그린다 (GET /stats/summary) */
+export interface StatsSummary {
+  period: { unit: StatisticPeriod["unit"]; label: string; start: string; end: string };
+  /** 기간 안의 작성 완료 일지 수 */
+  completedDiaries: number;
+  behavior: {
+    /** 세부 행동 선택 건수 합계 (FR-32) */
+    count: number;
+    /** 발생 일수 (FR-33) */
+    days: number;
+    /** 이전 동기간 대비 증감 (FR-34) */
+    delta: number;
+    /** 이전 동기간에 기록이 없었는지 */
+    previousEmpty: boolean;
+    byType: Record<BehaviorType, number>;
+    /** 유형 필터로 요약을 바꿀 때 쓰는 유형별 요약 (FR-47) */
+    typeSummary: Record<BehaviorType, { count: number; days: number; delta: number }>;
+    /** 추이 그래프 (FR-35), 오래된 구간부터 */
+    trend: { label: string; count: number; isCurrent: boolean }[];
+    /** 세부 행동별 건수 (FR-48). 1건 이상만. 상위 '기타'는 detailId가 "other" */
+    details: { type: BehaviorType; detailId: string; count: number }[];
+    /** 발생 기록 최신순 (FR-49). 도전적 행동이 있었던 활동 1개가 1줄 */
+    records: StatsBehaviorRecord[];
+  };
+  /** 항목별 건수. 많은 순, 같으면 목록 순서. 0건 항목도 들어 있다 */
+  participation: CountItem[];
+  reaction: CountItem[];
+  preSupport: CountItem[];
+  positiveSupport: CountItem[];
+  /** 컨디션은 일지 기준 */
+  condition: CountItem[];
+  /** 참여 활동 상세 (FR-53, 55, 56) */
+  activities: {
+    totalCount: number;
+    kindCount: number;
+    /** '기타' 직접 입력 건수 */
+    otherCount: number;
+    /** 활동별 도전적 행동 건수 (0건 포함) */
+    behaviorByParticipation: CountItem[];
+    /** 참여 활동마다 이용자 반응 건수 (반응 전체, 0건 포함) */
+    reactionByParticipation: { label: string; reaction: CountItem[] }[];
+  };
+}
+
+export interface StatsBehaviorRecord {
+  diaryId: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  activityId: string;
+  /** 유형 순서 → 목록 순서. otherText는 상위 '기타'의 직접 입력 */
+  behaviors: { type: BehaviorType; detailId: string; otherText?: string }[];
+}
+
+export interface StatsApi {
+  /** 이용자가 없거나 형식이 틀리면 400 */
+  summary(query: StatsQuery): Promise<StatsSummary>;
+}
+
+export interface CalendarApi {
+  days(query: CalendarQuery): Promise<CalendarDayCount[]>;
+  clientStatuses(date: string): Promise<CalendarClientStatus[]>;
+}
+
 export interface NewsApi {
   /** 발생 시각 최신순 */
   list(query: NewsQuery): Promise<NewsEntry[]>;
@@ -121,6 +221,8 @@ export interface StaffApi {
 export interface Api {
   auth: AuthApi;
   diaries: DiaryApi;
+  calendar: CalendarApi;
+  stats: StatsApi;
   news: NewsApi;
   serviceUsers: ServiceUserApi;
   staff: StaffApi;

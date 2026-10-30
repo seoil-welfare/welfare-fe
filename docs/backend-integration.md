@@ -45,7 +45,7 @@
 | 401 | 로그인 상태를 비우고 로그인 화면으로 이동 | 같음 |
 | 403 | 서버 `message`와 "다시 시도"를 표시, 재시도 안 함 | 서버 `message`를 알림으로 표시 |
 | 404 | 일지·이용자 상세는 "찾을 수 없음" 화면 | 서버 `message` 표시 |
-| 409 | – | 직원 추가는 아이디 입력란 오류, 그 밖에는 알림 |
+| 409 | – | 직원 추가는 아이디 입력란 오류, 일지 `DIARY_UPDATED_BY_OTHER`는 최신 내용 불러오기 확인 창, 그 밖에는 알림 |
 | 그 밖의 4xx | 재시도 안 함 | 재시도 안 함 |
 | 5xx·네트워크 | **최대 2회 자동 재시도** 후 "다시 시도" | **자동 재시도 안 함** |
 
@@ -106,7 +106,9 @@
 | `POST /diaries` | `SaveDiaryInput` (`diaryId` 없음) | `Diary` |
 | `PUT /diaries/:id` | `SaveDiaryInput` | `Diary` |
 
-`SaveDiaryInput` = 일지 내용 전체 + `status: "draft" | "completed"`. 활동 목록을 통째로 보냅니다(활동 단위 API 없음).
+`SaveDiaryInput` = 일지 내용 전체 + `status: "draft" | "completed"` + `updatedAt`. 활동 목록을 통째로 보냅니다(활동 단위 API 없음).
+
+**동시 수정 (B-3, 구현됨)**: PUT에는 불러오거나 마지막으로 저장할 때 받은 `updatedAt`을 그대로 보냅니다. 그사이 다른 사람이 저장했으면 서버가 409 `DIARY_UPDATED_BY_OTHER`로 거절합니다. 프론트는 자동 저장을 멈추고 "다른 분이 먼저 이 일지를 수정했어요" 확인 창을 띄운 뒤, '최신 내용 불러오기'를 누르면 입력을 버리고 서버 내용으로 바꿉니다('나중에'는 입력 유지). 처리는 [`DraftContext.tsx`](../src/app/DraftContext.tsx)에 있습니다.
 완료 일지를 수정할 때도 `PUT /diaries/:id`에 `status: "completed"`를 보내며, 화면에서는 `userId`를 바꿀 수 없게 막습니다. mock은 완료 → 완료 저장을 `updated` 소식으로 남깁니다. 서버도 같은 규칙을 따르고, 완료 일지의 `userId` 변경은 거절하는 것을 권장합니다.
 
 프론트의 조회 패턴은 다음과 같습니다. 서버 인덱스 설계에 참고하세요.
@@ -114,8 +116,27 @@
 | 화면 | 조회 |
 |---|---|
 | 홈·일지 작성 | `from=to=오늘(또는 작성 날짜)` |
-| 달력 | 화면에 보이는 6주 (`from`=그리드 첫날, `to`=마지막 날) |
 | 통계 | `userId` + `status=completed` + 추이 그래프 첫 구간부터 선택 기간 끝까지 |
+
+달력은 일지 목록 대신 아래 달력 API를 쓴다.
+
+### 달력
+
+| 메서드 · 경로 | 요청 | 응답 |
+|---|---|---|
+| `GET /calendar?from&to` | 화면에 보이는 6주 (`from`=그리드 첫날, `to`=마지막 날, 최대 42일) | `CalendarDayCount[]` · 일지가 없는 날은 빠짐 · 형식 오류·42일 초과는 400 |
+| `GET /calendar/days/:date` | – | `CalendarClientStatus[]` · 현재 이용 중인 이용자 전원 |
+
+```ts
+CalendarDayCount = { date, completed, draft, target, hasBehavior }
+CalendarClientStatus = { clientId, clientName, status: "completed" | "draft" | "none",
+                         diaryId?, authorId?, behaviorCount, canCreate }
+```
+
+- `target`(대상 이용자 수)은 현재 이용 중인 이용자 수다. 지난 날짜도 같은 값을 쓴다 (기준은 회의에서 확인)
+- 종결된 이용자의 일지는 세지 않는다
+- 도전적 행동 건수 규칙은 통계와 같다 (상위 '기타'는 내용이 있을 때만 1건, 작성 중 일지 포함)
+- `canCreate`는 그날 일지가 없을 때만 `true` (B-1)
 
 ### 오늘의 소식
 
@@ -170,7 +191,7 @@ NewsEntry = {
 |---|---|---|---|
 | **B-1** | **이용자 1명당 하루 1건** | 개발계획서에 없는 목업 가정. 화면에서 새 작성을 막음: 홈 `오늘 일지 작성`은 담당 이용자에게 오늘 일지가 있으면 팝업 후 그 일지 상세로 이동, 달력은 일지가 있는 이용자에게 새 작성 버튼을 주지 않음, 작성 화면은 그런 이용자를 선택할 수 없고 저장도 막음. mock은 `diaryId` 없이 같은 이용자·날짜로 저장하면 **기존 일지를 덮어씀**(완료 일지 포함) | 규칙 자체를 확정할지. 확정한다면 덮어쓰기 대신 **409로 거절하고 기존 일지 id를 돌려주는 방식**을 권장(덮어쓰기는 다른 직원의 기록을 지울 수 있음) |
 | **B-2** | 저장 중복 방지 | 자동 재시도 없음. 실패하면 목록을 다시 불러오고 안내 | 서버 멱등성(`Idempotency-Key` 헤더 등) 지원 여부. B-1이 409로 정해지면 일지 생성 중복은 서버가 막을 수 있음. 지금 mock은 응답을 잃은 뒤 다시 저장하면 `updated` 소식이 하나 더 생김 |
-| **B-3** | 동시 수정 | 마지막 저장이 이김 | `updatedAt`(또는 version)을 함께 보내 서버가 409로 충돌을 알릴지 |
+| **B-3** | 동시 수정 | **구현됨.** PUT에 `updatedAt`을 보내고, 409 `DIARY_UPDATED_BY_OTHER`면 확인 후 최신 내용을 불러옴 | – |
 | **B-4** | 카테고리 값 형식 | 한글 라벨 저장 | 코드값 저장으로 바꿀지. 국장의 "카테고리 수정" 기능(1.3 대상 사용자)이 생기면 항목 목록을 서버에서 받아야 함 → 7-1 제안 |
 | **B-5** | 작성 중 일지 보존 (U1) | 상단 `임시저장`은 서버에 저장하지 않음(알림만). `나중에 이어서`만 서버에 저장. 저장 전 입력은 **메모리에만** 있어 새로고침하면 사라짐(화면 이동 시에는 유지) | 상단 `임시저장`도 서버에 저장할지. 브라우저 저장소에 보관할지(개인정보가 담긴 기록이라 보안 검토 필요) |
 | **B-6** | 화면 접근 제한 | 메뉴만 숨김(3장 표) | 권한별 화면 차단 여부와 역할 정의(팀장·국장 권한 미확정) |
@@ -208,16 +229,20 @@ GET /categories
 
 ### 7-2. 통계 집계 (B-11 관련)
 
+**구현됨.** 통계 화면 4개가 아래 응답 하나를 함께 씁니다. 타입은 [`api/types.ts`](../src/api/types.ts)의 `StatsSummary`입니다.
+
 ```
 GET /stats/summary?userId&unit=week|month|quarter|year&year&month&quarter&week
-→ { behavior: { count, days, delta, previousEmpty, byType, trend[] },
+→ { period, completedDiaries,
+    behavior: { count, days, delta, previousEmpty, byType, typeSummary, trend[], details[], records[] },
     participation: CountItem[], reaction: CountItem[], preSupport: CountItem[],
-    positiveSupport: CountItem[], condition: CountItem[] }
-GET /stats/behaviors?…&type=all|selfHarm|…   → 세부 행동 건수 + 발생 기록(페이지네이션)
-GET /stats/activities?…&focus=일상생활훈련   → FR-53~56 수치
+    positiveSupport: CountItem[], condition: CountItem[],
+    activities: { totalCount, kindCount, otherCount, behaviorByParticipation[], reactionByParticipation[] } }
 ```
 
-필드 이름은 프론트 [`statsService.ts`](../src/services/statsService.ts)의 반환 타입과 같게 맞추면 화면 수정이 가장 적습니다.
+- 항목 목록은 0건까지 들어 있고, 통계 메인은 0건을 빼고 보여 줍니다.
+- 유형 필터(도전적 행동 상세)와 기준 참여 활동(참여 활동 상세)은 화면이 이 응답에서 골라 그립니다. 처음 제안한 `/stats/behaviors`·`/stats/activities`는 만들지 않았습니다.
+- mock은 [`statsService.ts`](../src/services/statsService.ts)의 `statsSummary`로 같은 응답을 만듭니다. 백엔드 `StatsService`와 규칙이 같아야 하며, 같은 DB 일지로 비교해 값이 같음을 확인했습니다.
 
 ### 7-3. 파일 출력 (B-12 관련)
 
@@ -228,20 +253,19 @@ GET /stats/activities?…&focus=일상생활훈련   → FR-53~56 수치
 | 동기 다운로드 | `POST /exports/{diaries\|monthly\|excel}` `{ userIds, from, to }` → 파일 바이너리(`Content-Disposition`) | 작은 파일, 엑셀 |
 | 비동기 작업 | `POST /exports/...` → `{ jobId }`, `GET /exports/:jobId` → `{ status, downloadUrl }` | 여러 이용자·긴 기간의 PDF·HWPX처럼 생성에 시간이 걸리는 경우 |
 
-## 8. 통계 [프론트 가정]
+## 8. 통계
 
-- **집계 위치**: 프론트. 서버는 완료 일지 목록만 주면 됩니다([`useStatsDiaries.ts`](../src/app/useStatsDiaries.ts)).
-- **조회 범위**: 선택한 이용자의 작성 완료 일지를, 추이 그래프 첫 구간부터 선택 기간 끝까지 받습니다. 이전 동기간 비교(FR-34)는 이 범위 안에 들어 있습니다.
+- **집계 위치**: 서버(`GET /stats/summary`, 7-2). 화면은 [`useStatsSummary.ts`](../src/app/useStatsSummary.ts)로 숫자만 받습니다.
+- **집계 범위**: 선택한 이용자의 작성 완료 일지. 추이 그래프는 아래 구간 수만큼, 이전 동기간 비교(FR-34)는 바로 앞 같은 단위 기간입니다.
 
-| 조회 단위 | 추이 구간 (FR-35 제안값) | 한 번에 받는 기간 |
+| 조회 단위 | 추이 구간 (FR-35 제안값) | 추이 그래프가 덮는 기간 |
 |---|---|---|
 | 주 | 6주 | 약 6주 |
 | 월 | 6개월 | 6개월 |
 | 분기 | 4분기 | 1년 |
 | 연 | 5년 | **5년** |
 
-- **성능 위험**: 연 단위에서는 이용자 1명의 5년치 일지(근무일 기준 약 1,200건, 활동 포함)를 한 번에 받습니다. 응답이 수 MB가 될 수 있어 모바일에서 느릴 수 있습니다. 서버 집계(7-2)로 바꾸는 것을 권장합니다.
-- **전환 구조**: 집계 함수가 순수 함수로 분리되어 있어, 서버 집계로 바꿀 때는 `useStatsDiaries`와 통계 화면 4개의 계산 부분만 고치면 됩니다.
+- 예전에는 일지 목록을 받아 프론트가 계산해서, 연 단위에서는 5년치 일지를 한 번에 받아야 했습니다. 서버 집계로 바꿔 숫자만 받습니다.
 
 ## 9. 파일 출력 현황
 

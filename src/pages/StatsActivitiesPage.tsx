@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
@@ -9,16 +9,9 @@ import { PillToggle } from "@/components/ui/toggle-group";
 import { PARTICIPATION_OPTIONS } from "@/data/catalog";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
-import { useStatsDiaries } from "@/app/useStatsDiaries";
+import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
-import {
-  activityFieldCounts,
-  behaviorCountsByParticipation,
-  completedDiaries,
-  participationSummary,
-  periodRange,
-  reactionCountsForParticipation,
-} from "@/services/statsService";
+import { reactionItemsFor } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
 
 /**
@@ -31,20 +24,15 @@ import { useStatsContext } from "@/app/StatsContext";
 export function StatsActivitiesPage() {
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
-  const { query: diariesQuery, diaries } = useStatsDiaries(userId, period);
+  const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const [focusActivity, setFocusActivity] = useState<string>(PARTICIPATION_OPTIONS[0]);
 
-  const range = periodRange(period);
-  const completed = useMemo(
-    () => completedDiaries(diaries, userId, range),
-    [diaries, userId, range],
-  );
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
-  const summary = participationSummary(completed);
+  const summary = stats.activities;
 
   // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
-  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, diariesQuery]), [
-    diariesQuery,
+  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
+    statsQuery,
   ]);
   if (loadState.isPending || loadState.isError) {
     return (
@@ -69,14 +57,14 @@ export function StatsActivitiesPage() {
         </div>
 
         <FormSection title="활동별 참여 건수" description="모든 활동 카테고리를 표시합니다.">
-          <HorizontalBars items={activityFieldCounts(completed, "participation", { includeZero: true })} />
+          <HorizontalBars items={stats.participation} />
         </FormSection>
 
         <FormSection
           title="활동별 도전적 행동"
           description="도전적 행동이 기록되지 않은 활동도 0건으로 표시합니다."
         >
-          <HorizontalBars items={behaviorCountsByParticipation(completed)} tone="behavior" />
+          <HorizontalBars items={summary.behaviorByParticipation} tone="behavior" />
         </FormSection>
 
         <FormSection title="활동별 이용자 반응">
@@ -87,7 +75,7 @@ export function StatsActivitiesPage() {
             onValueChange={setFocusActivity}
             options={PARTICIPATION_OPTIONS.map((label) => ({ value: label, label }))}
           />
-          <HorizontalBars items={reactionCountsForParticipation(completed, focusActivity)} />
+          <HorizontalBars items={reactionItemsFor(stats, focusActivity)} />
         </FormSection>
       </div>
     </AppShell>

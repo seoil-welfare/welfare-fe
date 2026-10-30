@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -8,15 +7,9 @@ import { HorizontalBars } from "@/components/stats/charts";
 import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
-import { useStatsDiaries } from "@/app/useStatsDiaries";
+import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
-import {
-  activityFieldCounts,
-  completedDiaries,
-  conditionCounts,
-  periodRange,
-  type ActivityField,
-} from "@/services/statsService";
+import type { ActivityField } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
 
 /**
@@ -43,7 +36,7 @@ export function StatsCategoryPage() {
   const usersQuery = useServiceUsers();
   const { category } = useParams();
   const { userId, period } = useStatsContext();
-  const { query: diariesQuery, diaries } = useStatsDiaries(userId, period);
+  const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
 
   const meta = CATEGORY_META[category ?? ""] ?? {
     title: "통계 상세",
@@ -51,24 +44,16 @@ export function StatsCategoryPage() {
     unitLabel: "활동별 선택 건수",
   };
 
-  const range = periodRange(period);
-  const completed = useMemo(
-    () => completedDiaries(diaries, userId, range),
-    [diaries, userId, range],
-  );
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
 
-  const items =
-    meta.field === "condition"
-      ? conditionCounts(completed, { includeZero: true })
-      : activityFieldCounts(completed, meta.field, { includeZero: true });
+  const items = stats[meta.field];
 
   const total = items.reduce((sum, item) => sum + item.count, 0);
   const recorded = items.filter((item) => item.count > 0).length;
 
   // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
-  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, diariesQuery]), [
-    diariesQuery,
+  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
+    statsQuery,
   ]);
   if (loadState.isPending || loadState.isError) {
     return (
@@ -89,7 +74,7 @@ export function StatsCategoryPage() {
         <div className="grid grid-cols-3 gap-3">
           <MetricCard value={total} unit="건" description={"전체 " + meta.unitLabel} />
           <MetricCard value={recorded} unit="종" description="기록된 항목 수" />
-          <MetricCard value={completed.length} unit="건" description="작성 완료 일지" />
+          <MetricCard value={stats.completedDiaries} unit="건" description="작성 완료 일지" />
         </div>
 
         <FormSection title="항목별 기록 건수" description={meta.unitLabel + " 기준"}>

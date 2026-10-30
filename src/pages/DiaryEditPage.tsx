@@ -17,7 +17,7 @@ import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
 import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { CONDITIONS, WEATHERS } from "@/data/catalog";
-import { errorMessage, isApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
+import { errorMessage, isApiError, isUpdatedByOther, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { combineQueries, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
 import { useDraft } from "@/app/DraftContext";
 import { getLastPage } from "@/app/lastPage";
@@ -62,6 +62,7 @@ export function DiaryEditPage() {
     beginCommit,
     cancelCommit,
     setAutosaveBlocked,
+    reportUpdatedByOther,
   } = useDraft();
   // 삭제 확인 팝업을 띄울 활동
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
@@ -175,10 +176,11 @@ export function DiaryEditPage() {
       return;
     }
     // 자동 저장이 진행 중이면 기다렸다가, 거기서 만들어진 일지로 저장한다 (일지가 두 건 생기지 않게)
-    const autosavedId = await beginCommit();
+    // updatedAt도 자동 저장이 받은 최신 값으로 보낸다 (내 자동 저장을 다른 사람의 수정으로 오해하지 않게)
+    const saved = await beginCommit();
     const input = toSaveInput(draft, status);
     saveDiary.mutate(
-      { ...input, diaryId: input.diaryId ?? autosavedId },
+      { ...input, diaryId: input.diaryId ?? saved.diaryId, updatedAt: saved.updatedAt ?? input.updatedAt },
       {
         onSuccess: (diary) => {
           // draft를 비우면 위 effect가 다음 이용자로 빈 일지를 만들 수 있어 먼저 막는다
@@ -197,6 +199,11 @@ export function DiaryEditPage() {
         // 실패하면 입력을 그대로 두고 다시 시도할 수 있게 한다 (가이드 6장)
         onError: (error) => {
           cancelCommit();
+          // 불러온 뒤 다른 사람이 먼저 저장했다. 덮어쓰지 않고 최신 내용을 불러올지 묻는다 (명세 4.6)
+          if (isUpdatedByOther(error)) {
+            reportUpdatedByOther();
+            return;
+          }
           toast.error("저장하지 못했어요.", {
             // 응답을 받지 못한 경우는 서버에 저장됐을 수도 있다. 목록을 다시 불러오므로
             // 이미 저장된 일지가 있으면 그 이용자는 선택할 수 없게 바뀌어 확인할 수 있다.
