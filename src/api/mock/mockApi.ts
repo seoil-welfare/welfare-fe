@@ -120,7 +120,7 @@ function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
       activities: clone(input.activities),
       notes: input.notes,
       createdAt: previous?.createdAt ?? now,
-      updatedAt: now,
+      updatedAt: nextUpdatedAt(previous?.updatedAt, now),
     };
     saved = next;
 
@@ -140,6 +140,15 @@ function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
   });
 
   return clone(saved!);
+}
+
+/**
+ * 저장할 때마다 updatedAt이 반드시 바뀌게 한다. 동시 수정 비교(409)에 쓰므로
+ * 같은 밀리초에 연달아 저장해도 이전 값과 겹치면 안 된다 (서버는 마이크로초까지 저장한다)
+ */
+function nextUpdatedAt(previous: string | undefined, now: string): string {
+  if (!previous || now > previous) return now;
+  return new Date(Date.parse(previous) + 1).toISOString();
 }
 
 function updateServiceUser(userId: string, patch: Partial<ServiceUser>): ServiceUser {
