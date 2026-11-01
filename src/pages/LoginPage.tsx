@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/misc";
 import { errorMessage, isApiError } from "@/api/errors";
 import { MOCK_PASSWORD } from "@/api/mock/mockApi";
 import { useLogin } from "@/api/queries";
+import { clearSessionExpired, isSessionExpired } from "@/app/sessionExpired";
 import { IS_MOCK } from "@/config";
 import { DemoPanel } from "@/demo/DemoPanel";
 import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
@@ -32,7 +33,14 @@ export function LoginPage() {
   const [autoLogin, setAutoLogin] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  // 쓰던 중 세션이 만료되어 이 화면으로 왔으면 안내 팝업을 띄운다
+  const [expiredOpen, setExpiredOpen] = useState(isSessionExpired);
   const submitting = loginMutation.isPending;
+
+  function handleExpiredOpenChange(open: boolean) {
+    setExpiredOpen(open);
+    if (!open) clearSessionExpired();
+  }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -176,6 +184,17 @@ export function LoginPage() {
             </DialogContent>
           </Dialog>
         </div>
+
+        <Dialog open={expiredOpen} onOpenChange={handleExpiredOpenChange}>
+          <DialogContent
+            title="로그인이 만료됐어요"
+            description="한동안 사용하지 않아 자동으로 로그아웃됐어요. 다시 로그인해 주세요."
+          >
+            <DialogClose asChild>
+              <Button block>닫기</Button>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
 
       </AuthLayout>
     </div>

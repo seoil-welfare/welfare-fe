@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { configureHttp } from "@/api/http/client";
 import { createQueryClient, queryKeys } from "@/api/queries";
 import { DraftProvider } from "@/app/DraftContext";
+import { markSessionExpired } from "@/app/sessionExpired";
 import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
 import "@/styles/globals.css";
@@ -19,7 +20,13 @@ const queryClient = createQueryClient();
 const TOAST_BOTTOM = "calc(85px + env(safe-area-inset-bottom, 0px))";
 
 // 세션이 만료되면 로그인 상태를 비운다. RequireAuth가 로그인 화면으로 보낸다.
-configureHttp({ onUnauthorized: () => queryClient.setQueryData(queryKeys.me, null) });
+// 로그인해 있던 중이었을 때만 만료로 표시해서 로그인 화면에 안내 팝업을 띄운다.
+configureHttp({
+  onUnauthorized: () => {
+    if (queryClient.getQueryData(queryKeys.me)) markSessionExpired();
+    queryClient.setQueryData(queryKeys.me, null);
+  },
+});
 
 createRoot(root).render(
   <StrictMode>
