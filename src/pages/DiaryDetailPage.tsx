@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Share2 } from "lucide-react";
+import { Printer, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar, BottomNoticeBar } from "@/components/layout/bars";
@@ -21,13 +23,14 @@ import {
   findServiceUser,
   findStaff,
 } from "@/services/diaryService";
+import { downloadDailyRecord } from "@/lib/downloadDailyRecord";
 import { formatDateTime, formatLongDate } from "@/lib/utils";
 import type { Diary, ServiceUser, Staff } from "@/types";
 
 /**
  * 일지 상세 조회 (2.1.11/FR-57 ~ FR-64, 2.1.12/FR-65 ~ FR-72).
  * 세 상태를 각각 구현한다 (가이드 7장):
- *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 하단 고정 '수정하기'
+ *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 특이사항 아래 '출력하기' + 하단 고정 '수정하기'
  *  2) 본인이 작성 중 — 작성 중 Badge + 남은 활동 안내 + '이어서 작성' 작업 버튼
  *  3) 다른 담당자가 작성 중 — 작성 중 Badge + BottomNoticeBar (수정 CTA 없음)
  * 어떤 상태를 누구에게 보여 줄지의 권한·동시 편집 판정은 이 프로토타입에서 정하지 않는다.
@@ -236,7 +239,39 @@ function DiaryDetail({
           )}
         </FormSection>
 
+        {/* 일일 기록지 출력 (JD-09). 작성 완료 일지만 복지관 양식으로 내려받는다 */}
+        {!isDraft && serviceUser ? <PrintButton diary={diary} serviceUser={serviceUser} /> : null}
       </div>
     </AppShell>
+  );
+}
+
+function PrintButton({ diary, serviceUser }: { diary: Diary; serviceUser: ServiceUser }) {
+  const [running, setRunning] = useState(false);
+
+  async function handlePrint() {
+    if (running) return; // 중복 클릭 방지 (가이드 7장 파일 출력 피드백)
+    setRunning(true);
+    try {
+      await downloadDailyRecord(diary, serviceUser);
+      toast.success("일일 기록지를 내려받았어요.");
+    } catch {
+      toast.error("일일 기록지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <Button variant="outline" block onClick={handlePrint} disabled={running}>
+      {running ? (
+        <Spinner label="파일 만드는 중…" />
+      ) : (
+        <>
+          <Printer aria-hidden />
+          출력하기
+        </>
+      )}
+    </Button>
   );
 }
