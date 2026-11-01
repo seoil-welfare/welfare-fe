@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { CalendarDays, Clock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/misc";
 import { PillToggle } from "@/components/ui/toggle-group";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -26,7 +26,13 @@ import {
   newsItems,
   type NewsItem,
 } from "@/services/diaryService";
-import { addDays, dateGroupLabel, formatTime, relativeDayLabel } from "@/lib/utils";
+import {
+  addDays,
+  dateGroupLabel,
+  formatDotDate,
+  formatTime,
+  relativeDayLabel,
+} from "@/lib/utils";
 
 /**
  * 오늘의 소식 (2.1.3/FR-08 ~ FR-12).
@@ -167,38 +173,43 @@ function NewsList({
             {dateGroupLabel(group.date, today)}
             <span className="ml-1.5 font-normal">{group.items.length}건</span>
           </h2>
-          <Card variant="list">
-            <ul className="divide-y divide-border">
-              {group.items.map((item) => (
-                <li key={item.event.id}>
+          {/* 소식 1건 = 카드 1장. 위에는 '무엇'(이용자·일지 날짜), 구분선 아래에는 '언제·누가' */}
+          <ul className="flex flex-col gap-2">
+            {group.items.map((item) => (
+              <li key={item.event.id}>
+                <Card variant="plain" className="overflow-hidden">
                   <Link
                     to={"/diaries/" + item.diary.id}
-                    className="flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-accent"
+                    className="flex flex-col gap-3 p-4 hover:bg-accent"
                   >
-                    <Avatar name={item.actorName} />
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate type-body font-medium">
+                    <span className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate type-body font-semibold">
                         {item.serviceUserName} 님 일지
                       </span>
-                      <span className="truncate type-caption text-muted-foreground">
-                        {item.actorName} · {formatTime(item.event.occurredAt)}
-                        {/* 일지 날짜와 발생 날짜가 다를 때만 어떤 날짜의 일지인지 덧붙인다 */}
-                        {item.diary.date !== item.occurredDate
-                          ? " · " + relativeDayLabel(item.diary.date, today) + " 일지"
-                          : ""}
-                      </span>
+                      <Badge
+                        variant="soft"
+                        tone={item.event.kind === "created" ? "primary" : "warning"}
+                      >
+                        {eventKindLabel(item.event.kind)}
+                      </Badge>
                     </span>
-                    <Badge
-                      variant="soft"
-                      tone={item.event.kind === "created" ? "primary" : "warning"}
-                    >
-                      {eventKindLabel(item.event.kind)}
-                    </Badge>
+                    <span className="flex items-center gap-1.5 tnum type-caption">
+                      <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                      {formatDotDate(item.diary.date)} 일지
+                    </span>
+                    <span className="flex items-center gap-1.5 border-t border-border pt-3 tnum type-caption text-muted-foreground">
+                      <Clock className="size-4 shrink-0" aria-hidden />
+                      <span className="flex-1">
+                        {relativeDayLabel(item.occurredDate, today)}{" "}
+                        {formatTime(item.event.occurredAt)}
+                      </span>
+                      <span className="truncate">{item.actorName}</span>
+                    </span>
                   </Link>
-                </li>
-              ))}
-            </ul>
-          </Card>
+                </Card>
+              </li>
+            ))}
+          </ul>
         </section>
       ))}
     </div>

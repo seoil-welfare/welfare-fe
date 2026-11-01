@@ -41,6 +41,12 @@ export function formatShortDate(iso: string): string {
   return date.getMonth() + 1 + "월 " + date.getDate() + "일";
 }
 
+/** 2026. 10. 07. — 숫자만 점으로 끊은 형식. 소식 카드에서 어떤 날짜의 일지인지 보여 줄 때 쓴다 */
+export function formatDotDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return y + ". " + m + ". " + d + ".";
+}
+
 export function weekdayLabel(iso: string): string {
   return WEEKDAYS[parseISODate(iso).getDay()];
 }
