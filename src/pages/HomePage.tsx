@@ -44,7 +44,7 @@ const DRAFT_LOOKBACK_DAYS = 14;
  * - 상단 바로가기: ① 이어서 작성(쓰던 일지가 있을 때만) ② 일지 작성 ③ 이용자 등록
  * - 오늘 날짜와 로그인한 계정명을 표시한다
  * - 오늘의 소식은 최신순 최대 4건 (FR-07 원안 3건에서 늘림). 0건이면 안내 문구
- * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 당일 4건 이상일 때만 보인다
+ * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 소식 개수와 상관없이 항상 보인다
  * - '오늘 일지 작성'은 담당 이용자에게 오늘 일지가 이미 있으면 새로 만들지 않고 그 일지로 안내한다
  *   (이용자 1명당 하루 1건)
  */
@@ -66,7 +66,6 @@ export function HomePage() {
     { filter: "all", sinceDate: today },
   );
   const visibleNews = todayNews.slice(0, HOME_NEWS_LIMIT);
-  const showMore = todayNews.length >= HOME_NEWS_LIMIT;
 
   // 최근 2주 안에 내가 쓰다 만 일지 중 가장 최근 것 (① 이어서 작성하기)
   const myDraft = (recentQuery.data ?? [])
@@ -176,7 +175,7 @@ export function HomePage() {
         </Card>
 
         <QueryGate state={combineQueries([newsQuery, usersQuery, staffQuery])}>
-          {() => <TodayNewsCard items={visibleNews} showMore={showMore} />}
+          {() => <TodayNewsCard items={visibleNews} />}
         </QueryGate>
       </div>
 
@@ -202,7 +201,7 @@ export function HomePage() {
   );
 }
 
-function TodayNewsCard({ items: visibleNews, showMore }: { items: NewsItem[]; showMore: boolean }) {
+function TodayNewsCard({ items: visibleNews }: { items: NewsItem[] }) {
   return (
     <Card variant="list" elevation="home">
       {/* 소식 영역은 0건일 때도 눌러서 소식 화면으로 갈 수 있다 (FR-07) */}
@@ -211,13 +210,11 @@ function TodayNewsCard({ items: visibleNews, showMore }: { items: NewsItem[]; sh
         className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 hover:bg-accent"
       >
         <h2 className="type-heading">오늘의 소식</h2>
-        {/* '더 보기'는 당일 활동 내역이 홈에 보이는 개수 이상일 때만 표시한다 (FR-07) */}
-        {showMore ? (
-          <span className="flex items-center gap-0.5 type-caption font-medium text-muted-foreground">
-            더 보기
-            <ChevronRight className="size-4" aria-hidden />
-          </span>
-        ) : null}
+        {/* '더 보기'는 소식이 몇 건이든 항상 표시한다 (FR-07 원안은 홈 표시 개수 이상일 때만 → 요청으로 변경) */}
+        <span className="flex items-center gap-0.5 type-caption font-medium text-muted-foreground">
+          더 보기
+          <ChevronRight className="size-4" aria-hidden />
+        </span>
       </Link>
 
       {visibleNews.length === 0 ? (

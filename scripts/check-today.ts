@@ -27,7 +27,7 @@ const todayNews = newsItems(toNewsEntries(events, diaries, DEMO_TODAY), director
   filter: "all",
   sinceDate: DEMO_TODAY,
 });
-expect("오늘 소식 4건 이상 (홈 4건 + '더 보기' 조건)", todayNews.length >= 4, todayNews.length + "건");
+expect("오늘 소식 4건 이상 (홈 소식 4칸 채우기)", todayNews.length >= 4, todayNews.length + "건");
 // 오늘 날짜 일지는 없으므로 오늘 소식은 지난 일지를 오늘 수정한 내역이다
 expect(
   "오늘 소식은 지난 일지 수정 내역",

@@ -298,7 +298,7 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
   forceDay(lastWeekday, "usr-02", "stf-02", "completed", 10, true);
   forceDay(lastWeekday, "usr-03", "stf-03", "draft", 11, false);
 
-  // 홈 소식 4건 + '더 보기' 시연용: 지난 일지를 오늘 수정한 소식 5건 (소식은 발생 시각 기준).
+  // 홈 소식 4건 + 소식 화면에 더 있는 것 시연용: 지난 일지를 오늘 수정한 소식 5건 (소식은 발생 시각 기준).
   // 오늘 날짜 일지는 없지만 소식은 수정이 일어난 시각을 따르므로 오늘 소식으로 보인다.
   const editedToday: Array<[editorId: string, hour: number, minute: number]> = [
     ["stf-04", 9, 10],
