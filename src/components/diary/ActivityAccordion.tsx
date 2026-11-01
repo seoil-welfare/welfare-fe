@@ -53,7 +53,7 @@ export function ActivityAccordion({
                       </Badge>
                     ) : null}
                   </span>
-                  <span className="type-caption text-muted-foreground break-keep">
+                  <span className="type-caption text-muted-foreground break-keep wrap-anywhere">
                     {summarize(activity)}
                   </span>
                 </span>
@@ -80,7 +80,7 @@ export function ActivityAccordion({
                     {hasBehavior ? (
                       <ul className="flex flex-col gap-1">
                         {activity.behaviors.map((selection) => (
-                          <li key={selection.type} className="type-body text-behavior break-keep">
+                          <li key={selection.type} className="type-body text-behavior break-keep wrap-anywhere">
                             <span className="font-medium">{behaviorTypeLabel(selection.type)}</span>
                             {" · "}
                             {selection.type === "other"
@@ -143,7 +143,9 @@ function ChipList({ items }: { items: readonly string[] }) {
       {items.map((item) => (
         <li
           key={item}
-          className="rounded-full bg-secondary px-2 py-0.5 type-caption text-secondary-foreground break-keep"
+          // rounded-full이면 여러 줄일 때 양 끝 반원이 커져 글자가 밖으로 삐져나와 보인다.
+          // rounded-control(12px)은 한 줄일 때 높이의 절반으로 줄어 알약 모양 그대로, 여러 줄이면 둥근 사각형이 된다
+          className="rounded-control bg-secondary px-2 py-0.5 type-caption text-secondary-foreground break-keep wrap-anywhere"
         >
           {item}
         </li>

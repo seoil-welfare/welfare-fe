@@ -320,7 +320,7 @@ export function ActivityEditPage() {
                     key={meta.type}
                     className="flex min-h-12 items-center gap-3 rounded-control px-1"
                   >
-                    <label className="flex min-h-11 flex-1 cursor-pointer items-center gap-3">
+                    <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3">
                       <Checkbox
                         tone="behavior"
                         checked={checked}
@@ -330,7 +330,7 @@ export function ActivityEditPage() {
                         <span className="type-body font-medium">{meta.label}</span>
                         <span
                           className={
-                            "truncate type-caption " +
+                            "break-keep wrap-anywhere type-caption " +
                             (checked && summary !== "선택 안 함"
                               ? "text-behavior"
                               : "text-muted-foreground")
