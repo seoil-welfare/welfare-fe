@@ -330,7 +330,7 @@ export function ActivityEditPage() {
                         <span className="type-body font-medium">{meta.label}</span>
                         <span
                           className={
-                            "break-keep type-caption " +
+                            "break-keep wrap-anywhere type-caption " +
                             (checked && summary !== "선택 안 함"
                               ? "text-behavior"
                               : "text-muted-foreground")
