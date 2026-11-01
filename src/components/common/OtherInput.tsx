@@ -1,4 +1,4 @@
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 /**
@@ -34,10 +34,17 @@ export function OtherInput({
       <label htmlFor={id} className="mb-2 block type-caption text-warning-foreground">
         직접 입력
       </label>
-      <Input
+      {/* 긴 글이 화면 밖으로 나가지 않게 줄바꿈되는 Textarea를 쓴다.
+          다만 '기타'는 짧은 한 줄 답이라 Enter·붙여넣기로 생긴 줄바꿈 문자는 넣지 않는다 */}
+      <Textarea
         id={id}
+        size="line"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange(event.target.value.replace(/[\r\n]+/g, " "))}
+        onKeyDown={(event) => {
+          // 한글 조합 중 Enter를 막으면 마지막 글자가 사라질 수 있어서 조합이 끝난 Enter만 막는다
+          if (event.key === "Enter" && !event.nativeEvent.isComposing) event.preventDefault();
+        }}
         placeholder={placeholder}
         className="bg-card"
       />
