@@ -44,6 +44,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: { "@": path.resolve(__dirname, "./src") },
     },
+    // 일일 기록지 출력 라이브러리는 버튼을 누를 때만 import()로 불러와서, 개발 서버가 켜질 때 찾지 못한다.
+    // 그러면 첫 클릭에 Vite가 패키지를 새로 변환하며 페이지를 통째로 새로고침한다. 미리 변환해 두게 한다
+    optimizeDeps: { include: ["docxtemplater", "pizzip"] },
     server: {
       host: true,
       port: 5173,
