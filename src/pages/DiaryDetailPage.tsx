@@ -30,7 +30,7 @@ import type { Diary, ServiceUser, Staff } from "@/types";
 /**
  * 일지 상세 조회 (2.1.11/FR-57 ~ FR-64, 2.1.12/FR-65 ~ FR-72).
  * 세 상태를 각각 구현한다 (가이드 7장):
- *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 특이사항 아래 '출력하기' + 하단 고정 '수정하기'
+ *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 특이사항 아래 '출력하기'·'공유하기' + 하단 고정 '수정하기'
  *  2) 본인이 작성 중 — 작성 중 Badge + 남은 활동 안내 + '이어서 작성' 작업 버튼
  *  3) 다른 담당자가 작성 중 — 작성 중 Badge + BottomNoticeBar (수정 CTA 없음)
  * 어떤 상태를 누구에게 보여 줄지의 권한·동시 편집 판정은 이 프로토타입에서 정하지 않는다.
@@ -240,7 +240,21 @@ function DiaryDetail({
         </FormSection>
 
         {/* 일일 기록지 출력 (JD-09). 작성 완료 일지만 복지관 양식으로 내려받는다 */}
-        {!isDraft && serviceUser ? <PrintButton diary={diary} serviceUser={serviceUser} /> : null}
+        {!isDraft && serviceUser ? (
+          <div className="grid grid-cols-2 gap-3">
+            <PrintButton diary={diary} serviceUser={serviceUser} />
+            {/* 공유 기능은 미정. 지금은 버튼만 둔다 */}
+            <Button
+              variant="outline"
+              block
+              className="border-input/40" // 오늘의 소식 필터 pill과 같은 옅은 테두리
+              onClick={() => toast.info("공유 기능은 준비 중이에요.")}
+            >
+              <Share2 aria-hidden />
+              공유하기
+            </Button>
+          </div>
+        ) : null}
       </div>
     </AppShell>
   );
@@ -263,7 +277,13 @@ function PrintButton({ diary, serviceUser }: { diary: Diary; serviceUser: Servic
   }
 
   return (
-    <Button variant="outline" block onClick={handlePrint} disabled={running}>
+    <Button
+      variant="outline"
+      block
+      className="border-input/40" // 오늘의 소식 필터 pill과 같은 옅은 테두리
+      onClick={handlePrint}
+      disabled={running}
+    >
       {running ? (
         <Spinner label="파일 만드는 중…" />
       ) : (
