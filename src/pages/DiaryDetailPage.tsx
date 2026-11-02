@@ -277,7 +277,13 @@ function PrintButton({ diary, serviceUser }: { diary: Diary; serviceUser: Servic
   }
 
   return (
-    <Button variant="outline" block onClick={handlePrint} disabled={running}>
+    <Button
+      variant="outline"
+      block
+      className="border-input/40" // 오늘의 소식 필터 pill과 같은 옅은 테두리
+      onClick={handlePrint}
+      disabled={running}
+    >
       {running ? (
         <Spinner label="파일 만드는 중…" />
       ) : (
