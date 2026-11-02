@@ -23,6 +23,8 @@ export interface Staff {
   loginId: string;
   /** YYYY-MM-DD. 회원가입 때 받는다 */
   birthDate?: string;
+  /** false면 사용 중지된 계정. 서버는 항상 보내고, mock 기본 데이터는 생략(= 사용 중) */
+  active?: boolean;
   /** U4 미확정 예시 직위임을 화면에서 표시하기 위한 플래그 */
   unconfirmedPosition?: boolean;
 }

@@ -305,6 +305,16 @@ export function useCreateStaff() {
   });
 }
 
+export function useSetStaffActive() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ staffId, active }: { staffId: string; active: boolean }) =>
+      api.staff.setActive(staffId, active),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.staff }),
+    onError: () => refetchAfterFailure(client, [queryKeys.staff]),
+  });
+}
+
 /* ---------- 여러 조회를 한 번에 다루기 ---------- */
 
 /**

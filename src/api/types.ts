@@ -214,8 +214,11 @@ export interface ServiceUserApi {
 }
 
 export interface StaffApi {
+  /** 사용 중지된 직원도 포함한다 (과거 일지 작성자 이름 표시용) */
   list(): Promise<Staff[]>;
   create(input: StaffInput): Promise<Staff>;
+  /** 계정 사용 중지(false)·다시 사용(true). 팀장·국장만, 내 계정은 중지 못 함 */
+  setActive(staffId: string, active: boolean): Promise<Staff>;
 }
 
 /** 헤더 종 아이콘용. 마지막으로 읽은 뒤 다른 직원이 등록·수정한 소식 수 */

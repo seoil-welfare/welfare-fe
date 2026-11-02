@@ -161,6 +161,11 @@ NewsEntry = {
 | `POST /service-users/:id/close` | – | `ServiceUser` (`status: "closed"`) |
 | `GET /staff` | – | `Staff[]` |
 | `POST /staff` | `{ name, loginId, department, position, role }` | `Staff` · 아이디 중복은 409 |
+| `POST /staff/:id/deactivate` | – | `Staff` (`active: false`). 팀장·국장만, 국장 계정은 국장만, 내 계정은 400 (구현됨) |
+| `POST /staff/:id/activate` | – | `Staff` (`active: true`) (구현됨) |
+
+- `GET /staff`는 사용 중지된 직원도 `active: false`로 함께 줍니다. 담당자 목록에 '사용 중지' 배지로 보이고, 이용자의 담당 직원 선택지에서는 빠집니다.
+- 사용 중지 계정으로 로그인하면 403 `ACCOUNT_DISABLED`이고, 로그인 화면은 서버 문구를 그대로 보여 줍니다.
 
 ### 알림 (구현됨)
 

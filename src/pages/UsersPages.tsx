@@ -25,7 +25,7 @@ import {
   useStaffList,
   useUpdateServiceUser,
 } from "@/api/queries";
-import { activeServiceUsers, findStaff } from "@/services/diaryService";
+import { activeServiceUsers, findStaff, isStaffActive } from "@/services/diaryService";
 import type { ServiceUser, Staff } from "@/types";
 
 /**
@@ -119,7 +119,8 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
   const createUser = useCreateServiceUser();
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [staffId, setStaffId] = useState(staff[0]?.id ?? "");
+  const staffOptions = staff.filter(isStaffActive); // 사용 중지된 직원에게는 새로 맡기지 않는다
+  const [staffId, setStaffId] = useState(staffOptions[0]?.id ?? "");
   const [errors, setErrors] = useState<{ name?: string; birthDate?: string }>({});
 
   function submit() {
@@ -167,7 +168,7 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
           staffId={staffId}
           onStaffChange={setStaffId}
           errors={errors}
-          staffOptions={staff}
+          staffOptions={staffOptions}
         />
       </FormSection>
     </AppShell>
@@ -212,7 +213,9 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
   const closeUser = useCloseServiceUser();
   const [name, setName] = useState(user.name);
   const [birthDate, setBirthDate] = useState(user.birthDate);
-  const [staffId, setStaffId] = useState(user.assignedStaffId || (staff[0]?.id ?? ""));
+  // 사용 중지된 직원은 빼되, 지금 담당자는 그대로 보이게 남긴다
+  const staffOptions = staff.filter((s) => isStaffActive(s) || s.id === user.assignedStaffId);
+  const [staffId, setStaffId] = useState(user.assignedStaffId || (staffOptions[0]?.id ?? ""));
   const [errors, setErrors] = useState<{ name?: string; birthDate?: string }>({});
   const [closeOpen, setCloseOpen] = useState(false);
   const busy = updateUser.isPending || closeUser.isPending;
@@ -274,7 +277,7 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
             staffId={staffId}
             onStaffChange={setStaffId}
             errors={errors}
-            staffOptions={staff}
+            staffOptions={staffOptions}
           />
         </FormSection>
 

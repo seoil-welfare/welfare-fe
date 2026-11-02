@@ -3,7 +3,7 @@ import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
 import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
-import { calendarClientStatuses, calendarDayCounts } from "@/services/diaryService";
+import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
 import { statsSummary } from "@/services/statsService";
 import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
@@ -178,6 +178,9 @@ export const mockApi: Api = {
           "INVALID_CREDENTIALS",
         );
       }
+      if (!isStaffActive(member)) {
+        throw new ApiError(403, "사용이 중지된 계정이에요. 관리자에게 문의해 주세요.", "ACCOUNT_DISABLED");
+      }
       writeDb((db) => ({ ...db, session: { currentStaffId: member.id } }));
       return clone(member);
     },
@@ -320,6 +323,27 @@ export const mockApi: Api = {
       const created: Staff = { ...input, id: uid("stf") };
       writeDb((db) => ({ ...db, staff: [...db.staff, created] }));
       return clone(created);
+    },
+    // 규칙은 백엔드 AuthService.setStaffActive와 같다
+    async setActive(staffId, active) {
+      await writeLatency();
+      const me = requireSession();
+      if (me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "계정 사용 중지는 팀장·국장만 할 수 있어요.", "FORBIDDEN");
+      }
+      const target = readDb().staff.find((s) => s.id === staffId);
+      if (!target) throw notFound("직원");
+      if (target.role === "director" && me.role !== "director") {
+        throw new ApiError(403, "국장 계정은 국장만 바꿀 수 있어요.", "FORBIDDEN");
+      }
+      if (!active && staffId === me.id) {
+        throw new ApiError(400, "내 계정은 사용 중지할 수 없어요.", "VALIDATION_ERROR");
+      }
+      writeDb((db) => ({
+        ...db,
+        staff: db.staff.map((s) => (s.id === staffId ? { ...s, active } : s)),
+      }));
+      return clone(readDb().staff.find((s) => s.id === staffId)!);
     },
   },
 

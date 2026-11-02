@@ -50,6 +50,10 @@ export const httpApi: Api = {
   staff: {
     list: () => request("/staff"),
     create: (input) => request("/staff", { method: "POST", body: input }),
+    setActive: (staffId, active) =>
+      request("/staff/" + encodeURIComponent(staffId) + (active ? "/activate" : "/deactivate"), {
+        method: "POST",
+      }),
   },
   notifications: {
     summary: () => request("/notifications/summary"),
