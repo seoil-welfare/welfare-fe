@@ -12,6 +12,7 @@ import type {
   DiaryQuery,
   LoginInput,
   NotificationSettings,
+  ParticipationUpdate,
   SaveDiaryInput,
   StatsQuery,
   ServiceUserInput,
@@ -312,6 +313,31 @@ export function useCreateStaff() {
     mutationFn: (input: StaffInput) => api.staff.create(input),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.staff }),
     onError: () => refetchAfterFailure(client, [queryKeys.staff]),
+  });
+}
+
+/** 참여 활동이 바뀌면 일지 선택지와 통계(활동 이름)를 다시 불러온다 */
+function invalidateCategories(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: queryKeys.stats });
+  return client.invalidateQueries({ queryKey: queryKeys.categories });
+}
+
+export function useAddParticipation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (label: string) => api.categories.addParticipation(label),
+    onSuccess: () => invalidateCategories(client),
+    onError: () => refetchAfterFailure(client, [queryKeys.categories]),
+  });
+}
+
+export function useUpdateParticipation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ code, input }: { code: string; input: ParticipationUpdate }) =>
+      api.categories.updateParticipation(code, input),
+    onSuccess: () => invalidateCategories(client),
+    onError: () => refetchAfterFailure(client, [queryKeys.categories]),
   });
 }
 

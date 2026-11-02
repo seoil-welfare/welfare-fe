@@ -63,7 +63,7 @@ API 명세 초안은 [`docs/backend-integration.md`](docs/backend-integration.md
 ```powershell
 npm run build        # tsc -b && vite build  — 타입 오류 없이 통과
 npm run preview      # 빌드 결과 확인
-npm run smoke        # 32개 라우트 전체 렌더 검증
+npm run smoke        # 34개 라우트 전체 렌더 검증
 npm run check:data   # 가상 데이터 분포 + 통계 집계 규칙 검증
 npm run check:api    # mock API 저장 흐름(작성 중→완료, 소식, 종결, 오류 코드) 검증
 npm run verify       # build + smoke + check:data + check:api 한 번에
@@ -150,6 +150,7 @@ npm run verify       # build + smoke + check:data + check:api 한 번에
 | `/staff` `/staff/new` | 담당자 목록·계정 추가 | 2.1.13/FR-80~81 |
 | `/exports/diaries` `/exports/monthly` `/exports/excel` | 파일 출력 설정 | 2.1.13/FR-77~79 |
 | `/settings/password` | 비밀번호 변경 | 2.1.13/FR-83 |
+| `/settings/participation` | 참여 활동 관리 (추가·이름 변경·숨기기, 팀장·국장) | 기능명세서 5.1 |
 | 그 외 | 잘못된 경로 안내 → 홈/로그인 | — |
 
 URL은 공식 요구사항이 아니라 **개발 편의를 위한 데모 라우팅 제안**입니다. 화면에 보이는 메뉴·업무 용어는 원문을 따랐습니다.

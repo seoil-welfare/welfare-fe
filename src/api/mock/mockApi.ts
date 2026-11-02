@@ -1,6 +1,6 @@
 import { ApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
-import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
+import type { Api, CategoryItem, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
 import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
@@ -19,6 +19,9 @@ import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 export const MOCK_PASSWORD = "demo1234";
 
 const SLOW_DELAY_MS = 3000;
+
+/** 참여 활동 이름 길이. 백엔드 activity_type.name VARCHAR(30)과 같다 */
+const PARTICIPATION_MAX_LABEL = 30;
 
 /** 달력 6주. 백엔드 CalendarService.MAX_DAYS와 같다 */
 const CALENDAR_MAX_DAYS = 42;
@@ -376,14 +379,74 @@ export const mockApi: Api = {
     },
   },
 
-  // mock은 catalog.ts 목록을 그대로 돌려준다 (숨긴 항목 없음)
+  // 참여 활동만 관리 화면에서 바뀐다. 규칙은 백엔드 CategoryService와 같다
   categories: {
     async list() {
       await readLatency();
-      return defaultCategories();
+      return { ...defaultCategories(), participation: clone(participationItems()) };
+    },
+    async addParticipation(rawLabel) {
+      await writeLatency();
+      requireManager();
+      const label = checkParticipationLabel(rawLabel);
+      const items = participationItems();
+      const etcIndex = items.findIndex((item) => item.etc);
+      const created: CategoryItem = { code: uid("custom"), label, order: 0, active: true, etc: false };
+      // '기타'는 항상 맨 끝
+      const next = etcIndex < 0 ? [...items, created] : [...items.slice(0, etcIndex), created, ...items.slice(etcIndex)];
+      writeDb((db) => ({ ...db, participation: next.map((item, i) => ({ ...item, order: i + 1 })) }));
+      return clone({ ...created, order: next.indexOf(created) + 1 });
+    },
+    async updateParticipation(code, input) {
+      await writeLatency();
+      requireManager();
+      const current = participationItems().find((item) => item.code === code);
+      if (!current) throw notFound("참여 활동");
+      if (input.label === undefined && input.active === undefined) {
+        throw new ApiError(400, "바꿀 이름이나 사용 여부를 보내 주세요.", "VALIDATION_ERROR");
+      }
+      const label = input.label === undefined ? current.label : checkParticipationLabel(input.label, code);
+      if (input.active === false && current.etc) {
+        throw new ApiError(400, "'기타'는 숨길 수 없어요.", "VALIDATION_ERROR");
+      }
+      const updated = { ...current, label, active: input.active ?? current.active };
+      writeDb((db) => ({
+        ...db,
+        participation: participationItems().map((item) => (item.code === code ? updated : item)),
+      }));
+      return clone(updated);
     },
   },
 };
+
+function participationItems(): CategoryItem[] {
+  return readDb().participation ?? defaultCategories().participation;
+}
+
+function requireManager(): Staff {
+  const me = requireSession();
+  if (me.role !== "teamLead" && me.role !== "director") {
+    throw new ApiError(403, "참여 활동은 팀장·국장만 바꿀 수 있어요.", "FORBIDDEN");
+  }
+  return me;
+}
+
+/** 이름 검사. 띄어쓰기만 다른 이름도 같은 이름으로 본다 (selfCode는 수정할 때 자기 자신) */
+function checkParticipationLabel(raw: string, selfCode?: string): string {
+  const label = raw.trim();
+  if (!label) throw new ApiError(400, "참여 활동 이름을 입력해 주세요.", "VALIDATION_ERROR");
+  if (label.length > PARTICIPATION_MAX_LABEL) {
+    throw new ApiError(400, "참여 활동 이름은 " + PARTICIPATION_MAX_LABEL + "자까지 쓸 수 있어요.", "VALIDATION_ERROR");
+  }
+  const key = label.replaceAll(" ", "");
+  const duplicate = participationItems().find(
+    (item) => item.code !== selfCode && item.label.replaceAll(" ", "") === key,
+  );
+  if (duplicate) {
+    throw new ApiError(409, "이미 있는 참여 활동 이름이에요: " + duplicate.label, "DUPLICATE_CATEGORY");
+  }
+  return label;
+}
 
 function notificationState(staffId: string): MockNotificationState {
   return readDb().notifications?.[staffId] ?? { notifyNewLog: true };

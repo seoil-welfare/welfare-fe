@@ -225,7 +225,7 @@ NewsEntry = {
 
 ### 7-1. 카테고리 조회 (B-4 관련)
 
-**조회는 구현·연결됨.** 일지 작성(날씨·컨디션), 활동 입력(참여 활동·사전 지원·이용자 반응·긍정행동지원), 도전적 행동 세부 항목 화면이 이 목록을 씁니다([`useCategoryChoices`](../src/app/useCategoryChoices.ts)). 받기 전이나 실패하면 `catalog.ts` 기본 목록으로 그립니다. `active: false` 항목은 새로 고를 수 없고, 이미 고른 일지를 고칠 때만 보입니다. 저장 값은 아직 라벨이며(서버가 띄어쓰기를 무시하고 찾음), 코드 저장 전환과 참여 활동 관리 화면(`POST/PUT /categories/participation`)은 남아 있습니다. 아래는 처음 제안한 모양입니다.
+**조회는 구현·연결됨.** 일지 작성(날씨·컨디션), 활동 입력(참여 활동·사전 지원·이용자 반응·긍정행동지원), 도전적 행동 세부 항목 화면이 이 목록을 씁니다([`useCategoryChoices`](../src/app/useCategoryChoices.ts)). 받기 전이나 실패하면 `catalog.ts` 기본 목록으로 그립니다. `active: false` 항목은 새로 고를 수 없고, 이미 고른 일지를 고칠 때만 보입니다. 저장 값은 아직 라벨이며(서버가 띄어쓰기를 무시하고 찾음), 코드 저장 전환은 남아 있습니다. 참여 활동 추가·이름 변경·숨기기(`POST /categories/participation`, `PUT /categories/participation/:code`)는 마이페이지 > 참여 활동 관리(`/settings/participation`, 팀장·국장 메뉴)에서 합니다. 아래는 처음 제안한 모양입니다.
 
 ```
 GET /categories

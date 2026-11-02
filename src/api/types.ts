@@ -245,8 +245,18 @@ export interface Categories {
   behaviorDetails: Record<string, CategoryItem[]>;
 }
 
+/** 참여 활동 이름 변경·숨기기. 보내지 않은 칸은 바꾸지 않는다 */
+export interface ParticipationUpdate {
+  label?: string;
+  active?: boolean;
+}
+
 export interface CategoryApi {
   list(): Promise<Categories>;
+  /** 팀장·국장만. '기타' 바로 앞에 들어간다. 이름이 겹치면 409 DUPLICATE_CATEGORY */
+  addParticipation(label: string): Promise<CategoryItem>;
+  /** 팀장·국장만. '기타'는 숨길 수 없다(400) */
+  updateParticipation(code: string, input: ParticipationUpdate): Promise<CategoryItem>;
 }
 
 /** 헤더 종 아이콘용. 마지막으로 읽은 뒤 다른 직원이 등록·수정한 소식 수 */

@@ -5,6 +5,7 @@ import {
   FileSpreadsheet,
   FileText,
   KeyRound,
+  ListChecks,
   LogOut,
   Printer,
   UserPlus,
@@ -137,6 +138,19 @@ export function MyPage() {
                 to="/staff/new"
                 leading={<UserPlus className="size-5 text-primary" aria-hidden />}
                 title="계정 추가"
+              />
+            </Card>
+          </section>
+        ) : null}
+
+        {canManageStaff ? (
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 type-heading">일지 항목 관리</h2>
+            <Card variant="list">
+              <ListRowLink
+                to="/settings/participation"
+                leading={<ListChecks className="size-5 text-primary" aria-hidden />}
+                title="참여 활동 관리"
               />
             </Card>
           </section>

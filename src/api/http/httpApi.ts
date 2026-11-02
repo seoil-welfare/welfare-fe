@@ -63,5 +63,8 @@ export const httpApi: Api = {
   },
   categories: {
     list: () => request("/categories"),
+    addParticipation: (label) => request("/categories/participation", { method: "POST", body: { label } }),
+    updateParticipation: (code, input) =>
+      request("/categories/participation/" + encodeURIComponent(code), { method: "PUT", body: input }),
   },
 };
