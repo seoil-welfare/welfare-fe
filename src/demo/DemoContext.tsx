@@ -3,7 +3,6 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -24,9 +23,6 @@ import type { DemoFlags } from "@/demo/flags";
 interface DemoContextValue {
   flags: DemoFlags;
   setFlags: (partial: Partial<DemoFlags>) => void;
-  /** 알림 설정 — 알림 조건·전달 방식이 미확정이라 서버에 저장하지 않는다 */
-  notifyNewDiary: boolean;
-  setNotifyNewDiary: (value: boolean) => void;
   /** DEMO_ONLY — 가상 역할 전환. mock 모드에서만 동작한다 */
   switchStaff: (staffId: string) => Promise<void>;
   /** DEMO_ONLY — 가상 데이터·세션·플래그를 처음 상태로 되돌린다 */
@@ -39,7 +35,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const { discardDraft } = useDraft();
   const flags = useSyncExternalStore(subscribeFlags, getFlags, getFlags);
-  const [notifyNewDiary, setNotifyNewDiary] = useState(true);
 
   const switchStaff = useCallback(
     async (staffId: string) => {
@@ -54,7 +49,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (IS_MOCK) resetDb();
     resetFlags();
     discardDraft();
-    setNotifyNewDiary(true);
     client.clear();
     client.setQueryData(queryKeys.me, null);
   }, [client, discardDraft]);
@@ -72,12 +66,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     () => ({
       flags,
       setFlags: updateFlags,
-      notifyNewDiary,
-      setNotifyNewDiary,
       switchStaff,
       resetDemo,
     }),
-    [flags, updateFlags, notifyNewDiary, switchStaff, resetDemo],
+    [flags, updateFlags, switchStaff, resetDemo],
   );
 
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;

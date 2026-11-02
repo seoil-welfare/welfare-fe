@@ -11,6 +11,7 @@ import type {
   CalendarQuery,
   DiaryQuery,
   LoginInput,
+  NotificationSettings,
   SaveDiaryInput,
   StatsQuery,
   ServiceUserInput,
@@ -68,6 +69,9 @@ export const queryKeys = {
   newsSince: (since: string) => ["news", since] as const,
   serviceUsers: ["serviceUsers"] as const,
   staff: ["staff"] as const,
+  notifications: ["notifications"] as const,
+  notificationSummary: ["notifications", "summary"] as const,
+  notificationSettings: ["notifications", "settings"] as const,
 };
 
 /* ---------- 인증 ---------- */
@@ -171,6 +175,37 @@ export function useNews(since: string) {
     queryKey: queryKeys.newsSince(since),
     queryFn: () => api.news.list({ since }),
     placeholderData: (previous) => previous,
+  });
+}
+
+/* ---------- 알림 ---------- */
+
+export function useNotificationSummary() {
+  return useQuery({ queryKey: queryKeys.notificationSummary, queryFn: () => api.notifications.summary() });
+}
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: queryKeys.notificationSettings,
+    queryFn: () => api.notifications.settings(),
+  });
+}
+
+/** 소식 화면을 열면 부른다. 종 아이콘의 점이 바로 사라지게 summary를 다시 불러온다 */
+export function useMarkNotificationsRead() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.notifications.markAllRead(),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.notificationSummary }),
+  });
+}
+
+export function useUpdateNotificationSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NotificationSettings) => api.notifications.updateSettings(input),
+    onSuccess: (settings) => client.setQueryData(queryKeys.notificationSettings, settings),
+    onError: () => refetchAfterFailure(client, [queryKeys.notificationSettings]),
   });
 }
 

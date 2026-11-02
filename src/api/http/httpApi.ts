@@ -51,4 +51,10 @@ export const httpApi: Api = {
     list: () => request("/staff"),
     create: (input) => request("/staff", { method: "POST", body: input }),
   },
+  notifications: {
+    summary: () => request("/notifications/summary"),
+    markAllRead: () => request("/notifications/read", { method: "POST" }),
+    settings: () => request("/notifications/settings"),
+    updateSettings: (input) => request("/notifications/settings", { method: "PUT", body: input }),
+  },
 };

@@ -16,7 +16,14 @@ export interface MockState {
   staff: Staff[];
   /** 회원가입한 계정의 비밀번호 (직원 id → 비밀번호). 없으면 데모 비밀번호를 쓴다 */
   passwords?: Record<string, string>;
+  /** 직원 id → 알림 읽은 시각·설정. 없으면 읽은 적 없음, 알림 받기 켬 */
+  notifications?: Record<string, MockNotificationState>;
   session: { currentStaffId: string | null };
+}
+
+export interface MockNotificationState {
+  readAt?: string;
+  notifyNewLog: boolean;
 }
 
 let state: MockState | null = null;

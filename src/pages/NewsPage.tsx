@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, Clock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { errorMessage } from "@/api/errors";
 import {
   combineQueries,
   findOlderNewsDate,
+  useMarkNotificationsRead,
   useNews,
   useServiceUsers,
   useStaffList,
@@ -42,6 +43,7 @@ import {
  *   (한 번에 불러올 범위는 미확정 — 소식이 있는 하루씩)
  * - 전체 / 등록만 / 수정만 필터는 추가로 불러온 내역에도 유지된다.
  *   다음 날짜를 찾을 때도 지금 고른 필터에 맞는 소식이 있는 날을 찾는다
+ * - 화면을 열면 알림을 전부 읽음으로 바꾼다 (POST /notifications/read)
  */
 
 /** '지난 소식 더 보기'로 거슬러 올라갈 수 있는 최대 기간(일) */
@@ -60,6 +62,9 @@ export function NewsPage() {
   const [searching, setSearching] = useState(false);
   // 더 이전 소식이 없다고 확인된 필터. 'all'에서 없으면 어떤 필터로도 없다
   const [exhausted, setExhausted] = useState<NewsFilter[]>([]);
+  const { mutate: markRead } = useMarkNotificationsRead();
+
+  useEffect(() => markRead(), [markRead]); // 들어올 때 한 번. 실패해도 소식은 그대로 보여 준다
 
   const newsQuery = useNews(sinceDate);
   const usersQuery = useServiceUsers();

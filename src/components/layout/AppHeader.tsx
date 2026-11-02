@@ -3,25 +3,25 @@ import { Link, useNavigate } from "react-router-dom";
 import { Bell, ChevronLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/layout/BrandMark";
-import { useNews } from "@/api/queries";
-import { useToday } from "@/lib/today";
+import { useNotificationSettings, useNotificationSummary } from "@/api/queries";
 import { cn } from "@/lib/utils";
 
 /**
  * MainHeader (프로젝트 컴포넌트).
- * 하단 탭으로 바로 가는 화면(홈·달력·통계·마이페이지)의 상단바. 로고 + 소식 종.
+ * 하단 탭으로 바로 가는 화면(홈·달력·통계·마이페이지)의 상단바. 로고 + 알림 종.
  * 한 단계 더 들어간 화면은 AppHeader(뒤로가기 + 제목)를 쓴다.
  * 데스크톱(1280+)은 Sidebar에 로고가 있어 숨긴다.
  */
 export function MainHeader() {
-  const today = useToday();
-  // 오늘 이후 소식만 받는다. 홈과 같은 쿼리라 캐시를 같이 쓴다
-  const hasNews = (useNews(today).data?.length ?? 0) > 0;
+  const summary = useNotificationSummary().data;
+  const settings = useNotificationSettings().data;
+  // 서버는 알림을 꺼도 수를 세어 준다. 점을 보일지는 설정을 보고 정한다
+  const hasNews = Boolean(settings?.notifyNewLog) && (summary?.unreadCount ?? 0) > 0;
 
   return (
     <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-2 border-b border-border bg-card pl-4 pr-1 xl:hidden">
       <BrandMark />
-      {/* 알림 기능이 없으므로 오늘의 소식으로 보낸다. 점은 오늘 소식이 있다는 뜻 */}
+      {/* 누르면 오늘의 소식으로 간다. 점은 마지막으로 읽은 뒤 다른 직원의 새 소식이 있다는 뜻 */}
       <Button variant="ghost" size="icon" asChild>
         <Link to="/news" aria-label={hasNews ? "오늘의 소식 (새 소식 있음)" : "오늘의 소식"}>
           <span className="relative">

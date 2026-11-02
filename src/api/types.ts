@@ -218,6 +218,26 @@ export interface StaffApi {
   create(input: StaffInput): Promise<Staff>;
 }
 
+/** 헤더 종 아이콘용. 마지막으로 읽은 뒤 다른 직원이 등록·수정한 소식 수 */
+export interface NotificationSummary {
+  unreadCount: number;
+  /** 한 번도 읽지 않았으면 없다 */
+  lastReadAt?: string;
+}
+
+export interface NotificationSettings {
+  /** 새 일지 알림 받기 (마이페이지 스위치) */
+  notifyNewLog: boolean;
+}
+
+export interface NotificationApi {
+  summary(): Promise<NotificationSummary>;
+  /** 전부 읽음. 소식 화면을 열 때 부른다 */
+  markAllRead(): Promise<void>;
+  settings(): Promise<NotificationSettings>;
+  updateSettings(input: NotificationSettings): Promise<NotificationSettings>;
+}
+
 export interface Api {
   auth: AuthApi;
   diaries: DiaryApi;
@@ -226,4 +246,5 @@ export interface Api {
   news: NewsApi;
   serviceUsers: ServiceUserApi;
   staff: StaffApi;
+  notifications: NotificationApi;
 }

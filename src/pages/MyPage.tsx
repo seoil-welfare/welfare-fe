@@ -18,10 +18,15 @@ import { AppShell } from "@/components/layout/AppShell";
 import { MainHeader } from "@/components/layout/AppHeader";
 import { ListRowButton, ListRowLink, ListRowStatic } from "@/components/common/ListRow";
 import { ConfirmDialog } from "@/components/ui/dialog";
-import { useLogout, useServiceUsers, useStaffList } from "@/api/queries";
+import {
+  useLogout,
+  useNotificationSettings,
+  useServiceUsers,
+  useStaffList,
+  useUpdateNotificationSettings,
+} from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
-import { useDemo } from "@/demo/DemoContext";
 import { activeServiceUsers } from "@/services/diaryService";
 import { useState } from "react";
 
@@ -35,7 +40,8 @@ const APP_VERSION = "0.1.0";
 export function MyPage() {
   const navigate = useNavigate();
   const currentStaff = useCurrentStaff();
-  const { notifyNewDiary, setNotifyNewDiary } = useDemo();
+  const notifySettings = useNotificationSettings();
+  const updateNotify = useUpdateNotificationSettings();
   const { discardDraft } = useDraft();
   const logout = useLogout();
   const usersQuery = useServiceUsers();
@@ -144,10 +150,17 @@ export function MyPage() {
               title="새 일지 알림 받기"
               trailing={
                 <Switch
-                  checked={notifyNewDiary}
+                  checked={notifySettings.data?.notifyNewLog ?? false}
+                  disabled={!notifySettings.data || updateNotify.isPending}
                   onCheckedChange={(value) => {
-                    setNotifyNewDiary(value);
-                    toast.success(value ? "알림을 받도록 설정했어요." : "알림을 껐어요.");
+                    updateNotify.mutate(
+                      { notifyNewLog: value },
+                      {
+                        onSuccess: () =>
+                          toast.success(value ? "알림을 받도록 설정했어요." : "알림을 껐어요."),
+                        onError: () => toast.error("알림 설정을 저장하지 못했어요. 다시 시도해 주세요."),
+                      },
+                    );
                   }}
                   aria-label="새 일지 알림 받기"
                 />

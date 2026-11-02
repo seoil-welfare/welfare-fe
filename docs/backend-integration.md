@@ -162,6 +162,17 @@ NewsEntry = {
 | `GET /staff` | – | `Staff[]` |
 | `POST /staff` | `{ name, loginId, department, position, role }` | `Staff` · 아이디 중복은 409 |
 
+### 알림 (구현됨)
+
+| 메서드 · 경로 | 요청 | 응답 |
+|---|---|---|
+| `GET /notifications/summary` | – | `{ unreadCount, lastReadAt? }`. 마지막으로 읽은 뒤 **다른 직원**이 남긴 소식 수 |
+| `POST /notifications/read` | – | 204. 오늘의 소식 화면을 열 때 부름 |
+| `GET /notifications/settings` | – | `{ notifyNewLog }` |
+| `PUT /notifications/settings` | `{ notifyNewLog }` | 같음. 마이페이지 '새 일지 알림 받기' 스위치 |
+
+- 헤더 종 아이콘의 점은 `notifyNewLog`가 켜져 있고 `unreadCount > 0`일 때만 보입니다. 서버는 알림을 꺼도 수를 세어 줍니다.
+
 ## 5. 데이터 모델
 
 타입: [`src/types/index.ts`](../src/types/index.ts), [`src/api/types.ts`](../src/api/types.ts)
@@ -201,13 +212,14 @@ NewsEntry = {
 | **B-10** | 소식 조회 단위 | `since` 날짜 범위(3일씩 추가) | 커서 기반 페이지네이션 여부 |
 | **B-11** | 통계 집계 위치 | 프론트 집계 (8장) | 서버 집계 전환 시점 |
 | **B-12** | 파일 출력 (U5) | 미연동 (9장) | 형식·생성 방식·엔드포인트 |
-| **B-13** | 알림 설정 | 기기 메모리에만 보관 | 서버 저장 여부, 알림 조건 |
+| **B-13** | 알림 설정 | **구현됨.** 서버에 저장(`/notifications/settings`). 앱 안 종 아이콘 점만 있고 푸시 알림은 없음 | 푸시 알림이 필요한지 |
 
 ## 7. 새 API 제안 [제안]
 
 아래는 **확정 API가 아닙니다.** 프론트가 필요로 하는 모양을 제안한 것이며, 백엔드가 다른 형태로 정해도 됩니다.
 
 ### 7-1. 카테고리 조회 (B-4 관련)
+
 
 ```
 GET /categories

@@ -1,5 +1,5 @@
 import { ApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
-import { readDb, writeDb } from "@/api/mock/mockDb";
+import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
 import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
@@ -322,7 +322,46 @@ export const mockApi: Api = {
       return clone(created);
     },
   },
+
+  // 규칙은 백엔드 NotificationService와 같다. 내가 남긴 소식은 세지 않는다
+  // mock 직원에는 가입 시각이 없어서, 한 번도 안 읽었으면 소식 전체를 센다
+  notifications: {
+    async summary() {
+      await readLatency();
+      const me = requireSession();
+      const db = readDb();
+      const { readAt } = notificationState(me.id);
+      const unreadCount = db.events.filter(
+        (e) => e.actorId !== me.id && (!readAt || e.occurredAt > readAt),
+      ).length;
+      return readAt ? { unreadCount, lastReadAt: readAt } : { unreadCount };
+    },
+    async markAllRead() {
+      const me = requireSession();
+      setNotificationState(me.id, { readAt: new Date().toISOString() });
+    },
+    async settings() {
+      await readLatency();
+      return { notifyNewLog: notificationState(requireSession().id).notifyNewLog };
+    },
+    async updateSettings({ notifyNewLog }) {
+      await writeLatency();
+      setNotificationState(requireSession().id, { notifyNewLog });
+      return { notifyNewLog };
+    },
+  },
 };
+
+function notificationState(staffId: string): MockNotificationState {
+  return readDb().notifications?.[staffId] ?? { notifyNewLog: true };
+}
+
+function setNotificationState(staffId: string, patch: Partial<MockNotificationState>): void {
+  writeDb((db) => ({
+    ...db,
+    notifications: { ...db.notifications, [staffId]: { ...notificationState(staffId), ...patch } },
+  }));
+}
 
 /** DEMO_ONLY — 시연 패널의 가상 역할 전환. 실제 권한을 보장하는 코드가 아니다 */
 export function mockSwitchStaff(staffId: string): void {
