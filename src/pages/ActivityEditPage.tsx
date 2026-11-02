@@ -21,13 +21,11 @@ import {
   ACTIVITY_SLOT_MINUTES,
   BEHAVIOR_TYPES,
   addActivityMinutes,
-  PARTICIPATION_OPTIONS,
-  POSITIVE_SUPPORT_OPTIONS,
-  PRE_SUPPORT_OPTIONS,
-  REACTION_OPTIONS,
   behaviorDetailLabel,
 } from "@/data/catalog";
 import { useDraft } from "@/app/DraftContext";
+import { useCategoryChoices } from "@/app/useCategoryChoices";
+import { choiceLabels } from "@/services/categoryService";
 import { useDemo } from "@/demo/DemoContext";
 import { emptyActivity, sortActivities } from "@/services/diaryService";
 import { uid } from "@/lib/utils";
@@ -38,7 +36,8 @@ import type { Activity, BehaviorType } from "@/types";
  * 활동 내용 입력/수정 (2.1.5/FR-17 ~ FR-25).
  * - 제목은 신규 '활동 입력', 수정 '활동 수정' (FR-17)
  * - 활동 시간은 30분 칸 하나를 고른다. 같은 일지의 다른 활동이 쓴 칸은 목록에서 뺀다 (FR-18)
- * - 참여활동·사전지원·반응·긍정행동지원은 복수 선택 칩, '기타'는 직접 입력 (FR-19~FR-23)
+ * - 참여활동·사전지원·반응·긍정행동지원은 복수 선택 칩, '기타'는 직접 입력 (FR-19~FR-23).
+ *   선택지는 서버 목록(GET /categories)을 쓴다
  * - 도전적 행동은 '있음'을 켜면 타해/자해/파괴행동/기타가 나타나고, 앞 3종은 상세 화면으로 이동 (FR-24)
  * - '저장하고 다음 활동'은 임시 활동 목록만 갱신하고 서버에 저장하지 않는다 (FR-25)
  */
@@ -46,6 +45,7 @@ export function ActivityEditPage() {
   const navigate = useNavigate();
   const { activityId } = useParams();
   const { flags } = useDemo();
+  const choices = useCategoryChoices();
   const { draft, pendingActivity, setPendingActivity, upsertActivity } = useDraft();
   // 활동 시간은 필수다. '저장'을 눌렀는데 비어 있으면 표시한다
   const [timeMissing, setTimeMissing] = useState(false);
@@ -229,7 +229,7 @@ export function ActivityEditPage() {
           <MultiChoiceGroup
             label="참여 활동"
             hideLabel
-            options={PARTICIPATION_OPTIONS}
+            options={choiceLabels(choices.participation, activity.participation)}
             values={activity.participation}
             onChange={(values) => patch({ participation: values })}
             otherValue={activity.participationOther}
@@ -253,7 +253,7 @@ export function ActivityEditPage() {
           <MultiChoiceGroup
             label="사전 지원"
             hideLabel
-            options={PRE_SUPPORT_OPTIONS}
+            options={choiceLabels(choices.preSupport, activity.preSupport)}
             values={activity.preSupport}
             onChange={(values) => patch({ preSupport: values })}
             otherValue={activity.preSupportOther}
@@ -267,7 +267,7 @@ export function ActivityEditPage() {
           <MultiChoiceGroup
             label="이용자 반응"
             hideLabel
-            options={REACTION_OPTIONS}
+            options={choiceLabels(choices.reaction, activity.reaction)}
             values={activity.reaction}
             onChange={(values) => patch({ reaction: values })}
             otherValue={activity.reactionOther}
@@ -279,7 +279,7 @@ export function ActivityEditPage() {
           <MultiChoiceGroup
             label="긍정행동지원"
             hideLabel
-            options={POSITIVE_SUPPORT_OPTIONS}
+            options={choiceLabels(choices.positiveSupport, activity.positiveSupport)}
             values={activity.positiveSupport}
             onChange={(values) => patch({ positiveSupport: values })}
             otherValue={activity.positiveSupportOther}

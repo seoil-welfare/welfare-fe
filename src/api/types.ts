@@ -221,6 +221,34 @@ export interface StaffApi {
   setActive(staffId: string, active: boolean): Promise<Staff>;
 }
 
+/** 선택 항목 1개. 일지에는 아직 label을 저장한다 (code 저장 전환은 B-4) */
+export interface CategoryItem {
+  code: string;
+  label: string;
+  order: number;
+  /** false면 새 일지에서는 숨긴다. 과거 일지·통계에는 그대로 남는다 */
+  active: boolean;
+  /** '기타'면 true (직접 입력칸) */
+  etc: boolean;
+}
+
+/** GET /categories. 숨긴 항목도 함께 온다 */
+export interface Categories {
+  weather: CategoryItem[];
+  condition: CategoryItem[];
+  participation: CategoryItem[];
+  preSupport: CategoryItem[];
+  reaction: CategoryItem[];
+  positiveSupport: CategoryItem[];
+  behaviorTypes: { code: string; label: string; order: number }[];
+  /** 도전적 행동 유형 코드 → 세부 항목. code는 BEHAVIOR_DETAILS의 id와 같다 */
+  behaviorDetails: Record<string, CategoryItem[]>;
+}
+
+export interface CategoryApi {
+  list(): Promise<Categories>;
+}
+
 /** 헤더 종 아이콘용. 마지막으로 읽은 뒤 다른 직원이 등록·수정한 소식 수 */
 export interface NotificationSummary {
   unreadCount: number;
@@ -250,4 +278,5 @@ export interface Api {
   serviceUsers: ServiceUserApi;
   staff: StaffApi;
   notifications: NotificationApi;
+  categories: CategoryApi;
 }

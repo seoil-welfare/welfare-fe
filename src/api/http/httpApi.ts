@@ -61,4 +61,7 @@ export const httpApi: Api = {
     settings: () => request("/notifications/settings"),
     updateSettings: (input) => request("/notifications/settings", { method: "PUT", body: input }),
   },
+  categories: {
+    list: () => request("/categories"),
+  },
 };

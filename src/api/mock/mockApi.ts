@@ -4,6 +4,7 @@ import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
 import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
+import { defaultCategories } from "@/services/categoryService";
 import { statsSummary } from "@/services/statsService";
 import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
@@ -372,6 +373,14 @@ export const mockApi: Api = {
       await writeLatency();
       setNotificationState(requireSession().id, { notifyNewLog });
       return { notifyNewLog };
+    },
+  },
+
+  // mock은 catalog.ts 목록을 그대로 돌려준다 (숨긴 항목 없음)
+  categories: {
+    async list() {
+      await readLatency();
+      return defaultCategories();
     },
   },
 };

@@ -72,6 +72,7 @@ export const queryKeys = {
   notifications: ["notifications"] as const,
   notificationSummary: ["notifications", "summary"] as const,
   notificationSettings: ["notifications", "settings"] as const,
+  categories: ["categories"] as const,
 };
 
 /* ---------- 인증 ---------- */
@@ -175,6 +176,15 @@ export function useNews(since: string) {
     queryKey: queryKeys.newsSince(since),
     queryFn: () => api.news.list({ since }),
     placeholderData: (previous) => previous,
+  });
+}
+
+/** 일지 선택 항목. 자주 바뀌지 않으므로 5분 동안 다시 묻지 않는다 */
+export function useCategories() {
+  return useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: () => api.categories.list(),
+    staleTime: 5 * 60_000,
   });
 }
 
