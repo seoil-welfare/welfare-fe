@@ -57,6 +57,9 @@ export function ExportPage() {
 /** 월간 기록 출력에서 고를 수 있는 연도 수 (올해부터 거슬러) */
 const MONTHLY_YEAR_COUNT = 5;
 
+/** 월간 기록 출력 화면의 선택 박스·버튼 테두리. 지난 소식 보기 버튼과 같은 옅은 테두리 */
+const SOFT_BORDER = "border-input/40";
+
 function ExportForm({
   meta,
   users,
@@ -105,7 +108,12 @@ function ExportForm({
       width="form"
       bottomBar={
         <BottomActionBar>
-          <Button variant="outline" block onClick={() => navigate("/mypage")}>
+          <Button
+            variant="outline"
+            block
+            className={byMonth ? SOFT_BORDER : undefined} // 엑셀 내보내기 화면은 그대로
+            onClick={() => navigate("/mypage")}
+          >
             닫기
           </Button>
           <Button block onClick={run} disabled={running || selectedUsers.length === 0}>
@@ -148,7 +156,7 @@ function ExportForm({
               <Field className="flex-1">
                 <FieldLabel htmlFor="export-year">연도</FieldLabel>
                 <Select value={String(year)} onValueChange={(value) => changeYear(Number(value))}>
-                  <SelectTrigger id="export-year">
+                  <SelectTrigger id="export-year" className={SOFT_BORDER}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,7 +171,7 @@ function ExportForm({
               <Field className="flex-1">
                 <FieldLabel htmlFor="export-month">월</FieldLabel>
                 <Select value={String(month)} onValueChange={(value) => setMonth(Number(value))}>
-                  <SelectTrigger id="export-month">
+                  <SelectTrigger id="export-month" className={SOFT_BORDER}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
