@@ -50,5 +50,21 @@ export const httpApi: Api = {
   staff: {
     list: () => request("/staff"),
     create: (input) => request("/staff", { method: "POST", body: input }),
+    setActive: (staffId, active) =>
+      request("/staff/" + encodeURIComponent(staffId) + (active ? "/activate" : "/deactivate"), {
+        method: "POST",
+      }),
+  },
+  notifications: {
+    summary: () => request("/notifications/summary"),
+    markAllRead: () => request("/notifications/read", { method: "POST" }),
+    settings: () => request("/notifications/settings"),
+    updateSettings: (input) => request("/notifications/settings", { method: "PUT", body: input }),
+  },
+  categories: {
+    list: () => request("/categories"),
+    addParticipation: (label) => request("/categories/participation", { method: "POST", body: { label } }),
+    updateParticipation: (code, input) =>
+      request("/categories/participation/" + encodeURIComponent(code), { method: "PUT", body: input }),
   },
 };

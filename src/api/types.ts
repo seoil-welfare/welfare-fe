@@ -214,8 +214,69 @@ export interface ServiceUserApi {
 }
 
 export interface StaffApi {
+  /** 사용 중지된 직원도 포함한다 (과거 일지 작성자 이름 표시용) */
   list(): Promise<Staff[]>;
   create(input: StaffInput): Promise<Staff>;
+  /** 계정 사용 중지(false)·다시 사용(true). 팀장·국장만, 내 계정은 중지 못 함 */
+  setActive(staffId: string, active: boolean): Promise<Staff>;
+}
+
+/** 선택 항목 1개. 일지에는 아직 label을 저장한다 (code 저장 전환은 B-4) */
+export interface CategoryItem {
+  code: string;
+  label: string;
+  order: number;
+  /** false면 새 일지에서는 숨긴다. 과거 일지·통계에는 그대로 남는다 */
+  active: boolean;
+  /** '기타'면 true (직접 입력칸) */
+  etc: boolean;
+}
+
+/** GET /categories. 숨긴 항목도 함께 온다 */
+export interface Categories {
+  weather: CategoryItem[];
+  condition: CategoryItem[];
+  participation: CategoryItem[];
+  preSupport: CategoryItem[];
+  reaction: CategoryItem[];
+  positiveSupport: CategoryItem[];
+  behaviorTypes: { code: string; label: string; order: number }[];
+  /** 도전적 행동 유형 코드 → 세부 항목. code는 BEHAVIOR_DETAILS의 id와 같다 */
+  behaviorDetails: Record<string, CategoryItem[]>;
+}
+
+/** 참여 활동 이름 변경·숨기기. 보내지 않은 칸은 바꾸지 않는다 */
+export interface ParticipationUpdate {
+  label?: string;
+  active?: boolean;
+}
+
+export interface CategoryApi {
+  list(): Promise<Categories>;
+  /** 팀장·국장만. '기타' 바로 앞에 들어간다. 이름이 겹치면 409 DUPLICATE_CATEGORY */
+  addParticipation(label: string): Promise<CategoryItem>;
+  /** 팀장·국장만. '기타'는 숨길 수 없다(400) */
+  updateParticipation(code: string, input: ParticipationUpdate): Promise<CategoryItem>;
+}
+
+/** 헤더 종 아이콘용. 마지막으로 읽은 뒤 다른 직원이 등록·수정한 소식 수 */
+export interface NotificationSummary {
+  unreadCount: number;
+  /** 한 번도 읽지 않았으면 없다 */
+  lastReadAt?: string;
+}
+
+export interface NotificationSettings {
+  /** 새 일지 알림 받기 (마이페이지 스위치) */
+  notifyNewLog: boolean;
+}
+
+export interface NotificationApi {
+  summary(): Promise<NotificationSummary>;
+  /** 전부 읽음. 소식 화면을 열 때 부른다 */
+  markAllRead(): Promise<void>;
+  settings(): Promise<NotificationSettings>;
+  updateSettings(input: NotificationSettings): Promise<NotificationSettings>;
 }
 
 export interface Api {
@@ -226,4 +287,6 @@ export interface Api {
   news: NewsApi;
   serviceUsers: ServiceUserApi;
   staff: StaffApi;
+  notifications: NotificationApi;
+  categories: CategoryApi;
 }

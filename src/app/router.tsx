@@ -25,6 +25,7 @@ import { MyPage } from "@/pages/MyPage";
 import { UserDetailPage, UserNewPage, UsersPage } from "@/pages/UsersPages";
 import { StaffNewPage, StaffPage } from "@/pages/StaffPages";
 import { ExportPage } from "@/pages/ExportPage";
+import { ParticipationPage } from "@/pages/ParticipationPage";
 import { PasswordPage, ProfilePage } from "@/pages/SettingsPages";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -109,6 +110,7 @@ export function AppRoutes() {
         <Route path="/staff/new" element={<StaffNewPage />} />
         <Route path="/exports/:kind" element={<ExportPage />} />
         <Route path="/settings/password" element={<PasswordPage />} />
+        <Route path="/settings/participation" element={<ParticipationPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

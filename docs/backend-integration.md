@@ -161,6 +161,22 @@ NewsEntry = {
 | `POST /service-users/:id/close` | – | `ServiceUser` (`status: "closed"`) |
 | `GET /staff` | – | `Staff[]` |
 | `POST /staff` | `{ name, loginId, department, position, role }` | `Staff` · 아이디 중복은 409 |
+| `POST /staff/:id/deactivate` | – | `Staff` (`active: false`). 팀장·국장만, 국장 계정은 국장만, 내 계정은 400 (구현됨) |
+| `POST /staff/:id/activate` | – | `Staff` (`active: true`) (구현됨) |
+
+- `GET /staff`는 사용 중지된 직원도 `active: false`로 함께 줍니다. 담당자 목록에 '사용 중지' 배지로 보이고, 이용자의 담당 직원 선택지에서는 빠집니다.
+- 사용 중지 계정으로 로그인하면 403 `ACCOUNT_DISABLED`이고, 로그인 화면은 서버 문구를 그대로 보여 줍니다.
+
+### 알림 (구현됨)
+
+| 메서드 · 경로 | 요청 | 응답 |
+|---|---|---|
+| `GET /notifications/summary` | – | `{ unreadCount, lastReadAt? }`. 마지막으로 읽은 뒤 **다른 직원**이 남긴 소식 수 |
+| `POST /notifications/read` | – | 204. 오늘의 소식 화면을 열 때 부름 |
+| `GET /notifications/settings` | – | `{ notifyNewLog }` |
+| `PUT /notifications/settings` | `{ notifyNewLog }` | 같음. 마이페이지 '새 일지 알림 받기' 스위치 |
+
+- 헤더 종 아이콘의 점은 `notifyNewLog`가 켜져 있고 `unreadCount > 0`일 때만 보입니다. 서버는 알림을 꺼도 수를 세어 줍니다.
 
 ## 5. 데이터 모델
 
@@ -200,14 +216,16 @@ NewsEntry = {
 | **B-9** | 자동 로그인 | 값만 전송 | 세션 유지 기간, 공용 기기 정책 |
 | **B-10** | 소식 조회 단위 | `since` 날짜 범위(3일씩 추가) | 커서 기반 페이지네이션 여부 |
 | **B-11** | 통계 집계 위치 | 프론트 집계 (8장) | 서버 집계 전환 시점 |
-| **B-12** | 파일 출력 (U5) | 미연동 (9장) | 형식·생성 방식·엔드포인트 |
-| **B-13** | 알림 설정 | 기기 메모리에만 보관 | 서버 저장 여부, 알림 조건 |
+| **B-12** | 파일 출력 (U5) | 일일 기록지·일지 모아 출력·월간 기록은 프론트에서 docx 생성. 엑셀은 미연동 (9장) | 엑셀의 형식·생성 방식·엔드포인트 |
+| **B-13** | 알림 설정 | **구현됨.** 서버에 저장(`/notifications/settings`). 앱 안 종 아이콘 점만 있고 푸시 알림은 없음 | 푸시 알림이 필요한지 |
 
 ## 7. 새 API 제안 [제안]
 
 아래는 **확정 API가 아닙니다.** 프론트가 필요로 하는 모양을 제안한 것이며, 백엔드가 다른 형태로 정해도 됩니다.
 
 ### 7-1. 카테고리 조회 (B-4 관련)
+
+**조회는 구현·연결됨.** 일지 작성(날씨·컨디션), 활동 입력(참여 활동·사전 지원·이용자 반응·긍정행동지원), 도전적 행동 세부 항목 화면이 이 목록을 씁니다([`useCategoryChoices`](../src/app/useCategoryChoices.ts)). 받기 전이나 실패하면 `catalog.ts` 기본 목록으로 그립니다. `active: false` 항목은 새로 고를 수 없고, 이미 고른 일지를 고칠 때만 보입니다. 저장 값은 아직 라벨이며(서버가 띄어쓰기를 무시하고 찾음), 코드 저장 전환은 남아 있습니다. 참여 활동 추가·이름 변경·숨기기(`POST /categories/participation`, `PUT /categories/participation/:code`)는 마이페이지 > 참여 활동 관리(`/settings/participation`, 팀장·국장 메뉴)에서 합니다. 아래는 처음 제안한 모양입니다.
 
 ```
 GET /categories
@@ -269,8 +287,13 @@ GET /stats/summary?userId&unit=week|month|quarter|year&year&month&quarter&week
 
 ## 9. 파일 출력 현황
 
-- 구현된 것: 출력 설정 화면 3종(대상 이용자·기간 선택, 진행 표시)
-- 구현되지 않은 것: 파일 생성·다운로드. 버튼을 누르면 "출력 기능은 백엔드 연동 후 구현"이라고 안내하고, 파일이 만들어진 것처럼 표시하지 않습니다.
+- 구현된 것
+  - 출력 설정 화면 3종(대상 이용자·기간 선택, 진행 표시)
+  - 일지 모아 출력: 출력 API 없이 `GET /diaries?userId&from&to&status=completed`로 받아 일일 기록지 docx 한 파일을 브라우저에서 만듭니다. 이용자 한 명, 날짜순 하루 한 페이지, 일지 없는 날은 건너뜁니다. 양식은 단건 출력과 같은 파일을 반복형으로 바꿔 씁니다.
+  - 한 번에 92일까지: 하루를 꽉 채운 일지(활동 10개) 31건이 PC에서 약 0.6초 걸립니다. 휴대폰은 3~4배 느려서 3개월이면 몇 초 안에 끝나는 범위로 정했습니다.
+  - 월간 기록: 출력 API 없이 이용자마다 `GET /diaries?userId&from&to&status=completed`(그 달 1일~말일)로 받아 월별활동일지 docx를 브라우저에서 만들고, 이용자마다 파일 하나씩 연달아 내려받습니다. 값 규칙은 [`monthlyRecordService.ts`](../src/services/monthlyRecordService.ts) 맨 위 주석에 있습니다. 양식 안 그림 2개(월간 발생 행동, 막대그래프)는 캔버스로 그려 바꿔 끼웁니다.
+  - 템플릿은 원본 양식(`src/assets/forms/monthly-record.docx`)에서 `scripts/build-monthly-template.cjs`로 만듭니다. 양식이 바뀌면 다시 돌립니다.
+- 구현되지 않은 것: 엑셀의 파일 생성. 버튼을 누르면 "출력 기능은 준비 중이에요"라고 안내하고, 파일이 만들어진 것처럼 표시하지 않습니다.
 - 형식에 따라 달라지는 설계:
   - 엑셀: 서버가 바로 파일을 만들 수 있음
   - PDF·HWPX: 복지관 양식(FR-78)이 확정되어야 하고 생성 시간이 길 수 있음 → 7-3 비동기 방식 검토

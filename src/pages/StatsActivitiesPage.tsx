@@ -29,6 +29,8 @@ export function StatsActivitiesPage() {
 
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
   const summary = stats.activities;
+  // 서버 통계가 주는 참여 활동 목록(숨긴 항목 포함)을 쓴다. 새로 추가된 활동도 고를 수 있다
+  const activityOptions = summary.reactionByParticipation.map(({ label }) => ({ value: label, label }));
 
   // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
   const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
@@ -73,7 +75,7 @@ export function StatsActivitiesPage() {
             label="기준 참여 활동"
             value={focusActivity}
             onValueChange={setFocusActivity}
-            options={PARTICIPATION_OPTIONS.map((label) => ({ value: label, label }))}
+            options={activityOptions}
           />
           <HorizontalBars items={reactionItemsFor(stats, focusActivity)} />
         </FormSection>

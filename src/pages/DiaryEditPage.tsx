@@ -16,11 +16,12 @@ import { FormSection } from "@/components/common/FormSection";
 import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
 import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
-import { CONDITIONS, WEATHERS } from "@/data/catalog";
 import { errorMessage, isApiError, isUpdatedByOther, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { combineQueries, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
 import { useDraft } from "@/app/DraftContext";
 import { getLastPage } from "@/app/lastPage";
+import { useCategoryChoices } from "@/app/useCategoryChoices";
+import { choiceLabels } from "@/services/categoryService";
 import { useToday } from "@/lib/today";
 import {
   activeServiceUsers,
@@ -67,6 +68,7 @@ export function DiaryEditPage() {
   // 삭제 확인 팝업을 띄울 활동
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
   const saveDiary = useSaveDiary();
+  const choices = useCategoryChoices(); // 날씨·컨디션 선택지 (GET /categories)
   const usersQuery = useServiceUsers();
   const users = activeServiceUsers(usersQuery.data ?? []);
 
@@ -311,13 +313,13 @@ export function DiaryEditPage() {
         <FormSection title="날씨와 컨디션">
           <SingleChoiceGroup
             label="날씨"
-            options={WEATHERS}
+            options={choiceLabels(choices.weather, [draft.weather])}
             value={draft.weather}
             onChange={(value) => updateDraft({ weather: value as Weather })}
           />
           <SingleChoiceGroup
             label="이용자 컨디션"
-            options={CONDITIONS}
+            options={choiceLabels(choices.condition, [draft.condition])}
             value={draft.condition}
             onChange={(value) => updateDraft({ condition: value as Condition })}
             otherValue={draft.conditionOther}

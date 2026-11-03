@@ -34,6 +34,11 @@ export function findStaff(staff: readonly Staff[], staffId: string): Staff | und
   return staff.find((s) => s.id === staffId);
 }
 
+/** 사용 중지된 계정이 아닌지. active를 생략한 mock 데이터는 사용 중으로 본다 */
+export function isStaffActive(staff: Staff): boolean {
+  return staff.active !== false;
+}
+
 export function activeServiceUsers(serviceUsers: readonly ServiceUser[]): ServiceUser[] {
   return serviceUsers.filter((u) => u.status === "active");
 }

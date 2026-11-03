@@ -1,9 +1,10 @@
 import { ApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
-import { readDb, writeDb } from "@/api/mock/mockDb";
-import type { Api, NewsEntry, SaveDiaryInput } from "@/api/types";
+import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
+import type { Api, CategoryItem, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
-import { calendarClientStatuses, calendarDayCounts } from "@/services/diaryService";
+import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
+import { defaultCategories } from "@/services/categoryService";
 import { statsSummary } from "@/services/statsService";
 import { ROLE_POSITION } from "@/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
@@ -18,6 +19,9 @@ import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 export const MOCK_PASSWORD = "demo1234";
 
 const SLOW_DELAY_MS = 3000;
+
+/** 참여 활동 이름 길이. 백엔드 activity_type.name VARCHAR(30)과 같다 */
+const PARTICIPATION_MAX_LABEL = 30;
 
 /** 달력 6주. 백엔드 CalendarService.MAX_DAYS와 같다 */
 const CALENDAR_MAX_DAYS = 42;
@@ -178,6 +182,9 @@ export const mockApi: Api = {
           "INVALID_CREDENTIALS",
         );
       }
+      if (!isStaffActive(member)) {
+        throw new ApiError(403, "사용이 중지된 계정이에요. 관리자에게 문의해 주세요.", "ACCOUNT_DISABLED");
+      }
       writeDb((db) => ({ ...db, session: { currentStaffId: member.id } }));
       return clone(member);
     },
@@ -321,8 +328,136 @@ export const mockApi: Api = {
       writeDb((db) => ({ ...db, staff: [...db.staff, created] }));
       return clone(created);
     },
+    // 규칙은 백엔드 AuthService.setStaffActive와 같다
+    async setActive(staffId, active) {
+      await writeLatency();
+      const me = requireSession();
+      if (me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "계정 사용 중지는 팀장·국장만 할 수 있어요.", "FORBIDDEN");
+      }
+      const target = readDb().staff.find((s) => s.id === staffId);
+      if (!target) throw notFound("직원");
+      if (target.role === "director" && me.role !== "director") {
+        throw new ApiError(403, "국장 계정은 국장만 바꿀 수 있어요.", "FORBIDDEN");
+      }
+      if (!active && staffId === me.id) {
+        throw new ApiError(400, "내 계정은 사용 중지할 수 없어요.", "VALIDATION_ERROR");
+      }
+      writeDb((db) => ({
+        ...db,
+        staff: db.staff.map((s) => (s.id === staffId ? { ...s, active } : s)),
+      }));
+      return clone(readDb().staff.find((s) => s.id === staffId)!);
+    },
+  },
+
+  // 규칙은 백엔드 NotificationService와 같다. 내가 남긴 소식은 세지 않는다
+  // mock 직원에는 가입 시각이 없어서, 한 번도 안 읽었으면 소식 전체를 센다
+  notifications: {
+    async summary() {
+      await readLatency();
+      const me = requireSession();
+      const db = readDb();
+      const { readAt } = notificationState(me.id);
+      const unreadCount = db.events.filter(
+        (e) => e.actorId !== me.id && (!readAt || e.occurredAt > readAt),
+      ).length;
+      return readAt ? { unreadCount, lastReadAt: readAt } : { unreadCount };
+    },
+    async markAllRead() {
+      const me = requireSession();
+      setNotificationState(me.id, { readAt: new Date().toISOString() });
+    },
+    async settings() {
+      await readLatency();
+      return { notifyNewLog: notificationState(requireSession().id).notifyNewLog };
+    },
+    async updateSettings({ notifyNewLog }) {
+      await writeLatency();
+      setNotificationState(requireSession().id, { notifyNewLog });
+      return { notifyNewLog };
+    },
+  },
+
+  // 참여 활동만 관리 화면에서 바뀐다. 규칙은 백엔드 CategoryService와 같다
+  categories: {
+    async list() {
+      await readLatency();
+      return { ...defaultCategories(), participation: clone(participationItems()) };
+    },
+    async addParticipation(rawLabel) {
+      await writeLatency();
+      requireManager();
+      const label = checkParticipationLabel(rawLabel);
+      const items = participationItems();
+      const etcIndex = items.findIndex((item) => item.etc);
+      const created: CategoryItem = { code: uid("custom"), label, order: 0, active: true, etc: false };
+      // '기타'는 항상 맨 끝
+      const next = etcIndex < 0 ? [...items, created] : [...items.slice(0, etcIndex), created, ...items.slice(etcIndex)];
+      writeDb((db) => ({ ...db, participation: next.map((item, i) => ({ ...item, order: i + 1 })) }));
+      return clone({ ...created, order: next.indexOf(created) + 1 });
+    },
+    async updateParticipation(code, input) {
+      await writeLatency();
+      requireManager();
+      const current = participationItems().find((item) => item.code === code);
+      if (!current) throw notFound("참여 활동");
+      if (input.label === undefined && input.active === undefined) {
+        throw new ApiError(400, "바꿀 이름이나 사용 여부를 보내 주세요.", "VALIDATION_ERROR");
+      }
+      const label = input.label === undefined ? current.label : checkParticipationLabel(input.label, code);
+      if (input.active === false && current.etc) {
+        throw new ApiError(400, "'기타'는 숨길 수 없어요.", "VALIDATION_ERROR");
+      }
+      const updated = { ...current, label, active: input.active ?? current.active };
+      writeDb((db) => ({
+        ...db,
+        participation: participationItems().map((item) => (item.code === code ? updated : item)),
+      }));
+      return clone(updated);
+    },
   },
 };
+
+function participationItems(): CategoryItem[] {
+  return readDb().participation ?? defaultCategories().participation;
+}
+
+function requireManager(): Staff {
+  const me = requireSession();
+  if (me.role !== "teamLead" && me.role !== "director") {
+    throw new ApiError(403, "참여 활동은 팀장·국장만 바꿀 수 있어요.", "FORBIDDEN");
+  }
+  return me;
+}
+
+/** 이름 검사. 띄어쓰기만 다른 이름도 같은 이름으로 본다 (selfCode는 수정할 때 자기 자신) */
+function checkParticipationLabel(raw: string, selfCode?: string): string {
+  const label = raw.trim();
+  if (!label) throw new ApiError(400, "참여 활동 이름을 입력해 주세요.", "VALIDATION_ERROR");
+  if (label.length > PARTICIPATION_MAX_LABEL) {
+    throw new ApiError(400, "참여 활동 이름은 " + PARTICIPATION_MAX_LABEL + "자까지 쓸 수 있어요.", "VALIDATION_ERROR");
+  }
+  const key = label.replaceAll(" ", "");
+  const duplicate = participationItems().find(
+    (item) => item.code !== selfCode && item.label.replaceAll(" ", "") === key,
+  );
+  if (duplicate) {
+    throw new ApiError(409, "이미 있는 참여 활동 이름이에요: " + duplicate.label, "DUPLICATE_CATEGORY");
+  }
+  return label;
+}
+
+function notificationState(staffId: string): MockNotificationState {
+  return readDb().notifications?.[staffId] ?? { notifyNewLog: true };
+}
+
+function setNotificationState(staffId: string, patch: Partial<MockNotificationState>): void {
+  writeDb((db) => ({
+    ...db,
+    notifications: { ...db.notifications, [staffId]: { ...notificationState(staffId), ...patch } },
+  }));
+}
 
 /** DEMO_ONLY — 시연 패널의 가상 역할 전환. 실제 권한을 보장하는 코드가 아니다 */
 export function mockSwitchStaff(staffId: string): void {

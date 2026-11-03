@@ -1,6 +1,7 @@
 import { SERVICE_USERS, STAFF } from "@/data/fixtures";
 import { DEMO_KEYS, clearDemo, readDemo, writeDemo } from "@/demo/demoStorage";
 import { getFlags, subscribeFlags } from "@/demo/flagStore";
+import type { CategoryItem } from "@/api/types";
 import type { Diary, DiaryEvent, ServiceUser, Staff } from "@/types";
 
 /**
@@ -16,7 +17,16 @@ export interface MockState {
   staff: Staff[];
   /** 회원가입한 계정의 비밀번호 (직원 id → 비밀번호). 없으면 데모 비밀번호를 쓴다 */
   passwords?: Record<string, string>;
+  /** 직원 id → 알림 읽은 시각·설정. 없으면 읽은 적 없음, 알림 받기 켬 */
+  notifications?: Record<string, MockNotificationState>;
+  /** 관리 화면에서 바꾼 참여 활동 목록. 없으면 catalog.ts 기본 목록 */
+  participation?: CategoryItem[];
   session: { currentStaffId: string | null };
+}
+
+export interface MockNotificationState {
+  readAt?: string;
+  notifyNewLog: boolean;
 }
 
 let state: MockState | null = null;

@@ -7,8 +7,10 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { OtherInput } from "@/components/common/OtherInput";
-import { BEHAVIOR_DETAILS, behaviorTypeLabel } from "@/data/catalog";
+import { behaviorTypeLabel } from "@/data/catalog";
 import { useDraft } from "@/app/DraftContext";
+import { useCategoryChoices } from "@/app/useCategoryChoices";
+import { behaviorDetailChoices } from "@/services/categoryService";
 import type { BehaviorType } from "@/types";
 
 /**
@@ -23,12 +25,14 @@ export function BehaviorDetailPage() {
   const { type, activityId } = useParams();
   const { pendingActivity, setPendingActivity } = useDraft();
 
+  const choices = useCategoryChoices();
+
   const behaviorType = (type ?? "selfHarm") as BehaviorType;
-  const options = BEHAVIOR_DETAILS[behaviorType] ?? [];
   const backTo = "/diaries/new/activities/" + (activityId ?? "new");
 
   const selection = pendingActivity?.behaviors.find((b) => b.type === behaviorType);
   const selectedIds = selection?.detailIds ?? [];
+  const options = behaviorDetailChoices(choices, behaviorType, selectedIds); // 세부 항목 (GET /categories)
   const otherOption = options.find((o) => o.label === "기타");
   const otherSelected = otherOption ? selectedIds.includes(otherOption.id) : false;
 
