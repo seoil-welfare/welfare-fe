@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Alert, Spinner } from "@/components/ui/misc";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
@@ -44,7 +45,7 @@ export function ExportPage() {
 
   if (usersQuery.data) {
     // 불러온 이용자 전원을 기본 선택하려고 목록을 받은 뒤 마운트한다
-    return <ExportForm meta={meta} users={activeServiceUsers(usersQuery.data)} />;
+    return <ExportForm meta={meta} users={activeServiceUsers(usersQuery.data)} byMonth={kind === "monthly"} />;
   }
   return (
     <AppShell header={<AppHeader title={meta.title} backTo="/mypage" />} width="form">
@@ -53,19 +54,37 @@ export function ExportPage() {
   );
 }
 
+/** 월간 기록 출력에서 고를 수 있는 연도 수 (올해부터 거슬러) */
+const MONTHLY_YEAR_COUNT = 5;
+
 function ExportForm({
   meta,
   users,
+  byMonth,
 }: {
   meta: (typeof KIND_META)[string];
   users: ServiceUser[];
+  /** 월간 기록 출력: 조회 기간을 연도·월로 고른다 (월별활동일지 양식의 '작성월') */
+  byMonth: boolean;
 }) {
   const navigate = useNavigate();
   const today = useToday();
+  const thisYear = Number(today.slice(0, 4));
+  const thisMonth = Number(today.slice(5, 7));
 
   const [selectedUsers, setSelectedUsers] = useState<string[]>(users.map((u) => u.id));
   const [from, setFrom] = useState(addDays(today, -30));
   const [to, setTo] = useState(today);
+  // 월간 기록 작성월. 지난 달을 마감해 쓰는 일이 많아 지난 달로 시작한다 (1월이면 작년 12월)
+  const [year, setYear] = useState(thisMonth === 1 ? thisYear - 1 : thisYear);
+  const [month, setMonth] = useState(thisMonth === 1 ? 12 : thisMonth - 1);
+  const periodLabel = byMonth ? year + "년 " + month + "월" : from + " ~ " + to;
+
+  // 올해를 고르면 이번 달 뒤는 고를 수 없다. 연도를 바꿔 고른 달이 미래가 되면 이번 달로 당긴다
+  function changeYear(next: number) {
+    setYear(next);
+    if (next === thisYear && month > thisMonth) setMonth(thisMonth);
+  }
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -123,33 +142,70 @@ function ExportForm({
           </ul>
         </FormSection>
 
-        <FormSection title="조회 기간">
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Field className="flex-1">
-              <FieldLabel htmlFor="export-from">시작일</FieldLabel>
-              <Input
-                id="export-from"
-                type="date"
-                value={from}
-                onChange={(event) => setFrom(event.target.value)}
-              />
-            </Field>
-            <Field className="flex-1">
-              <FieldLabel htmlFor="export-to">종료일</FieldLabel>
-              <Input
-                id="export-to"
-                type="date"
-                value={to}
-                onChange={(event) => setTo(event.target.value)}
-              />
-            </Field>
-          </div>
-        </FormSection>
+        {byMonth ? (
+          <FormSection title="조회 기간">
+            <div className="flex gap-3">
+              <Field className="flex-1">
+                <FieldLabel htmlFor="export-year">연도</FieldLabel>
+                <Select value={String(year)} onValueChange={(value) => changeYear(Number(value))}>
+                  <SelectTrigger id="export-year">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: MONTHLY_YEAR_COUNT }, (_, i) => thisYear - i).map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}년
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field className="flex-1">
+                <FieldLabel htmlFor="export-month">월</FieldLabel>
+                <Select value={String(month)} onValueChange={(value) => setMonth(Number(value))}>
+                  <SelectTrigger id="export-month">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={String(m)} disabled={year === thisYear && m > thisMonth}>
+                        {m}월
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </FormSection>
+        ) : (
+          <FormSection title="조회 기간">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Field className="flex-1">
+                <FieldLabel htmlFor="export-from">시작일</FieldLabel>
+                <Input
+                  id="export-from"
+                  type="date"
+                  value={from}
+                  onChange={(event) => setFrom(event.target.value)}
+                />
+              </Field>
+              <Field className="flex-1">
+                <FieldLabel htmlFor="export-to">종료일</FieldLabel>
+                <Input
+                  id="export-to"
+                  type="date"
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                />
+              </Field>
+            </div>
+          </FormSection>
+        )}
 
         {done ? (
           <Alert tone="warning" title="출력 기능은 준비 중이에요">
             <p className="mt-1 break-keep">
-              대상 {selectedUsers.length}명 · {from} ~ {to} 범위를 선택했어요.
+              대상 {selectedUsers.length}명 · {periodLabel} 범위를 선택했어요.
             </p>
           </Alert>
         ) : null}
