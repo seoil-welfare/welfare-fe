@@ -2,8 +2,8 @@
 import { readFileSync } from "node:fs";
 import PizZip from "pizzip";
 import { generateFixtures, SERVICE_USERS } from "@/data/fixtures";
-import { DOCX_MIME, renderDailyRecordDocx } from "@/lib/dailyRecordDocx";
-import { dailyRecordData, dailyRecordFileName } from "@/services/dailyRecordService";
+import { DOCX_MIME, renderDailyRecordBundleDocx, renderDailyRecordDocx } from "@/lib/dailyRecordDocx";
+import { dailyRecordData, dailyRecordFileName, diaryBundleFileName } from "@/services/dailyRecordService";
 import type { Diary, ServiceUser } from "@/types";
 
 const problems: string[] = [];
@@ -131,7 +131,29 @@ async function checkRenderedDocx() {
   expect("도전적 행동 내용", text.includes("파괴행동 - 물건 던지기"), "영역 - 항목");
 }
 
+/** 여러 건을 한 파일로 만들 때 일지마다 표가 반복되고, 두 번째부터 새 페이지에서 시작하는지 확인한다 */
+async function checkBundleDocx() {
+  console.log("[일지 모음 docx]");
+  const template = readFileSync("src/assets/forms/daily-record.template.docx");
+  const records = ["2026-09-21", "2026-09-22", "2026-09-24"].map((date) => dailyRecordData({ ...diary, date }, client));
+  const blob = renderDailyRecordBundleDocx(template.buffer.slice(template.byteOffset, template.byteOffset + template.byteLength), records);
+  const xml = new PizZip(await blob.arrayBuffer()).file("word/document.xml")?.asText() ?? "";
+  const text = [...xml.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("");
+
+  const tables = xml.match(/<w:tbl>/g)?.length ?? 0;
+  const singleTables = 3; // 양식 1장 = 머리말·활동·특이사항 표 3개
+  expect("일지 수만큼 양식 반복", tables === singleTables * records.length, tables + "개 표");
+  expect("페이지 나누기는 일지 사이에만", (xml.match(/w:type="page"/g)?.length ?? 0) === records.length - 1, "일지 3건 → 2개");
+  expect("남은 자리표시자 없음", !/[{}]/.test(text), text.match(/\{[^}]*\}/)?.[0] ?? "없음");
+  expect("날짜마다 머리말", ["21일", "22일", "24일"].every((day) => text.includes("9월  " + day)), "9/21, 9/22, 9/24");
+  expect("본문 끝 구역 설정 유지", xml.trimEnd().endsWith("</w:sectPr></w:body></w:document>"), "가로 A4 설정");
+
+  const fileName = diaryBundleFileName(client, "2026-09-01", "2026-09-30");
+  expect("이용자이름_기간_일지모음.docx", fileName === "가상이용자 A_2026-09-01~2026-09-30_일지모음.docx", fileName);
+}
+
 checkRenderedDocx()
+  .then(checkBundleDocx)
   .catch((error) => {
     console.log("  FAIL docx 생성 — " + error);
     problems.push("docx 생성");
