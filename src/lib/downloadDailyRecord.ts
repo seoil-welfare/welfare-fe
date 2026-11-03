@@ -38,8 +38,8 @@ async function loadTemplate() {
   return [await response.arrayBuffer(), docx] as const;
 }
 
-/** Blob을 파일로 내려받게 한다. 보이지 않는 링크를 만들어 누른 뒤 바로 치운다 */
-function saveBlob(blob: Blob, fileName: string) {
+/** Blob을 파일로 내려받게 한다. 보이지 않는 링크를 만들어 누른 뒤 바로 치운다 (월간 기록 출력도 쓴다) */
+export function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
