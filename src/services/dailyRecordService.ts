@@ -54,6 +54,12 @@ export function dailyRecordFileName(diary: Diary, client: ServiceUser): string {
   return name + "_" + diary.date + "_일일기록지.docx";
 }
 
+/** 가상이용자 A_2026-10-01~2026-10-31_일지모음.docx (일지 모아 출력) */
+export function diaryBundleFileName(client: ServiceUser, from: string, to: string): string {
+  const name = client.name.replace(/[\\/:*?"<>|]/g, "_");
+  return name + "_" + from + "~" + to + "_일지모음.docx";
+}
+
 /** 2001-03-05 → 010305 */
 export function toBirth6(birthDate: string): string {
   return birthDate.replaceAll("-", "").slice(2, 8);

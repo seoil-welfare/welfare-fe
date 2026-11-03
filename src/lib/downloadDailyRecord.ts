@@ -1,5 +1,5 @@
 import templateUrl from "@/assets/forms/daily-record.template.docx?url";
-import { dailyRecordData, dailyRecordFileName } from "@/services/dailyRecordService";
+import { dailyRecordData, dailyRecordFileName, diaryBundleFileName } from "@/services/dailyRecordService";
 import type { Diary, ServiceUser } from "@/types";
 
 /**
@@ -10,17 +10,33 @@ import type { Diary, ServiceUser } from "@/types";
  * 실패하면 예외를 그대로 던진다. 안내 문구는 부르는 화면이 정한다.
  */
 export async function downloadDailyRecord(diary: Diary, client: ServiceUser): Promise<void> {
-  // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다. 처음 화면을 여는 데 드는 용량이 늘지 않는다
-  const [response, { renderDailyRecordDocx }] = await Promise.all([
-    fetch(templateUrl),
-    import("@/lib/dailyRecordDocx"),
-  ]);
-  if (!response.ok) throw new Error("일일 기록지 양식을 불러오지 못했어요.");
-
-  const blob = renderDailyRecordDocx(await response.arrayBuffer(), dailyRecordData(diary, client));
+  const [template, { renderDailyRecordDocx }] = await loadTemplate();
+  const blob = renderDailyRecordDocx(template, dailyRecordData(diary, client));
   saveBlob(blob, dailyRecordFileName(diary, client));
 }
 
+/**
+ * 한 이용자의 일지 여러 건을 일일 기록지 한 파일로 내려받게 한다 (일지 모아 출력).
+ * 날짜순으로 하루 한 페이지씩 담는다. 어떤 일지를 넣을지는 부르는 화면이 정한다.
+ */
+export async function downloadDiaryBundle(
+  diaries: Diary[],
+  client: ServiceUser,
+  range: { from: string; to: string },
+): Promise<void> {
+  const [template, { renderDailyRecordBundleDocx }] = await loadTemplate();
+  const sorted = [...diaries].sort((a, b) => a.date.localeCompare(b.date));
+  const blob = renderDailyRecordBundleDocx(template, sorted.map((diary) => dailyRecordData(diary, client)));
+  saveBlob(blob, diaryBundleFileName(client, range.from, range.to));
+}
+
+/** 양식 파일과 docx 라이브러리를 함께 불러온다 */
+async function loadTemplate() {
+  // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다. 처음 화면을 여는 데 드는 용량이 늘지 않는다
+  const [response, docx] = await Promise.all([fetch(templateUrl), import("@/lib/dailyRecordDocx")]);
+  if (!response.ok) throw new Error("일일 기록지 양식을 불러오지 못했어요.");
+  return [await response.arrayBuffer(), docx] as const;
+}
 
 /** Blob을 파일로 내려받게 한다. 보이지 않는 링크를 만들어 누른 뒤 바로 치운다 */
 function saveBlob(blob: Blob, fileName: string) {
