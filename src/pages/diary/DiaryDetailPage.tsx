@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Printer, Share2 } from "lucide-react";
+import { LoaderCircle, Printer, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar, BottomNoticeBar } from "@/components/layout/bars";
@@ -30,7 +29,7 @@ import type { Diary, ServiceUser, Staff } from "@/types";
 /**
  * 일지 상세 조회 (2.1.11/FR-57 ~ FR-64, 2.1.12/FR-65 ~ FR-72).
  * 세 상태를 각각 구현한다 (가이드 7장):
- *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 특이사항 아래 '출력하기'·'공유하기' + 하단 고정 '수정하기'
+ *  1) 작성 완료 — 전체 활동 + 작성·수정 메타 + 아코디언 + 상단바 '출력하기'·'공유하기' 아이콘 + 하단 고정 '수정하기'
  *  2) 본인이 작성 중 — 작성 중 Badge + 남은 활동 안내 + '이어서 작성' 작업 버튼
  *  3) 다른 담당자가 작성 중 — 작성 중 Badge + BottomNoticeBar (수정 CTA 없음)
  * 어떤 상태를 누구에게 보여 줄지의 권한·동시 편집 판정은 이 프로토타입에서 정하지 않는다.
@@ -96,18 +95,26 @@ function DiaryDetail({
     navigate("/diaries/new");
   }
 
-  const headerAction = isDraft && isMine ? (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="공유"
-      onClick={() =>
-        toast.info("공유 기능은 준비 중이에요.")
-      }
-    >
-      <Share2 aria-hidden />
-    </Button>
-  ) : undefined;
+  // 상단바 오른쪽 아이콘 (홈 상단바의 알림 종과 같은 모양).
+  // 출력은 작성 완료 일지만 (JD-09). 공유는 미정이라 지금은 버튼만 둔다
+  const canPrint = !isDraft && serviceUser !== undefined;
+  const canShare = !isDraft || isMine;
+  const headerAction =
+    canPrint || canShare ? (
+      <>
+        {canPrint ? <PrintButton diary={diary} serviceUser={serviceUser} /> : null}
+        {canShare ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="공유하기"
+            onClick={() => toast.info("공유 기능은 준비 중이에요.")}
+          >
+            <Share2 aria-hidden />
+          </Button>
+        ) : null}
+      </>
+    ) : undefined;
 
   return (
     <AppShell
@@ -238,23 +245,6 @@ function DiaryDetail({
             </p>
           )}
         </FormSection>
-
-        {/* 일일 기록지 출력 (JD-09). 작성 완료 일지만 복지관 양식으로 내려받는다 */}
-        {!isDraft && serviceUser ? (
-          <div className="grid grid-cols-2 gap-3">
-            <PrintButton diary={diary} serviceUser={serviceUser} />
-            {/* 공유 기능은 미정. 지금은 버튼만 둔다 */}
-            <Button
-              variant="outline"
-              block
-              className="border-input/40" // 오늘의 소식 필터 pill과 같은 옅은 테두리
-              onClick={() => toast.info("공유 기능은 준비 중이에요.")}
-            >
-              <Share2 aria-hidden />
-              공유하기
-            </Button>
-          </div>
-        ) : null}
       </div>
     </AppShell>
   );
@@ -278,20 +268,14 @@ function PrintButton({ diary, serviceUser }: { diary: Diary; serviceUser: Servic
 
   return (
     <Button
-      variant="outline"
-      block
-      className="border-input/40" // 오늘의 소식 필터 pill과 같은 옅은 테두리
+      variant="ghost"
+      size="icon"
+      aria-label={running ? "일일 기록지 만드는 중" : "일일 기록지 출력하기"}
+      aria-busy={running}
       onClick={handlePrint}
       disabled={running}
     >
-      {running ? (
-        <Spinner label="파일 만드는 중…" />
-      ) : (
-        <>
-          <Printer aria-hidden />
-          출력하기
-        </>
-      )}
+      {running ? <LoaderCircle className="animate-spin" aria-hidden /> : <Printer aria-hidden />}
     </Button>
   );
 }
