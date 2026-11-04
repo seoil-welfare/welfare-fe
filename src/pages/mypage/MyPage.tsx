@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Bell,
-  FileSpreadsheet,
   FileText,
   KeyRound,
   ListChecks,
@@ -111,12 +110,6 @@ export function MyPage() {
               to="/exports/monthly"
               leading={<Printer className="size-5 text-primary" aria-hidden />}
               title="월간 기록 출력"
-            />
-            <Separator />
-            <ListRowLink
-              to="/exports/excel"
-              leading={<FileSpreadsheet className="size-5 text-primary" aria-hidden />}
-              title="엑셀 내보내기"
             />
           </Card>
         </section>

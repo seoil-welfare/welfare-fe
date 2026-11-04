@@ -115,7 +115,6 @@ npm run verify       # build + smoke + check:data + check:api 한 번에
 10. **파일 출력**
    - 일지 모아 출력: 이용자 한 명·기간(최대 92일) 선택 → `출력 시작` → 작성 완료 일지를 일일 기록지 docx 한 파일로 내려받음(하루 한 페이지, 일지 없는 날은 건너뜀)
    - 월간 기록: 이용자(여러 명 가능)·연월 선택 → `출력 시작` → 이용자마다 월별활동일지 docx를 하나씩 연달아 내려받음. 그 달 일지가 없는 이용자는 건너뜀
-   - 엑셀: 대상·기간 선택 → `출력 시작` → **“출력 기능은 준비 중이에요” 안내**(실제 파일 없음)
 
 ### 시연 설정 패널
 
@@ -151,7 +150,7 @@ npm run verify       # build + smoke + check:data + check:api 한 번에
 | `/profile` | 내 정보 | 2.1.13/FR-74 |
 | `/users` `/users/new` `/users/:id` | 이용자 목록·등록·정보 수정·종결 | 2.1.14/FR-86~92 |
 | `/staff` `/staff/new` | 담당자 목록·계정 추가 | 2.1.13/FR-80~81 |
-| `/exports/diaries` `/exports/monthly` `/exports/excel` | 파일 출력 설정 | 2.1.13/FR-77~79 |
+| `/exports/diaries` `/exports/monthly` | 파일 출력 설정 | 2.1.13/FR-77~79 |
 | `/settings/password` | 비밀번호 변경 | 2.1.13/FR-83 |
 | `/settings/participation` | 참여 활동 관리 (추가·이름 변경·숨기기, 팀장·국장) | 기능명세서 5.1 |
 | 그 외 | 잘못된 경로 안내 → 홈/로그인 | — |
@@ -197,7 +196,7 @@ src/
     stats/         StatsPage, StatsActivitiesPage, StatsBehaviorsPage, StatsCategoryPage
     mypage/        MyPage, SettingsPages (내 정보·비밀번호)
     manage/        UsersPages (이용자), StaffPages (담당자), ParticipationPage (참여 활동) — 관리 화면
-    export/        ExportPage(:kind로 폼 고르기), DiaryBundleForm, MonthlyRecordForm, ExcelExportForm
+    export/        ExportPage(:kind로 폼 고르기), DiaryBundleForm, MonthlyRecordForm
     NotFoundPage.tsx
   styles/        globals.css (가이드 11-1 토큰)
   types/         Staff, ServiceUser, Diary, Activity, BehaviorSelection, …
@@ -268,7 +267,7 @@ UI Guideline v1.0의 색 토큰·8단계 Typography·4px 간격·컨트롤 12px/
 | 생년월일 형식 | `YYYY-MM-DD` 권장안 | U6 |
 | 국장 직위 / 계정 정지 | `국장`은 **U4 미확정 예시** 직위(화면에는 `국장`으로만 표시). 정지 Badge·정지 화면은 추가하지 않음 | U4 |
 | 담당자 관리 메뉴 가시성 | 팀장·국장 역할에만 노출(확정 권한 아님) | FR-80, FR-81 |
-| 파일 출력 형식 | 일지 모아 출력은 일일 기록지 docx, 월간 기록은 월별활동일지 docx를 브라우저에서 만듦(월간 기록의 지원 결과·월간 요약 문장은 일지에서 자동으로 정함, 주의사항·종합평가는 빈칸). 엑셀은 “출력 기능은 준비 중이에요” 안내만 표시 | U5 |
+| 파일 출력 형식 | 일지 모아 출력은 일일 기록지 docx, 월간 기록은 월별활동일지 docx를 브라우저에서 만듦(월간 기록의 지원 결과·월간 요약 문장은 일지에서 자동으로 정함, 주의사항·종합평가는 빈칸). 엑셀 내보내기는 화면에서 뺌 | U5 |
 | 이용 종결 / 재활성화 | 종결은 활성 목록에서 숨기고 과거 일지 보존. 재활성화 기능은 없음 | FR-91 |
 
 ---
