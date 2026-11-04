@@ -1,5 +1,5 @@
 import templateUrl from "@/assets/forms/monthly-record.template.docx?url";
-import { saveBlob } from "@/lib/downloadDailyRecord";
+import { saveBlob } from "@/lib/export/downloadDailyRecord";
 import { behaviorTotals, monthlyRecordData, monthlyRecordFileName } from "@/services/monthlyRecordService";
 import type { Diary, ServiceUser } from "@/types";
 
@@ -19,8 +19,8 @@ export async function downloadMonthlyRecord(
   // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다
   const [response, { renderMonthlyRecordDocx }, charts] = await Promise.all([
     fetch(templateUrl),
-    import("@/lib/monthlyRecordDocx"),
-    import("@/lib/monthlyRecordCharts"),
+    import("@/lib/export/monthlyRecordDocx"),
+    import("@/lib/export/monthlyRecordCharts"),
   ]);
   if (!response.ok) throw new Error("월간 기록 양식을 불러오지 못했어요.");
 

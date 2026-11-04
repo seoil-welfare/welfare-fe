@@ -185,8 +185,20 @@ src/
   components/calendar/ RecordCalendar
   data/          catalog.ts (선택 항목), fixtures.ts (가상 데이터)
   demo/          DemoContext (시연 플래그·역할 전환·초기화), DemoPanel, flagStore, demoStorage
-  services/      diaryService.ts, statsService.ts  ← 받아 온 데이터로 계산하는 순수 함수
-  pages/         라우트 화면
+  lib/           utils.ts, today.ts
+  lib/export/    일일 기록지·일지 모아·월간 기록 docx 만들기와 내려받기
+  services/      diaryService.ts, statsService.ts, categoryService.ts,
+                 dailyRecordService.ts, monthlyRecordService.ts  ← 받아 온 데이터로 계산하는 순수 함수
+  pages/         라우트 화면. 영역별 폴더에 둔다
+    auth/          LoginPage, SignupPage
+    home/          HomePage, NewsPage (오늘의 소식)
+    diary/         DiaryEditPage, ActivityEditPage, BehaviorDetailPage, DiaryDetailPage
+    calendar/      CalendarPage
+    stats/         StatsPage, StatsActivitiesPage, StatsBehaviorsPage, StatsCategoryPage
+    mypage/        MyPage, SettingsPages (내 정보·비밀번호)
+    manage/        UsersPages (이용자), StaffPages (담당자), ParticipationPage (참여 활동) — 관리 화면
+    export/        ExportPage(:kind로 폼 고르기), DiaryBundleForm, MonthlyRecordForm, ExcelExportForm
+    NotFoundPage.tsx
   styles/        globals.css (가이드 11-1 토큰)
   types/         Staff, ServiceUser, Diary, Activity, BehaviorSelection, …
 scripts/         smoke.tsx, check-data.ts, check-today.ts (개발 검증용)

@@ -23,7 +23,7 @@ import {
   findServiceUser,
   findStaff,
 } from "@/services/diaryService";
-import { downloadDailyRecord } from "@/lib/downloadDailyRecord";
+import { downloadDailyRecord } from "@/lib/export/downloadDailyRecord";
 import { formatDateTime, formatLongDate } from "@/lib/utils";
 import type { Diary, ServiceUser, Staff } from "@/types";
 

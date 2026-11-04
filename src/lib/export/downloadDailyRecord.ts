@@ -33,7 +33,7 @@ export async function downloadDiaryBundle(
 /** 양식 파일과 docx 라이브러리를 함께 불러온다 */
 async function loadTemplate() {
   // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다. 처음 화면을 여는 데 드는 용량이 늘지 않는다
-  const [response, docx] = await Promise.all([fetch(templateUrl), import("@/lib/dailyRecordDocx")]);
+  const [response, docx] = await Promise.all([fetch(templateUrl), import("@/lib/export/dailyRecordDocx")]);
   if (!response.ok) throw new Error("일일 기록지 양식을 불러오지 못했어요.");
   return [await response.arrayBuffer(), docx] as const;
 }
