@@ -5,17 +5,12 @@ import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/misc";
-import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
 import { ExpandSelect } from "@/components/common/ExpandSelect";
 import { AuthLayout, authButtonClass } from "@/components/auth/AuthLayout";
 import { errorMessage, isApiError } from "@/api/errors";
 import { useSignup } from "@/api/queries";
 import { useToday } from "@/lib/today";
 import { cn } from "@/lib/utils";
-import { ROLE_POSITION, type UserRole } from "@/types";
-
-/** 직위 선택지. 화면에는 직위 이름을, 저장에는 권한(role)을 쓴다 */
-const ROLE_OPTIONS: readonly UserRole[] = ["staff", "teamLead", "director"];
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
@@ -33,7 +28,9 @@ const FOCUS_ID: Record<FieldKey, string> = {
 /**
  * 회원가입.
  * 칸마다 위에 이름을 두는 배치다 (네이버 회원가입 참고).
- * 아이디·비밀번호·이름·생년월일(년은 직접 입력, 월·일은 선택)과 직위(담당자·팀장·국장)를 받는다.
+ * 아이디·비밀번호·이름·생년월일(년은 직접 입력, 월·일은 선택)을 받는다.
+ * 직위는 받지 않는다. 누구나 가입할 수 있어서 직위를 고르게 하면 아무나 팀장·국장이 된다.
+ * 가입하면 항상 담당자(staff)이고, 팀장·국장 권한은 관리자가 따로 준다 (백엔드 AuthService.signup과 같음).
  * 아이디·비밀번호 규칙은 백엔드(AuthService, PasswordPolicy)와 같다. 가입만 하고 로그인은 따로 한다.
  */
 export function SignupPage() {
@@ -48,7 +45,6 @@ export function SignupPage() {
   const [birthYear, setBirthYear] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthDay, setBirthDay] = useState("");
-  const [role, setRole] = useState<UserRole>("staff");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
 
@@ -97,7 +93,7 @@ export function SignupPage() {
     }
 
     signup.mutate(
-      { loginId: loginId.trim().toLowerCase(), password, name: name.trim(), birthDate, role },
+      { loginId: loginId.trim().toLowerCase(), password, name: name.trim(), birthDate },
       {
         onSuccess: (staff) => {
           toast.success("가입했어요. 로그인해 주세요.");
@@ -263,18 +259,6 @@ export function SignupPage() {
               {errors.birthDate}
             </FieldError>
           </fieldset>
-
-          <div className="px-1">
-            <SingleChoiceGroup
-              label="직위"
-              options={ROLE_OPTIONS.map((r) => ROLE_POSITION[r])}
-              value={ROLE_POSITION[role]}
-              onChange={(label) => {
-                const next = ROLE_OPTIONS.find((r) => ROLE_POSITION[r] === label);
-                if (next) setRole(next);
-              }}
-            />
-          </div>
 
           <Button type="submit" size="lg" block disabled={signup.isPending} className={authButtonClass}>
             {signup.isPending ? <Spinner label="가입하는 중…" /> : "가입하기"}

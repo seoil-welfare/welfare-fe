@@ -36,7 +36,6 @@ export interface SignupInput {
   name: string;
   /** YYYY-MM-DD */
   birthDate: string;
-  role: UserRole;
 }
 
 export interface ChangePasswordInput {

@@ -188,7 +188,8 @@ export const mockApi: Api = {
       writeDb((db) => ({ ...db, session: { currentStaffId: member.id } }));
       return clone(member);
     },
-    async signup({ loginId, password, name, birthDate, role }) {
+    // 직위는 받지 않고 항상 담당자로 가입시킨다 (백엔드 AuthService.signup과 같음)
+    async signup({ loginId, password, name, birthDate }) {
       await writeLatency();
       const id = loginId.trim().toLowerCase();
       if (readDb().staff.some((s) => s.loginId === id)) {
@@ -198,8 +199,8 @@ export const mockApi: Api = {
         id: uid("stf"),
         name: name.trim(),
         department: "주간활동지원팀",
-        position: ROLE_POSITION[role],
-        role,
+        position: ROLE_POSITION.staff,
+        role: "staff",
         loginId: id,
         birthDate,
       };
