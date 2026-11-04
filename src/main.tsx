@@ -2,7 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+import { registerSW } from "virtual:pwa-register";
 import { configureHttp } from "@/api/http/client";
 import { createQueryClient, queryKeys } from "@/api/queries";
 import { DraftProvider } from "@/app/DraftContext";
@@ -29,6 +30,16 @@ function signOut(reason: SignedOutReason) {
 configureHttp({
   onUnauthorized: () => signOut("expired"),
   onAccountDisabled: () => signOut("disabled"),
+});
+
+// PWA: 새 버전을 배포하면 바로 바꾸지 않고 안내를 띄운다. 일지를 쓰던 중에 새로고침되면 입력이 사라질 수 있어서다
+const updateApp = registerSW({
+  onNeedRefresh() {
+    toast("새 버전이 있어요.", {
+      duration: Infinity,
+      action: { label: "새로고침", onClick: () => void updateApp(true) },
+    });
+  },
 });
 
 createRoot(root).render(

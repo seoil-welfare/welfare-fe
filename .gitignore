@@ -5,3 +5,6 @@ dist-ssr
 .vite
 .DS_Store
 .env
+
+# 원본 로고 (5.6MB). 아이콘·logo-128.png는 이 파일에서 만들고, 원본은 저장소 밖에 보관한다
+src/assets/logo.png
