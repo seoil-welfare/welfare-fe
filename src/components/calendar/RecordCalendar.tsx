@@ -1,5 +1,7 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { calendarGrid } from "@/services/statsService";
 import { parseISODate } from "@/lib/utils";
 import type { DayCompletion } from "@/services/diaryService";
@@ -12,6 +14,7 @@ import { cn } from "@/lib/utils";
  * - 일요일 calendar-sunday, 토요일 calendar-saturday, 월 바깥 날짜는 muted이며 누르면 그 달로 이동한다
  * - 선택한 날짜는 네이비 배경, 오늘은 네이비 테두리. 같은 날이면 선택 표시가 우선한다
  * - 요일 머리글은 모바일·데스크톱 모두 표시한다
+ * - 'YYYY년 M월' 제목을 누르면 연·월을 골라 바로 이동한다 (MonthPicker)
  */
 
 const WEEKDAY_HEADS = ["일", "월", "화", "수", "목", "금", "토"] as const;
@@ -37,6 +40,7 @@ export function RecordCalendar({
   indicator: "completion" | "gauge";
 }) {
   const days = calendarGrid(year, month);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   function shiftMonth(delta: number) {
     const next = new Date(year, month - 1 + delta, 1);
@@ -49,13 +53,37 @@ export function RecordCalendar({
         <Button variant="ghost" size="icon" aria-label="이전 달" onClick={() => shiftMonth(-1)}>
           <ChevronLeft aria-hidden />
         </Button>
-        <h2 className="tnum type-title" aria-live="polite">
-          {year}년 {month}월
+        <h2 className="type-title">
+          <Button
+            variant="ghost"
+            size="dense"
+            aria-label={year + "년 " + month + "월, 연도와 달 선택"}
+            aria-haspopup="dialog"
+            onClick={() => setPickerOpen(true)}
+            className="tnum type-title gap-1"
+          >
+            <span aria-live="polite">
+              {year}년 {month}월
+            </span>
+            <ChevronDown aria-hidden className="text-muted-foreground" />
+          </Button>
         </h2>
         <Button variant="ghost" size="icon" aria-label="다음 달" onClick={() => shiftMonth(1)}>
           <ChevronRight aria-hidden />
         </Button>
       </div>
+
+      <MonthPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        year={year}
+        month={month}
+        today={today}
+        onPick={(y, m) => {
+          onMonthChange(y, m);
+          setPickerOpen(false);
+        }}
+      />
 
       <div role="grid" aria-label={year + "년 " + month + "월 일지 현황"}>
         <div role="row" className="grid grid-cols-7">
@@ -95,6 +123,69 @@ export function RecordCalendar({
         </div>
       </div>
     </div>
+  );
+}
+
+/** 연·월 선택 창. 연도는 화살표로 넘기고, 달은 12칸 중에서 고른다 */
+function MonthPicker({
+  open,
+  onOpenChange,
+  year,
+  month,
+  today,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  year: number; // 지금 달력에 보이는 연도
+  month: number;
+  today: string;
+  onPick: (year: number, month: number) => void;
+}) {
+  const [shownYear, setShownYear] = useState(year); // 창 안에서 넘겨 보는 연도
+  const todayDate = parseISODate(today);
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setShownYear(year); // 열 때마다 보고 있던 연도에서 시작
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent title="연도와 달 선택" className="max-w-90">
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="ghost" size="icon" aria-label="이전 연도" onClick={() => setShownYear(shownYear - 1)}>
+            <ChevronLeft aria-hidden />
+          </Button>
+          <span className="tnum type-heading" aria-live="polite">
+            {shownYear}년
+          </span>
+          <Button variant="ghost" size="icon" aria-label="다음 연도" onClick={() => setShownYear(shownYear + 1)}>
+            <ChevronRight aria-hidden />
+          </Button>
+        </div>
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+            const selected = shownYear === year && m === month;
+            const isThisMonth = shownYear === todayDate.getFullYear() && m === todayDate.getMonth() + 1;
+            return (
+              <Button
+                key={m}
+                variant={selected ? "default" : "ghost"}
+                size="dense"
+                aria-pressed={selected}
+                aria-current={isThisMonth ? "date" : undefined}
+                onClick={() => onPick(shownYear, m)}
+                className={cn("tnum", !selected && isThisMonth && "ring-2 ring-inset ring-primary")}
+              >
+                {m}월
+              </Button>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
