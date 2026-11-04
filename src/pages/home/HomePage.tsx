@@ -34,7 +34,7 @@ import { addDays, formatShortDate, formatTime, weekdayLabel } from "@/lib/utils"
 import type { Diary } from "@/types";
 
 /** 홈에 보여 줄 오늘의 소식 개수 */
-const HOME_NEWS_LIMIT = 4;
+const HOME_NEWS_LIMIT = 5;
 
 /** '이어서 작성하기'에 띄울 작성 중 일지를 찾는 기간 */
 const DRAFT_LOOKBACK_DAYS = 14;
@@ -43,7 +43,8 @@ const DRAFT_LOOKBACK_DAYS = 14;
  * 일지 홈 (FR-04~FR-07).
  * - 상단 바로가기: ① 이어서 작성(쓰던 일지가 있을 때만) ② 일지 작성 ③ 이용자 등록
  * - 오늘 날짜와 로그인한 계정명을 표시한다
- * - 오늘의 소식은 최신순 최대 4건 (FR-07 원안 3건에서 늘림). 0건이면 안내 문구
+ * - 오늘의 소식은 최신순 최대 5건 (FR-07 원안 3건에서 늘림). 0건이면 안내 문구
+ *   카드는 하단 메뉴 위까지 늘어나고, 그 높이를 5칸으로 똑같이 나눈다. 소식이 5건보다 적어도 칸 높이는 같다
  * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 소식 개수와 상관없이 항상 보인다
  * - '오늘 일지 작성'은 담당 이용자에게 오늘 일지가 이미 있으면 새로 만들지 않고 그 일지로 안내한다
  *   (이용자 1명당 하루 1건)
@@ -230,12 +231,16 @@ function TodayNewsCard({ items: visibleNews }: { items: NewsItem[] }) {
           }
         />
       ) : (
-        <ul className="divide-y divide-border">
+        // 카드 높이를 5칸으로 나눈다. 화면이 낮아도 한 칸은 64px 아래로 줄지 않는다 (그때는 화면이 스크롤된다)
+        <ul
+          className="grid flex-1 divide-y divide-border"
+          style={{ gridTemplateRows: "repeat(" + HOME_NEWS_LIMIT + ", minmax(4rem, 1fr))" }}
+        >
           {visibleNews.map((item) => (
-            <li key={item.event.id}>
+            <li key={item.event.id} className="flex">
               <Link
                 to={"/diaries/" + item.diary.id}
-                className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-accent"
+                className="flex flex-1 items-center gap-3 px-4 py-2 hover:bg-accent"
               >
                 <Avatar name={item.serviceUserName} className="size-10" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">

@@ -68,7 +68,6 @@ const ROUTES = [
   "/staff/new",
   "/exports/diaries",
   "/exports/monthly",
-  "/exports/excel",
   "/settings/password",
   "/settings/participation",
   "/this/route/does/not/exist",
