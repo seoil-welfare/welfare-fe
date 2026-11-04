@@ -151,8 +151,9 @@ export function HomePage() {
   );
 
   return (
-    <AppShell header={<MainHeader />}>
-      <div className="flex flex-col gap-4">
+    // 오늘의 소식 카드가 하단 바 바로 위까지 늘어난다. 아래 여백은 위 여백(상단바~첫 카드)과 같은 16px
+    <AppShell header={<MainHeader />} fill>
+      <div className="flex flex-1 flex-col gap-4">
         <HomeShortcuts items={shortcuts} />
 
         <Card
@@ -203,7 +204,7 @@ export function HomePage() {
 
 function TodayNewsCard({ items: visibleNews }: { items: NewsItem[] }) {
   return (
-    <Card variant="list" elevation="home">
+    <Card variant="list" elevation="home" className="flex flex-1 flex-col">
       {/* 소식 영역은 0건일 때도 눌러서 소식 화면으로 갈 수 있다 (FR-07) */}
       <Link
         to="/news"
@@ -219,6 +220,8 @@ function TodayNewsCard({ items: visibleNews }: { items: NewsItem[] }) {
 
       {visibleNews.length === 0 ? (
         <EmptyState
+          // 늘어난 카드 안에서 세로 가운데에 둔다
+          className="flex-1 justify-center"
           message="오늘의 소식이 아직 없습니다"
           action={
             <Button variant="outline" size="dense" className="border-input/40" asChild>

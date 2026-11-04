@@ -22,6 +22,7 @@ export function AppShell({
   bottom = "nav",
   bottomBar,
   width = "body",
+  fill = false,
   className,
 }: {
   header?: ReactNode;
@@ -31,6 +32,8 @@ export function AppShell({
   bottomBar?: ReactNode;
   /** body 960px / form 720px (가이드 5-3, D8) */
   width?: "body" | "form" | "full";
+  /** 본문이 하단 바 위까지 남은 높이를 채우게 한다. 자식에서 flex-1을 준 요소가 늘어난다 */
+  fill?: boolean;
   className?: string;
 }) {
   const padBottom =
@@ -51,12 +54,14 @@ export function AppShell({
             "px-4 md:px-6 xl:px-8",
             "pt-4 xl:pt-6",
             padBottom,
+            fill && "flex flex-col",
             className,
           )}
         >
           <div
             className={cn(
               "mx-auto w-full",
+              fill && "flex flex-1 flex-col",
               width === "body" && "max-w-240",
               width === "form" && "max-w-180",
             )}

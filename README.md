@@ -53,9 +53,9 @@ npm run dev          # 개발 서버: http://localhost:5173
 | 모드 | 설정 | 데이터 |
 |---|---|---|
 | `mock` (기본) | 설정 없음 | 브라우저 안의 가상 서버(`src/api/mock`). 시연 설정 패널과 데모 계정이 보입니다 |
-| `http` | `.env.local`에 `VITE_API_MODE=http` | 실제 백엔드. 시연 패널·데모 계정이 숨겨집니다 |
+| `http` | `.env`에 `VITE_API_MODE=http` | 실제 백엔드. 시연 패널·데모 계정이 숨겨집니다 |
 
-http 모드로 개발할 때는 `.env.example`을 `.env.local`로 복사하고 `VITE_API_PROXY_TARGET`에 백엔드 주소를 넣으세요.
+http 모드로 개발할 때는 `.env.example`을 `.env`로 복사하고 `VITE_API_PROXY_TARGET`에 백엔드 주소를 넣으세요.
 API 명세 초안은 [`docs/backend-integration.md`](docs/backend-integration.md)에 있습니다.
 
 ### 빌드와 검증
