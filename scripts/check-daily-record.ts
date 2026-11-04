@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import PizZip from "pizzip";
 import { generateFixtures, SERVICE_USERS } from "@/data/fixtures";
-import { DOCX_MIME, renderDailyRecordBundleDocx, renderDailyRecordDocx } from "@/lib/dailyRecordDocx";
+import { DOCX_MIME, renderDailyRecordBundleDocx, renderDailyRecordDocx } from "@/lib/export/dailyRecordDocx";
 import { dailyRecordData, dailyRecordFileName, diaryBundleFileName } from "@/services/dailyRecordService";
 import type { Diary, ServiceUser } from "@/types";
 

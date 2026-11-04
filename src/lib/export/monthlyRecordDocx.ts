@@ -1,6 +1,6 @@
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { DOCX_MIME } from "@/lib/dailyRecordDocx";
+import { DOCX_MIME } from "@/lib/export/dailyRecordDocx";
 import type { MonthlyRecordData } from "@/services/monthlyRecordService";
 
 /**

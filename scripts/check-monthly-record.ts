@@ -2,8 +2,8 @@
 import { readFileSync } from "node:fs";
 import PizZip from "pizzip";
 import { generateFixtures, SERVICE_USERS } from "@/data/fixtures";
-import { DOCX_MIME } from "@/lib/dailyRecordDocx";
-import { MONTHLY_IMAGE_PATHS, renderMonthlyRecordDocx } from "@/lib/monthlyRecordDocx";
+import { DOCX_MIME } from "@/lib/export/dailyRecordDocx";
+import { MONTHLY_IMAGE_PATHS, renderMonthlyRecordDocx } from "@/lib/export/monthlyRecordDocx";
 import {
   BEHAVIOR_RESULT,
   behaviorTotals,
