@@ -190,6 +190,12 @@ function updateServiceUser(userId: string, patch: Partial<ServiceUser>): Service
   return clone(db.serviceUsers.find((u) => u.id === userId)!);
 }
 
+/** 백엔드 AuthService.temporaryPassword와 같은 글자(헷갈리는 0 O 1 l I 제외)로 12자 */
+function mockTemporaryPassword(): string {
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export const mockApi: Api = {
   auth: {
     async login({ loginId, password }) {
@@ -208,29 +214,6 @@ export const mockApi: Api = {
       }
       writeDb((db) => ({ ...db, session: { currentStaffId: member.id } }));
       return clone(member);
-    },
-    // 직위는 받지 않고 항상 담당자로 가입시킨다 (백엔드 AuthService.signup과 같음)
-    async signup({ loginId, password, name, birthDate }) {
-      await writeLatency();
-      const id = loginId.trim().toLowerCase();
-      if (readDb().staff.some((s) => s.loginId === id)) {
-        throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
-      }
-      const created: Staff = {
-        id: uid("stf"),
-        name: name.trim(),
-        department: "주간활동지원팀",
-        position: ROLE_POSITION.staff,
-        role: "staff",
-        loginId: id,
-        birthDate,
-      };
-      writeDb((db) => ({
-        ...db,
-        staff: [...db.staff, created],
-        passwords: { ...db.passwords, [created.id]: password },
-      }));
-      return clone(created);
     },
     async logout() {
       writeDb((db) => ({ ...db, session: { currentStaffId: null } }));
@@ -374,8 +357,13 @@ export const mockApi: Api = {
         throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
       }
       const created: Staff = { ...input, position: ROLE_POSITION.staff, id: uid("stf") };
-      writeDb((db) => ({ ...db, staff: [...db.staff, created] }));
-      return clone(created);
+      const temporaryPassword = mockTemporaryPassword();
+      writeDb((db) => ({
+        ...db,
+        staff: [...db.staff, created],
+        passwords: { ...db.passwords, [created.id]: temporaryPassword },
+      }));
+      return { ...clone(created), temporaryPassword };
     },
     // 규칙은 백엔드 AuthService.setStaffActive와 같다
     async setActive(staffId, active) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,11 +9,10 @@ import { Spinner } from "@/components/ui/misc";
 import { errorMessage, isApiError } from "@/api/errors";
 import { MOCK_PASSWORD } from "@/api/mock/mockApi";
 import { useLogin } from "@/api/queries";
-import { clearSessionExpired, isSessionExpired } from "@/app/sessionExpired";
+import { clearSignedOut, signedOutReason, type SignedOutReason } from "@/app/sessionExpired";
 import { IS_MOCK } from "@/config";
 import { DemoPanel } from "@/demo/DemoPanel";
 import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
-import { cn } from "@/lib/utils";
 
 /**
  * 로그인 (FR-01~FR-03).
@@ -21,25 +20,35 @@ import { cn } from "@/lib/utils";
  * 가운데 로고와 앱 이름, 아이콘이 붙은 둥근 입력칸, 둥근 로그인 버튼 순으로 둔다.
  * mock 모드에서는 demo.staff1 계정이 미리 입력되어 있다. 다른 데모 계정은 직접 입력한다.
  */
+const SIGNED_OUT_NOTICE: Record<SignedOutReason, { title: string; description: string }> = {
+  expired: {
+    title: "로그인이 만료됐어요",
+    description: "한동안 사용하지 않아 자동으로 로그아웃됐어요. 다시 로그인해 주세요.",
+  },
+  disabled: {
+    title: "사용이 중지된 계정이에요",
+    description: "팀장이나 국장이 이 계정을 사용 중지해서 로그아웃됐어요. 계속 쓰려면 팀장이나 국장에게 문의해 주세요.",
+  },
+};
+
 export function LoginPage() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
 
-  // 회원가입을 마치고 오면 가입한 아이디를 채워 둔다
-  const signedUpId = (useLocation().state as { loginId?: string } | null)?.loginId;
-  const [loginId, setLoginId] = useState(signedUpId ?? (IS_MOCK ? "demo.staff1" : ""));
-  const [password, setPassword] = useState(signedUpId ? "" : IS_MOCK ? MOCK_PASSWORD : "");
+  const [loginId, setLoginId] = useState(IS_MOCK ? "demo.staff1" : "");
+  const [password, setPassword] = useState(IS_MOCK ? MOCK_PASSWORD : "");
   const [showPassword, setShowPassword] = useState(false);
   const [autoLogin, setAutoLogin] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
-  // 쓰던 중 세션이 만료되어 이 화면으로 왔으면 안내 팝업을 띄운다
-  const [expiredOpen, setExpiredOpen] = useState(isSessionExpired);
+  // 쓰던 중 세션이 만료되거나 계정이 사용 중지되어 이 화면으로 왔으면 이유에 맞는 안내 팝업을 띄운다
+  const [signedOut, setSignedOut] = useState(signedOutReason);
   const submitting = loginMutation.isPending;
 
-  function handleExpiredOpenChange(open: boolean) {
-    setExpiredOpen(open);
-    if (!open) clearSessionExpired();
+  function handleSignedOutOpenChange(open: boolean) {
+    if (open) return;
+    setSignedOut(null);
+    clearSignedOut();
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -149,21 +158,6 @@ export function LoginPage() {
           >
             {submitting ? <Spinner label="로그인 중…" /> : "로그인"}
           </Button>
-
-          {/* 로그인과 같은 모양, 색만 반대(흰 바탕·남색 테두리). 로그인 버튼보다 눈에 덜 띄게 그림자를 옅게 둔다 */}
-          <Button
-            variant="outline"
-            size="lg"
-            block
-            asChild
-            className={cn(
-              authButtonClass,
-              "mt-0 border-primary bg-card text-primary hover:bg-accent md:mt-0",
-              "shadow-[0_6px_16px_-6px_rgb(21_46_99/0.18)] md:shadow-none",
-            )}
-          >
-            <Link to="/signup">회원가입</Link>
-          </Button>
         </form>
 
         <div className="mt-8 flex flex-col items-center gap-0.5 md:mt-6 md:flex-row md:justify-center md:gap-1">
@@ -185,10 +179,10 @@ export function LoginPage() {
           </Dialog>
         </div>
 
-        <Dialog open={expiredOpen} onOpenChange={handleExpiredOpenChange}>
+        <Dialog open={signedOut !== null} onOpenChange={handleSignedOutOpenChange}>
           <DialogContent
-            title="로그인이 만료됐어요"
-            description="한동안 사용하지 않아 자동으로 로그아웃됐어요. 다시 로그인해 주세요."
+            title={SIGNED_OUT_NOTICE[signedOut ?? "expired"].title}
+            description={SIGNED_OUT_NOTICE[signedOut ?? "expired"].description}
           >
             <DialogClose asChild>
               <Button block>닫기</Button>

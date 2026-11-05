@@ -9,7 +9,6 @@ import { useDraft } from "@/app/DraftContext";
 import { useRememberLastPage } from "@/app/lastPage";
 import { StatsProvider } from "@/app/StatsContext";
 import { LoginPage } from "@/pages/auth/LoginPage";
-import { SignupPage } from "@/pages/auth/SignupPage";
 import { HomePage } from "@/pages/home/HomePage";
 import { NewsPage } from "@/pages/home/NewsPage";
 import { DiaryEditPage } from "@/pages/diary/DiaryEditPage";
@@ -68,7 +67,6 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
 
       <Route element={<RequireAuth />}>
         <Route path="/home" element={<HomePage />} />

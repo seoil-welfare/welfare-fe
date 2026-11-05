@@ -22,6 +22,8 @@ interface HttpHooks {
   getToken?: () => string | null;
   /** 401 응답 시 호출한다. 로그인 화면 이동 등은 앱이 정한다 */
   onUnauthorized?: () => void;
+  /** 403 ACCOUNT_DISABLED 응답 시 호출한다. 로그인한 뒤에 계정이 사용 중지된 경우 */
+  onAccountDisabled?: () => void;
 }
 
 let hooks: HttpHooks = {};
@@ -66,6 +68,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   if (!response.ok) {
     const payload = await readJson<{ message?: string; code?: string }>(response);
+    if (response.status === 403 && payload?.code === "ACCOUNT_DISABLED") hooks.onAccountDisabled?.();
     throw new ApiError(
       response.status,
       payload?.message ?? defaultMessage(response.status),

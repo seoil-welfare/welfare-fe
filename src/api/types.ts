@@ -29,15 +29,6 @@ export interface LoginInput {
   autoLogin: boolean;
 }
 
-/** 회원가입. 가입만 하고 로그인은 따로 한다 */
-export interface SignupInput {
-  loginId: string;
-  password: string;
-  name: string;
-  /** YYYY-MM-DD */
-  birthDate: string;
-}
-
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
@@ -116,8 +107,6 @@ export interface StaffInput {
 
 export interface AuthApi {
   login(input: LoginInput): Promise<Staff>;
-  /** 아이디가 겹치면 409 DUPLICATE_LOGIN_ID, 비밀번호 규칙 위반이면 400 PASSWORD_POLICY */
-  signup(input: SignupInput): Promise<Staff>;
   logout(): Promise<void>;
   /** 로그인 상태가 아니면 null */
   me(): Promise<Staff | null>;
@@ -218,10 +207,16 @@ export interface ServiceUserApi {
   close(userId: string): Promise<ServiceUser>;
 }
 
+/** 계정 추가 응답. 임시 비밀번호는 이 응답에서만 받을 수 있다 */
+export interface CreatedStaff extends Staff {
+  temporaryPassword: string;
+}
+
 export interface StaffApi {
   /** 사용 중지된 직원도 포함한다 (과거 일지 작성자 이름 표시용) */
   list(): Promise<Staff[]>;
-  create(input: StaffInput): Promise<Staff>;
+  /** 서버가 만든 임시 비밀번호를 응답에 한 번만 담는다 */
+  create(input: StaffInput): Promise<CreatedStaff>;
   /** 계정 사용 중지(false)·다시 사용(true). 팀장·국장만, 내 계정은 중지 못 함 */
   setActive(staffId: string, active: boolean): Promise<Staff>;
   /** 역할 변경 (담당자 ↔ 팀장). 팀장·국장만, 국장·내 계정·중지된 계정은 못 바꿈 */

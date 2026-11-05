@@ -149,8 +149,7 @@ npm run verify       # build + smoke + check:data + check:api 한 번에
 | `/mypage` | 마이페이지 | 2.1.13/FR-73~85 |
 | `/profile` | 내 정보 | 2.1.13/FR-74 |
 | `/users` `/users/new` `/users/:id` | 이용자 목록·등록·정보 수정·종결 | 2.1.14/FR-86~92 |
-| `/signup` | 회원가입 (직위는 `담당자` 하나) | – |
-| `/staff` `/staff/new` `/staff/:id` | 담당자 관리(검색·상태 필터)·계정 추가(담당자로만)·담당자 상세(역할 변경, 관리 권한 이양, 사용 중지) | 2.1.13/FR-80~81 |
+| `/staff` `/staff/new` `/staff/:id` | 담당자 관리(검색·상태 필터)·계정 추가(담당자로만, 임시 비밀번호 팝업)·담당자 상세(역할 변경, 관리 권한 이양, 사용 중지) | 2.1.13/FR-80~81 |
 | `/exports/diaries` `/exports/monthly` | 파일 출력 설정 | 2.1.13/FR-77~79 |
 | `/settings/password` | 비밀번호 변경 | 2.1.13/FR-83 |
 | `/settings/participation` | 참여 활동 관리 (추가·이름 변경·숨기기, 팀장·국장) | 기능명세서 5.1 |
@@ -190,7 +189,7 @@ src/
   services/      diaryService.ts, statsService.ts, categoryService.ts,
                  dailyRecordService.ts, monthlyRecordService.ts  ← 받아 온 데이터로 계산하는 순수 함수
   pages/         라우트 화면. 영역별 폴더에 둔다
-    auth/          LoginPage, SignupPage
+    auth/          LoginPage
     home/          HomePage, NewsPage (오늘의 소식)
     diary/         DiaryEditPage, ActivityEditPage, BehaviorDetailPage, DiaryDetailPage
     calendar/      CalendarPage

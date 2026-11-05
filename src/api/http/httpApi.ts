@@ -9,7 +9,6 @@ export const httpApi: Api = {
   auth: {
     login: (input) => request("/auth/login", { method: "POST", body: input }),
     logout: () => request("/auth/logout", { method: "POST" }),
-    signup: (input) => request("/auth/signup", { method: "POST", body: input }),
     me: async () => {
       try {
         return await request("/auth/me");
