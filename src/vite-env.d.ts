@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/client" />
 
 interface ImportMetaEnv {
   /** 'mock'(기본) — 브라우저 안의 가상 서버 / 'http' — 실제 백엔드 */

@@ -69,6 +69,17 @@ npm run check:api    # mock API 저장 흐름(작성 중→완료, 소식, 종�
 npm run verify       # build + smoke + check:data + check:api 한 번에
 ```
 
+### PWA (홈 화면에 추가)
+
+`vite-plugin-pwa`로 앱 매니페스트와 서비스 워커를 만듭니다. 설정은 `vite.config.ts`, 아이콘은 `public/icons/`에 있습니다.
+
+- **빌드 결과에서만 동작합니다.** `npm run dev`에서는 서비스 워커가 켜지지 않으니 `npm run build && npm run preview`로 확인하세요
+- 배포 주소는 **HTTPS**여야 합니다 (localhost는 예외)
+- 서비스 워커는 화면 파일(JS·CSS·아이콘·docx 양식)만 미리 저장합니다. **`/api` 응답은 저장하지 않습니다** (개인정보가 기기에 남지 않게)
+- 새 버전을 배포하면 "새 버전이 있어요 · 새로고침" 안내가 뜹니다. 일지 작성 중에 저절로 새로고침되지 않게 하려는 것입니다
+- 아이폰은 Safari 공유 메뉴 → "홈 화면에 추가"로 설치합니다
+- 아이콘은 원본 로고(3762px)에서 투명 여백을 잘라 내고 만들었습니다. 안드로이드용 maskable과 아이폰용 아이콘은 흰 배경 위에 로고를 작게 둡니다
+
 ---
 
 ## 2. 데모 계정
