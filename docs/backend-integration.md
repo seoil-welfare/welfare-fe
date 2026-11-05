@@ -282,7 +282,7 @@ GET /stats/summary?userId&unit=week|month|quarter|year&year&month&quarter&week
 ## 8. 통계
 
 - **집계 위치**: 서버(`GET /stats/summary`, 7-2). 화면은 [`useStatsSummary.ts`](../src/app/useStatsSummary.ts)로 숫자만 받습니다.
-- **집계 범위**: 선택한 이용자의 작성 완료 일지. 추이 그래프는 아래 구간 수만큼, 이전 동기간 비교(FR-34)는 바로 앞 같은 단위 기간입니다.
+- **집계 범위**: 선택한 이용자의 작성 완료 일지. 추이 그래프는 아래 구간 수만큼, 이전 동기간 비교(FR-34)는 바로 앞 같은 단위 기간입니다. `previousEmpty`는 그 기간의 작성 완료 일지가 0건일 때만 `true`입니다(도전적 행동 0건과 구분).
 
 | 조회 단위 | 추이 구간 (FR-35 제안값) | 추이 그래프가 덮는 기간 |
 |---|---|---|
