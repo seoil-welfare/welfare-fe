@@ -27,7 +27,12 @@ import { useDraft } from "@/app/DraftContext";
 import { useCategoryChoices } from "@/app/useCategoryChoices";
 import { choiceLabels } from "@/services/categoryService";
 import { useDemo } from "@/demo/DemoContext";
-import { emptyActivity, sortActivities } from "@/services/diaryService";
+import {
+  behaviorTypesMissingDetail,
+  emptyActivity,
+  missingDetailMessage,
+  sortActivities,
+} from "@/services/diaryService";
 import { uid } from "@/lib/utils";
 import type { ActivitySlot } from "@/data/catalog";
 import type { Activity, BehaviorType } from "@/types";
@@ -50,6 +55,7 @@ export function ActivityEditPage() {
   // 활동 시간은 필수다. '저장'을 눌렀는데 비어 있으면 표시한다
   const [timeMissing, setTimeMissing] = useState(false);
   const timeSectionRef = useRef<HTMLDivElement>(null);
+  const behaviorSectionRef = useRef<HTMLDivElement>(null);
 
   const isNew = activityId === "new" || activityId === undefined;
 
@@ -150,6 +156,13 @@ export function ActivityEditPage() {
       setTimeMissing(true);
       timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       toast.error("활동 시간을 골라 주세요.");
+      return;
+    }
+    // 체크한 도전적 행동 유형마다 세부 행동을 1개 이상 골라야 한다 (QA 03-06)
+    const missing = behaviorTypesMissingDetail(activity!);
+    if (missing.length > 0) {
+      behaviorSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast.error(missingDetailMessage(missing));
       return;
     }
     // FR-25 — 임시 활동 목록만 갱신하고 서버에 저장하지 않는다
@@ -287,6 +300,7 @@ export function ActivityEditPage() {
           />
         </FormSection>
 
+        <div ref={behaviorSectionRef}>
         <FormSection title="도전적 행동">
           <label className="flex min-h-11 cursor-pointer items-center gap-2">
             <Checkbox
@@ -386,6 +400,7 @@ export function ActivityEditPage() {
           ) : null}
 
         </FormSection>
+        </div>
       </div>
     </AppShell>
   );

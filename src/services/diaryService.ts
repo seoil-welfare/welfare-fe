@@ -1,4 +1,4 @@
-import { OTHER_LABEL } from "@/data/catalog";
+import { OTHER_LABEL, behaviorTypeLabel } from "@/data/catalog";
 import { addDays, dateOf } from "@/lib/utils";
 import type {
   CalendarClientStatus,
@@ -9,6 +9,7 @@ import type {
 } from "@/api/types";
 import type {
   Activity,
+  BehaviorType,
   Diary,
   DiaryDraft,
   DiaryEvent,
@@ -136,6 +137,34 @@ export function countActivityBehaviors(activity: Activity): number {
     }
     return sum + new Set(selection.detailIds).size;
   }, 0);
+}
+
+/**
+ * 세부 행동을 고르지 않은 도전적 행동 유형 (QA 03-06). 없으면 빈 배열.
+ * 유형을 체크했으면 세부 행동을 1개 이상 골라야 한다 (상위 '기타' 유형은 직접 입력 내용).
+ * 세부 항목마다 '기타'가 있어 항상 고를 수 있다.
+ */
+export function behaviorTypesMissingDetail(activity: Activity): BehaviorType[] {
+  if (!activity.hasBehavior) return [];
+  return activity.behaviors
+    .filter((b) => (b.type === "other" ? !b.otherText?.trim() : b.detailIds.length === 0))
+    .map((b) => b.type);
+}
+
+/** 활동 안내 문구 "○○의 세부 행동을 골라 주세요." 에 쓰는 유형 이름 */
+export function missingDetailMessage(types: readonly BehaviorType[]): string {
+  return types.map(behaviorTypeLabel).join("·") + "의 세부 행동을 골라 주세요.";
+}
+
+/** 작성 완료 전 검사: 세부 행동이 빠진 활동을 처음 하나 찾는다. 없으면 null */
+export function findActivityMissingBehaviorDetail(
+  activities: readonly Activity[],
+): { activity: Activity; types: BehaviorType[] } | null {
+  for (const activity of sortActivities(activities)) {
+    const types = behaviorTypesMissingDetail(activity);
+    if (types.length > 0) return { activity, types };
+  }
+  return null;
 }
 
 /** 오늘의 소식 목록 (FR-06, FR-08~FR-12) */
