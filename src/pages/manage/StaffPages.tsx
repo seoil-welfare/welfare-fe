@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Copy, Search, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/toggle-group";
@@ -16,6 +15,7 @@ import { FormSection } from "@/components/common/FormSection";
 import { ListRowLink } from "@/components/common/ListRow";
 import { QueryGate } from "@/components/common/QueryGate";
 import { EmptyState } from "@/components/common/states";
+import { TemporaryPasswordDialog } from "@/components/staff/TemporaryPasswordDialog";
 import { errorMessage, isApiError } from "@/api/errors";
 import { combineQueries, useCreateStaff, useStaffList } from "@/api/queries";
 import type { CreatedStaff } from "@/api/types";
@@ -261,78 +261,11 @@ export function StaffNewPage() {
         </FormSection>
       </div>
 
-      <CreatedAccountDialog
+      <TemporaryPasswordDialog
         account={created}
+        title="계정을 추가했어요"
         onClose={() => navigate("/staff", { replace: true })}
       />
     </AppShell>
-  );
-}
-
-/**
- * 계정 추가 완료 팝업. 아이디와 임시 비밀번호를 보여 주고 함께 복사할 수 있다.
- * 닫으면 비밀번호를 다시 볼 수 없으므로 바깥을 눌러 닫히지 않게 하고, 닫을 때 목록으로 간다.
- */
-function CreatedAccountDialog({
-  account,
-  onClose,
-}: {
-  account: CreatedStaff | null;
-  onClose: () => void;
-}) {
-  async function copy() {
-    if (!account) return;
-    try {
-      await navigator.clipboard.writeText(
-        "아이디: " + account.loginId + "\n임시 비밀번호: " + account.temporaryPassword,
-      );
-      toast.success("아이디와 임시 비밀번호를 복사했어요.");
-    } catch {
-      toast.error("복사하지 못했어요. 화면을 보고 직접 전달해 주세요.");
-    }
-  }
-
-  return (
-    <Dialog
-      open={account !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <DialogContent
-        title="계정을 추가했어요"
-        description="아이디와 임시 비밀번호를 본인에게 전달해 주세요. 이 창을 닫으면 임시 비밀번호를 다시 볼 수 없어요."
-        onInteractOutside={(event) => event.preventDefault()}
-      >
-        {account ? (
-          <div className="flex flex-col gap-4">
-            <dl className="flex flex-col gap-3 rounded-control bg-secondary px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="type-body text-muted-foreground">아이디</dt>
-                <dd className="type-body font-medium break-all">{account.loginId}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="type-body text-muted-foreground">임시 비밀번호</dt>
-                <dd className="tnum type-heading tracking-wider select-all">
-                  {account.temporaryPassword}
-                </dd>
-              </div>
-            </dl>
-            <p className="type-caption text-muted-foreground">
-              처음 로그인한 뒤 마이페이지 › 비밀번호 변경에서 바꾸도록 안내해 주세요.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" block onClick={copy}>
-                <Copy aria-hidden />
-                복사하기
-              </Button>
-              <Button block onClick={onClose}>
-                확인
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </DialogContent>
-    </Dialog>
   );
 }

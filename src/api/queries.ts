@@ -363,6 +363,13 @@ export function useSetStaffActive() {
   });
 }
 
+/** 임시 비밀번호 다시 발급. 목록 정보는 바뀌지 않아 다시 불러오지 않는다 */
+export function useResetStaffPassword() {
+  return useMutation({
+    mutationFn: (staffId: string) => api.staff.resetPassword(staffId),
+  });
+}
+
 export function useChangeStaffRole() {
   const client = useQueryClient();
   return useMutation({

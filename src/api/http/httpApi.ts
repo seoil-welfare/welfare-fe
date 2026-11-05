@@ -55,6 +55,8 @@ export const httpApi: Api = {
       request("/staff/" + encodeURIComponent(staffId) + (active ? "/activate" : "/deactivate"), {
         method: "POST",
       }),
+    resetPassword: (staffId) =>
+      request("/staff/" + encodeURIComponent(staffId) + "/reset-password", { method: "POST" }),
     changeRole: (staffId, role) =>
       request("/staff/" + encodeURIComponent(staffId) + "/role", { method: "POST", body: { role } }),
     transferDirector: (staffId, previousRole) =>
