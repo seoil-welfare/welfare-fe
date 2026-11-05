@@ -151,9 +151,16 @@ export function behaviorTypesMissingDetail(activity: Activity): BehaviorType[] {
     .map((b) => b.type);
 }
 
-/** 활동 안내 문구 "○○의 세부 행동을 골라 주세요." 에 쓰는 유형 이름 */
+/**
+ * 안내 문구. 세부 항목이 있는 유형은 "○○의 세부 행동을 골라 주세요.",
+ * 상위 '기타'는 세부 항목이 없고 직접 입력뿐이라 "기타 행동 내용을 적어 주세요."
+ */
 export function missingDetailMessage(types: readonly BehaviorType[]): string {
-  return types.map(behaviorTypeLabel).join("·") + "의 세부 행동을 골라 주세요.";
+  const pick = types.filter((type) => type !== "other");
+  const parts: string[] = [];
+  if (pick.length > 0) parts.push(pick.map(behaviorTypeLabel).join("·") + "의 세부 행동을 골라 주세요.");
+  if (pick.length < types.length) parts.push("기타 행동 내용을 적어 주세요.");
+  return parts.join(" ");
 }
 
 /** 작성 완료 전 검사: 세부 행동이 빠진 활동을 처음 하나 찾는다. 없으면 null */
