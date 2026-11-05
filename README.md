@@ -80,7 +80,7 @@ npm run verify       # build + check:data 한 번에
 - **`/api/*` 요청은 Vercel이 백엔드(EC2)로 넘깁니다** (`rewrites`). 브라우저는 Vercel 주소 하나하고만 통신하므로
   CORS 설정이 필요 없고, 로그인 쿠키도 같은 사이트 쿠키라 아이폰 Safari에서도 유지됩니다.
   백엔드 주소를 다른 사이트로 직접 부르면 Safari가 쿠키를 막아 로그인이 풀립니다.
-- **배포 전에 `vercel.json`의 `BACKEND_DOMAIN`을 실제 백엔드 도메인으로 바꾸세요.** (`vercel.json`은 환경변수를 읽지 못합니다)
+- 지금 백엔드 주소는 `https://carelog-api.duckdns.org`(EC2, 테스트용)입니다. 주소가 바뀌면 `vercel.json`을 직접 고치세요. (`vercel.json`은 환경변수를 읽지 못합니다)
   백엔드는 HTTPS여야 합니다. 백엔드 쪽 준비는 `welfare-be`의 `deploy/README.md`를 보세요.
 - 그 밖의 주소(`/diaries/123` 등)는 `index.html`로 보내 화면이 직접 처리합니다. 이게 없으면 새로고침할 때 404가 납니다.
   실제 파일(js·css·아이콘·`sw.js`)은 이 규칙보다 먼저 그대로 내려갑니다.
