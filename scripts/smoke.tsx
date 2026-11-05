@@ -13,6 +13,7 @@ import { DraftProvider } from "@/app/DraftContext";
 import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
 import { DEMO_TODAY, generateFixtures } from "@/data/fixtures";
+import { addDays } from "@/lib/utils";
 
 // mock 서버가 localStorage에서 세션을 복원하도록 persist 상태를 주입한다.
 const store = new Map<string, string>([
@@ -133,6 +134,20 @@ async function main() {
       console.log("     " + (error instanceof Error ? error.message : String(error)));
     }
   }
+
+  // 주소에 내일 날짜를 직접 넣으면 작성 화면 대신 안내가 나와야 한다 (일지를 시작하지 않음)
+  const futureRoute = "/diaries/new?date=" + addDays(DEMO_TODAY, 1);
+  const { html: futureHtml } = await renderWithData(futureRoute);
+  const FUTURE_MESSAGE = "오늘 이후 날짜의 일지는 쓸 수 없어요.";
+  const blocked = futureHtml.includes(FUTURE_MESSAGE);
+  console.log("  " + (blocked ? "OK " : "FAIL ") + futureRoute.padEnd(48) + " (미래 날짜 안내)");
+  if (!blocked) failures += 1;
+  // 오늘 날짜는 안내가 나오면 안 된다 (안내가 늘 뜨는 잘못을 잡는다)
+  const todayRoute = "/diaries/new?date=" + DEMO_TODAY;
+  const { html: todayHtml } = await renderWithData(todayRoute);
+  const open = !todayHtml.includes(FUTURE_MESSAGE);
+  console.log("  " + (open ? "OK " : "FAIL ") + todayRoute.padEnd(48) + " (오늘은 안내 없음)");
+  if (!open) failures += 1;
 
   console.log("");
   console.log(failures === 0 ? "모든 라우트 렌더 성공" : failures + "개 라우트 실패");

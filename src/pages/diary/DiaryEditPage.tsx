@@ -77,13 +77,18 @@ export function DiaryEditPage() {
 
   const requestedUserId = params.get("userId");
   const requestedDate = params.get("date");
+  // 주소에 오늘 이후 날짜를 직접 넣고 들어온 경우. 일지를 시작하지 않고 안내 화면만 보여 준다.
+  // 달력은 서버의 canCreate로 이미 막지만, 주소창 입력은 거기를 거치지 않는다. 저장은 서버가 최종으로 막는다
+  const futureRequest = requestedDate !== null && requestedDate > today;
   const targetDate = draft?.date ?? requestedDate ?? today;
   // 이용자 1명당 하루 1건 규칙을 안내하려고 그 날짜의 일지를 불러온다
   const dayQuery = useDiaries({ from: targetDate, to: targetDate });
 
   // 달력 등에서 이용자·날짜를 지정해 들어왔는데 쓰던 draft와 다른 경우 (날짜가 없으면 오늘)
   const hasRequest = requestedUserId !== null || requestedDate !== null;
+  // 미래 날짜 요청은 받아들이지 않으므로, 쓰던 draft와 다르다고 보지 않는다 (쓰던 draft를 버리지 않게)
   const requestMismatch =
+    !futureRequest &&
     draft !== null &&
     hasRequest &&
     ((requestedUserId !== null && requestedUserId !== draft.userId) ||
@@ -97,8 +102,9 @@ export function DiaryEditPage() {
 
   // 지정한 대상을 반영했으면 주소에서 지운다. 화면에서 이용자를 바꿔도 다시 비교하지 않게 한다
   useEffect(() => {
-    if (draft && hasRequest && !requestMismatch) setParams({}, { replace: true });
-  }, [draft, hasRequest, requestMismatch, setParams]);
+    // 미래 날짜 요청은 주소에 남겨 둔다. 지우면 안내 화면 대신 쓰던 draft가 보여 헷갈린다
+    if (draft && hasRequest && !requestMismatch && !futureRequest) setParams({}, { replace: true });
+  }, [draft, hasRequest, requestMismatch, futureRequest, setParams]);
 
   // 저장을 마치고 상세로 넘어가는 중이다. 이때 draft가 비어도 새 일지를 만들지 않는다
   const committedRef = useRef(false);
@@ -106,6 +112,7 @@ export function DiaryEditPage() {
   // 라우트 이동으로 입력이 사라지지 않게 draft를 유지한다. 없으면 새로 만든다.
   useEffect(() => {
     if (committedRef.current) return;
+    if (futureRequest) return; // 오늘 이후 날짜로는 새 일지를 시작하지 않는다
     // 이전 날짜의 결과(placeholder)로 기본 이용자를 고르지 않는다
     if (draft || users.length === 0 || !dayQuery.data || dayQuery.isPlaceholderData) return;
     // 일지는 이용자 1명당 하루 1건이다. 대상이 지정되지 않았다면
@@ -113,7 +120,7 @@ export function DiaryEditPage() {
     const saved = diariesOnDate(dayQuery.data, targetDate);
     const firstAvailable = users.find((user) => !saved.some((d) => d.userId === user.id));
     startDraft(requestedUserId ?? firstAvailable?.id ?? users[0].id, targetDate);
-  }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData]);
+  }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData, futureRequest]);
 
   // 활동 화면에서 돌아오면 넘어가기 전 스크롤 위치로 되돌린다 (화면이 그려지기 전에 맞춰 깜빡임을 막는다)
   const hasDraft = Boolean(draft);
@@ -126,6 +133,23 @@ export function DiaryEditPage() {
   /** 활동 화면으로 넘어가기 직전에 현재 위치를 기억한다 */
   function rememberScroll() {
     setEditScrollY(window.scrollY);
+  }
+
+  if (futureRequest) {
+    return (
+      <AppShell header={<AppHeader title="일지 작성" backTo="/calendar" />} bottom="nav">
+        <Card variant="form">
+          <EmptyState
+            message="오늘 이후 날짜의 일지는 쓸 수 없어요."
+            action={
+              <Button asChild>
+                <Link to="/calendar">달력으로 돌아가기</Link>
+              </Button>
+            }
+          />
+        </Card>
+      </AppShell>
+    );
   }
 
   if (!draft) {

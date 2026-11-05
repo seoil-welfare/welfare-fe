@@ -60,6 +60,29 @@ async function main() {
   const author = await mockApi.auth.login({ loginId: "demo.staff1", password: "demo1234", autoLogin: false });
   expect("로그인 후 me", (await mockApi.auth.me())?.id === author.id, author.id);
 
+  console.log("\n[미래 날짜]");
+  const tomorrow = addDays(DEMO_TODAY, 1);
+  expect(
+    "내일 날짜로 새 일지 저장은 400",
+    (await rejects(() => mockApi.diaries.save({ ...emptyDraft(user.id, tomorrow), status: "draft" }))) === 400,
+    tomorrow,
+  );
+  expect(
+    "거부된 저장은 아무것도 남기지 않음",
+    (await mockApi.diaries.list({ from: tomorrow, to: tomorrow })).length === 0,
+    "0건",
+  );
+  expect(
+    "내일 달력은 아무도 새로 쓸 수 없음",
+    (await mockApi.calendar.clientStatuses(tomorrow)).every((s) => !s.canCreate),
+    "canCreate 전부 false",
+  );
+  expect(
+    "오늘 달력은 일지 없는 이용자가 새로 쓸 수 있음",
+    (await mockApi.calendar.clientStatuses(DEMO_TODAY)).some((s) => s.canCreate),
+    "canCreate true 있음",
+  );
+
   console.log("\n[작성 중 → 작성 완료]");
   const eventsBefore = readDb().events.length;
   const activity = emptyActivity("act-temp-1");

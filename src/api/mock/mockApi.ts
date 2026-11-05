@@ -3,6 +3,7 @@ import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
 import type { Api, CategoryItem, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
+import { todayIso } from "@/lib/today";
 import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
 import { defaultCategories } from "@/services/categoryService";
 import { statsSummary } from "@/services/statsService";
@@ -98,6 +99,11 @@ export function toNewsEntries(
 }
 
 function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
+  // 새 일지는 오늘까지만 쓸 수 있다 (백엔드 DiaryService 규칙 9와 같음).
+  // 수정(diaryId 있음)은 날짜를 바꿀 수 없어서 막지 않는다
+  if (!input.diaryId && input.date > todayIso()) {
+    throw new ApiError(400, "오늘 이후 날짜의 일지는 쓸 수 없어요.", "VALIDATION_ERROR");
+  }
   const now = new Date().toISOString();
   let saved: Diary | null = null;
 
@@ -300,7 +306,7 @@ export const mockApi: Api = {
     async clientStatuses(date) {
       await readLatency();
       const db = readDb();
-      return calendarClientStatuses(db.diaries, db.serviceUsers, date);
+      return calendarClientStatuses(db.diaries, db.serviceUsers, date, todayIso());
     },
   },
 
