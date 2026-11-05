@@ -291,7 +291,9 @@ export const mockApi: Api = {
     async summary({ userId, ...period }) {
       await readLatency();
       if (!userId) throw new ApiError(400, "userId가 필요해요.", "VALIDATION_ERROR");
-      return statsSummary(readDb().diaries, userId, period);
+      // 고정 목록이 아니라 지금의 참여 활동 목록 기준 (팀장이 추가한 활동 포함, 백엔드와 같음)
+      const participationOrder = participationItems().map((item) => item.label);
+      return statsSummary(readDb().diaries, userId, period, participationOrder);
     },
   },
 

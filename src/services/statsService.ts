@@ -282,9 +282,10 @@ export type ActivityField =
 export function activityFieldCounts(
   diaries: readonly Diary[],
   field: ActivityField,
-  options: { includeZero?: boolean } = {},
+  // order: 항목 순서(0건 채우기·같은 건수 정렬 기준). 없으면 코드에 정해 둔 기본 목록을 쓴다
+  options: { includeZero?: boolean; order?: readonly string[] } = {},
 ): CountItem[] {
-  const order = CATEGORY_ORDER[field] ?? [];
+  const order = options.order ?? CATEGORY_ORDER[field] ?? [];
   const map = new Map<string, number>();
   if (options.includeZero) order.forEach((label) => map.set(label, 0));
 
@@ -354,8 +355,10 @@ export function participationSummary(diaries: readonly Diary[]): ParticipationSu
  * 한 활동에서 여러 카테고리를 선택한 경우의 배분 방식은 미확정이다.
  * 시연에서는 선택된 모든 카테고리에 같은 건수를 계상한다 (중복 계상 가능).
  */
-export function behaviorCountsByParticipation(diaries: readonly Diary[]): CountItem[] {
-  const order = CATEGORY_ORDER.participation ?? [];
+export function behaviorCountsByParticipation(
+  diaries: readonly Diary[],
+  order: readonly string[] = CATEGORY_ORDER.participation ?? [],
+): CountItem[] {
   const map = new Map<string, number>();
   order.forEach((label) => map.set(label, 0)); // 0건도 표시한다 (공통 규칙 3)
   for (const diary of diaries) {
@@ -505,11 +508,16 @@ function addDaysDate(date: Date, days: number): Date {
 /**
  * GET /stats/summary 응답과 같은 값. mock 구현이 쓴다.
  * 백엔드 StatsService가 같은 규칙으로 SQL 집계한다. 규칙을 바꿀 때는 두 곳을 함께 바꾼다.
+ *
+ * participationOrder: 지금의 참여 활동 목록(이름, 목록 순서). 팀장이 추가한 활동도 들어 있어야
+ * 0건 채우기와 활동별 이용자 반응의 기준 목록에 나온다 (백엔드는 DB 목록을 쓴다).
+ * 빈 응답용으로 부를 때는 생략하면 코드에 정해 둔 기본 목록을 쓴다.
  */
 export function statsSummary(
   diaries: readonly Diary[],
   userId: string,
   period: StatisticPeriod,
+  participationOrder: readonly string[] = CATEGORY_ORDER.participation ?? [],
 ): StatsSummary {
   const range = periodRange(period);
   const completed = completedDiaries(diaries, userId, range);
@@ -536,15 +544,18 @@ export function statsSummary(
       details: behaviorDetailIdCounts(completed),
       records: behaviorRecordRows(completed),
     },
-    participation: activityFieldCounts(completed, "participation", { includeZero: true }),
+    participation: activityFieldCounts(completed, "participation", {
+      includeZero: true,
+      order: participationOrder,
+    }),
     reaction: activityFieldCounts(completed, "reaction", { includeZero: true }),
     preSupport: activityFieldCounts(completed, "preSupport", { includeZero: true }),
     positiveSupport: activityFieldCounts(completed, "positiveSupport", { includeZero: true }),
     condition: conditionCounts(completed, { includeZero: true }),
     activities: {
       ...participationSummary(completed),
-      behaviorByParticipation: behaviorCountsByParticipation(completed),
-      reactionByParticipation: (CATEGORY_ORDER.participation ?? []).map((label) => ({
+      behaviorByParticipation: behaviorCountsByParticipation(completed, participationOrder),
+      reactionByParticipation: participationOrder.map((label) => ({
         label,
         reaction: reactionCountsForParticipation(completed, label),
       })),
