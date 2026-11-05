@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Save, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppShell } from "@/components/layout/AppShell";
@@ -17,7 +17,7 @@ import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
 import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { errorMessage, isApiError, isUpdatedByOther, NETWORK_ERROR_STATUS } from "@/api/errors";
-import { combineQueries, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
+import { combineQueries, useDeleteDiary, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
 import { useDraft } from "@/app/DraftContext";
 import { getLastPage } from "@/app/lastPage";
 import { useCategoryChoices } from "@/app/useCategoryChoices";
@@ -67,7 +67,10 @@ export function DiaryEditPage() {
   } = useDraft();
   // 삭제 확인 팝업을 띄울 활동
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
+  // 작성 중 일지 삭제 확인 팝업
+  const [askDeleteDiary, setAskDeleteDiary] = useState(false);
   const saveDiary = useSaveDiary();
+  const deleteDiary = useDeleteDiary();
   const choices = useCategoryChoices(); // 날씨·컨디션 선택지 (GET /categories)
   const usersQuery = useServiceUsers();
   const users = activeServiceUsers(usersQuery.data ?? []);
@@ -219,6 +222,41 @@ export function DiaryEditPage() {
     );
   }
 
+  // 서버에 저장된 작성 중 일지만 삭제할 수 있다 (새 일지·완료 일지 수정 중에는 버튼을 숨긴다)
+  const canDeleteDiary = Boolean(draft.diaryId) && !isEditingCompleted;
+
+  async function handleDeleteDiary() {
+    if (!draft?.diaryId || deleteDiary.isPending) return;
+    // 자동 저장을 멈추고 진행 중인 저장을 기다린다. 안 그러면 삭제 도중·직후 자동 저장이 일지를 다시 만든다
+    const saved = await beginCommit();
+    const diaryId = saved.diaryId ?? draft.diaryId;
+
+    const finish = () => {
+      // draft를 비우면 위 effect가 빈 일지를 새로 만들 수 있어 먼저 막는다
+      committedRef.current = true;
+      discardDraft();
+      navigate("/home", { replace: true });
+    };
+
+    deleteDiary.mutate(diaryId, {
+      onSuccess: () => {
+        finish();
+        toast.success("작성 중인 일지를 삭제했어요.");
+      },
+      onError: (error) => {
+        // 이미 지워진 일지다. 작성 중 상태를 정리하고 홈으로 간다
+        if (isApiError(error) && error.status === 404) {
+          finish();
+          toast.error(errorMessage(error));
+          return;
+        }
+        // 403·400 등: 일지는 그대로이니 화면에 머물고 자동 저장을 다시 켠다
+        cancelCommit();
+        toast.error(errorMessage(error));
+      },
+    });
+  }
+
   return (
     <AppShell
       header={
@@ -300,6 +338,9 @@ export function DiaryEditPage() {
                 })}
               </SelectContent>
             </Select>
+            {canDeleteDiary ? (
+              <FieldDescription>이용자를 잘못 골랐다면 일지를 삭제하고 다시 쓰세요.</FieldDescription>
+            ) : null}
           </Field>
 
           <Field>
@@ -404,7 +445,28 @@ export function DiaryEditPage() {
           </Field>
         </FormSection>
 
+        {canDeleteDiary ? (
+          <Button
+            variant="ghost"
+            size="dense"
+            className="self-center text-destructive hover:text-destructive"
+            disabled={deleteDiary.isPending || saving !== null}
+            onClick={() => setAskDeleteDiary(true)}
+          >
+            <Trash2 aria-hidden />
+            작성 중인 일지 삭제
+          </Button>
+        ) : null}
       </div>
+
+      <ConfirmDialog
+        open={askDeleteDiary}
+        onOpenChange={setAskDeleteDiary}
+        title="작성 중인 일지를 삭제할까요?"
+        description="삭제하면 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onConfirm={() => void handleDeleteDiary()}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}

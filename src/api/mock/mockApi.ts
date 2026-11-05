@@ -266,6 +266,24 @@ export const mockApi: Api = {
       await writeLatency();
       return saveDiary(input, requireSession());
     },
+    // 백엔드 DELETE /api/diaries/{id}와 같은 규칙
+    async delete(diaryId) {
+      await writeLatency();
+      const me = requireSession();
+      const diary = readDb().diaries.find((d) => d.id === diaryId);
+      if (!diary) throw notFound("일지");
+      if (diary.status === "completed") {
+        throw new ApiError(400, "작성 완료된 일지는 삭제할 수 없어요.", "VALIDATION_ERROR");
+      }
+      if (diary.authorId !== me.id && me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "작성자 또는 팀장·국장만 삭제할 수 있어요.", "FORBIDDEN");
+      }
+      writeDb((db) => ({
+        ...db,
+        diaries: db.diaries.filter((d) => d.id !== diaryId),
+        events: db.events.filter((e) => e.diaryId !== diaryId),
+      }));
+    },
   },
 
   calendar: {
