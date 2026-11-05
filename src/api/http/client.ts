@@ -14,6 +14,8 @@ interface RequestOptions {
   query?: Query;
   body?: unknown;
   signal?: AbortSignal;
+  /** 탭을 닫거나 새로고침하는 중에도(pagehide) 요청이 끊기지 않게 한다 */
+  keepalive?: boolean;
 }
 
 interface HttpHooks {
@@ -53,6 +55,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       credentials: "include",
       signal: options.signal,
+      keepalive: options.keepalive,
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
