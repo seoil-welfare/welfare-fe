@@ -188,7 +188,7 @@ export interface BehaviorSummary {
   days: number;
   /** 이전 동기간 대비 증감 (FR-34) */
   delta: number;
-  /** 이전 동기간에 기록이 없었는지 — 증감 표시 방식 미확정(FR-34) */
+  /** 이전 동기간에 작성 완료 일지가 없었는지 (행동 건수가 아님) — 증감 표시 방식 미확정(FR-34) */
   previousEmpty: boolean;
 }
 
@@ -209,7 +209,9 @@ export function behaviorSummary(
     count,
     days,
     delta: count - prevCount,
-    previousEmpty: countBehaviorsIn(previous, "all") === 0,
+    // '이전 기간 기록 없음'은 이전 기간에 작성 완료 일지가 없을 때만이다 (백엔드 StatsService와 같음).
+    // 일지는 있는데 도전적 행동이 0건이면 비교할 기록이 있는 것이라 증감(+N건)으로 보여 준다
+    previousEmpty: previous.length === 0,
   };
 }
 

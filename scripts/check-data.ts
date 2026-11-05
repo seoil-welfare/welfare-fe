@@ -154,6 +154,34 @@ expect(
   trend.filter((t) => t.isCurrent).length === 1,
   trend.find((t) => t.isCurrent)?.label ?? "없음",
 );
+
+console.log("");
+console.log("[이전 기간 기록 없음]");
+// 도전적 행동이 있는 완료 일지 1건을 이번 기간으로 삼고, 이전 기간에 행동 없는 완료 일지를 1건 만든다
+const withBehavior = diaries.find(
+  (d) => d.userId === user1 && d.status === "completed" && countDiaryBehaviors(d) > 0,
+)!;
+const thisPeriod = currentPeriod("month", withBehavior.date);
+const noBehaviorBefore = {
+  ...withBehavior,
+  id: "chk-prev-no-behavior",
+  date: periodRange(previousPeriod(thisPeriod)).start,
+  activities: withBehavior.activities.map((a) => ({ ...a, hasBehavior: false, behaviors: [] })),
+};
+const behaviorsNow = countDiaryBehaviors(withBehavior);
+const withPrev = behaviorSummary([noBehaviorBefore, withBehavior], user1, thisPeriod);
+expect(
+  "이전 기간에 일지는 있고 행동 0건이면 증감 표시",
+  !withPrev.previousEmpty && withPrev.delta === behaviorsNow,
+  "previousEmpty=" + withPrev.previousEmpty + ", delta=" + withPrev.delta + " (이번 " + behaviorsNow + "건)",
+);
+const withoutPrev = behaviorSummary([withBehavior], user1, thisPeriod);
+expect(
+  "이전 기간에 완료 일지가 없으면 기록 없음",
+  withoutPrev.previousEmpty,
+  "previousEmpty=" + withoutPrev.previousEmpty,
+);
+
 for (const unit of ["week", "quarter", "year"] as const) {
   const p = currentPeriod(unit, DEMO_TODAY);
   const r = periodRange(p);
