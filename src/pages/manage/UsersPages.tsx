@@ -125,14 +125,16 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
 
   function submit() {
     if (createUser.isPending) return;
+    const birth = normalizeBirthDate(birthDate);
+    setBirthDate(birth);
     const next: typeof errors = {};
     if (!name.trim()) next.name = "이름을 입력해 주세요.";
-    if (!isValidDate(birthDate)) next.birthDate = "생년월일을 YYYY-MM-DD 형식으로 입력해 주세요.";
+    if (!isValidDate(birth)) next.birthDate = BIRTH_DATE_ERROR;
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     createUser.mutate(
-      { name: name.trim(), birthDate, assignedStaffId: staffId },
+      { name: name.trim(), birthDate: birth, assignedStaffId: staffId },
       {
         onSuccess: (created) => {
           toast.success(created.name + " 님을 등록했어요.");
@@ -222,15 +224,17 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
 
   function save() {
     if (busy) return;
+    const birth = normalizeBirthDate(birthDate);
+    setBirthDate(birth);
     const next: typeof errors = {};
     if (!name.trim()) next.name = "이름을 입력해 주세요.";
-    if (!isValidDate(birthDate)) next.birthDate = "생년월일을 YYYY-MM-DD 형식으로 입력해 주세요.";
+    if (!isValidDate(birth)) next.birthDate = BIRTH_DATE_ERROR;
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     // 저장을 누른 경우에만 반영한다 (이용자 공통 규칙 1)
     updateUser.mutate(
-      { userId: user.id, input: { name: name.trim(), birthDate, assignedStaffId: staffId } },
+      { userId: user.id, input: { name: name.trim(), birthDate: birth, assignedStaffId: staffId } },
       {
         onSuccess: () => {
           toast.success("이용자 정보를 저장했어요.");
@@ -356,6 +360,8 @@ function UserForm({
           aria-invalid={errors.birthDate ? true : undefined}
           aria-describedby={errors.birthDate ? "user-birth-error" : undefined}
           onChange={(event) => onBirthDateChange(event.target.value)}
+          // 20010803, 2001.08.03, 2001/8/3처럼 써도 칸을 벗어나면 2001-08-03으로 맞춘다
+          onBlur={(event) => onBirthDateChange(normalizeBirthDate(event.target.value))}
         />
         <FieldError id="user-birth-error">{errors.birthDate}</FieldError>
       </Field>
@@ -377,6 +383,22 @@ function UserForm({
       </Field>
     </FieldGroup>
   );
+}
+
+const BIRTH_DATE_ERROR = "생년월일을 2001-04-18처럼 연·월·일로 입력해 주세요.";
+
+/**
+ * 생년월일 입력을 YYYY-MM-DD로 맞춘다.
+ * 숫자 8자리(20010803)나 구분자가 다른 형식(2001.08.03, 2001/8/3, 2001 8 3)을 받는다.
+ * 그 밖의 값은 그대로 두어 isValidDate가 오류로 알려 준다.
+ */
+function normalizeBirthDate(value: string): string {
+  const text = value.trim();
+  const digits = /^(\d{4})(\d{2})(\d{2})$/.exec(text);
+  if (digits) return digits[1] + "-" + digits[2] + "-" + digits[3];
+  const parts = /^(\d{4})\D+(\d{1,2})\D+(\d{1,2})\D*$/.exec(text);
+  if (parts) return parts[1] + "-" + parts[2].padStart(2, "0") + "-" + parts[3].padStart(2, "0");
+  return text;
 }
 
 function isValidDate(value: string): boolean {
