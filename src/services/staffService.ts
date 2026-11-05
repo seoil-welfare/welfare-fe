@@ -4,7 +4,7 @@ import { isStaffActive } from "@/services/diaryService";
 /**
  * 담당자 관리 화면의 권한 판단·정렬·검색 (순수 함수).
  * 화면은 버튼을 보일지만 여기서 정하고, 실제 허용 여부는 서버가 다시 검사한다.
- * 규칙: 백엔드 AuthService (changeRole, transferDirector, setStaffActive)와 같다.
+ * 규칙: 백엔드 AuthService (changeRole, transferDirector, setStaffActive, resetPassword)와 같다.
  */
 
 const ROLE_ORDER: Record<UserRole, number> = { director: 0, teamLead: 1, staff: 2 };
@@ -27,6 +27,12 @@ export function canChangeRole(viewer: Staff | null | undefined, target: Staff): 
 /** 관리 권한 이양: 국장이, 내가 아닌 사용 중인 계정에게 */
 export function canTransferDirector(viewer: Staff | null | undefined, target: Staff): boolean {
   return viewer?.role === "director" && viewer.id !== target.id && isStaffActive(target);
+}
+
+/** 임시 비밀번호 다시 발급: 팀장·국장이, 내가 아닌 사용 중인 계정에. 국장 계정은 국장만 */
+export function canResetPassword(viewer: Staff | null | undefined, target: Staff): boolean {
+  if (!isStaffManager(viewer) || viewer!.id === target.id || !isStaffActive(target)) return false;
+  return target.role !== "director" || viewer!.role === "director";
 }
 
 /** 사용 중지·다시 사용: 팀장·국장이, 내 계정이 아닌 계정에. 국장 계정은 국장만 */

@@ -11,18 +11,25 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { ListRowButton } from "@/components/common/ListRow";
 import { QueryGate } from "@/components/common/QueryGate";
 import { EmptyState } from "@/components/common/states";
+import { TemporaryPasswordDialog } from "@/components/staff/TemporaryPasswordDialog";
 import { errorMessage } from "@/api/errors";
 import {
   combineQueries,
   useChangeStaffRole,
+  useResetStaffPassword,
   useSetStaffActive,
   useStaffList,
   useTransferDirector,
 } from "@/api/queries";
-import type { ChangeableRole, PreviousDirectorRole } from "@/api/types";
+import type { ChangeableRole, CreatedStaff, PreviousDirectorRole } from "@/api/types";
 import { useCurrentStaff } from "@/app/auth";
 import { isStaffActive } from "@/services/diaryService";
-import { canChangeRole, canToggleActive, canTransferDirector } from "@/services/staffService";
+import {
+  canChangeRole,
+  canResetPassword,
+  canToggleActive,
+  canTransferDirector,
+} from "@/services/staffService";
 import { StaffAvatar } from "@/pages/manage/StaffPages";
 import { cn } from "@/lib/utils";
 import { ROLE_POSITION, type Staff } from "@/types";
@@ -30,7 +37,8 @@ import { ROLE_POSITION, type Staff } from "@/types";
 /**
  * 담당자 상세 (/staff/:staffId). 담당자 관리 목록에서 행을 누르면 온다.
  * 데이터는 GET /staff 목록 캐시에서 id로 찾는다 (상세 조회 API 없음).
- * 권한 관리(역할 변경 바텀시트·관리 권한 이양 팝업)와 계정 상태(사용 중지·다시 사용)는 보일 사람에게만 보인다.
+ * 권한 관리(역할 변경 바텀시트·관리 권한 이양 팝업), 비밀번호(임시 비밀번호 다시 발급),
+ * 계정 상태(사용 중지·다시 사용)는 보일 사람에게만 보인다.
  * 보일지는 services/staffService, 실제 허용은 서버가 정한다.
  */
 export function StaffDetailPage() {
@@ -67,10 +75,14 @@ function StaffDetail({ member }: { member: Staff }) {
   const [confirmOpen, setConfirmOpen] = useState(false); // 사용 중지·다시 사용 확인 창
   const [roleOpen, setRoleOpen] = useState(false); // 역할 변경 바텀시트
   const [transferOpen, setTransferOpen] = useState(false); // 관리 권한 이양 팝업
+  const resetPassword = useResetStaffPassword();
+  const [resetOpen, setResetOpen] = useState(false); // 임시 비밀번호 발급 확인 창
+  const [issued, setIssued] = useState<CreatedStaff | null>(null); // 방금 발급한 임시 비밀번호
   const active = isStaffActive(member);
   const showRole = canChangeRole(viewer, member);
   const showTransfer = canTransferDirector(viewer, member);
   const showToggle = canToggleActive(viewer, member);
+  const showReset = canResetPassword(viewer, member);
 
   function confirmToggle() {
     const next = !active;
@@ -82,6 +94,13 @@ function StaffDetail({ member }: { member: Staff }) {
         onError: (error) => toast.error(errorMessage(error, "계정 상태를 바꾸지 못했어요.")),
       },
     );
+  }
+
+  function confirmReset() {
+    resetPassword.mutate(member.id, {
+      onSuccess: (result) => setIssued(result),
+      onError: (error) => toast.error(errorMessage(error, "임시 비밀번호를 발급하지 못했어요.")),
+    });
   }
 
   return (
@@ -125,6 +144,18 @@ function StaffDetail({ member }: { member: Staff }) {
         </Section>
       ) : null}
 
+      {showReset ? (
+        <Section title="비밀번호">
+          <ListRowButton
+            tall
+            title="임시 비밀번호 발급"
+            subtitle="비밀번호를 잊었을 때 새로 만들어 알려 줘요."
+            disabled={resetPassword.isPending}
+            onClick={() => setResetOpen(true)}
+          />
+        </Section>
+      ) : null}
+
       {showToggle ? (
         <Section title="계정 상태">
           <ListRowButton
@@ -149,6 +180,21 @@ function StaffDetail({ member }: { member: Staff }) {
         confirmLabel={active ? "사용 중지" : "다시 사용"}
         tone={active ? "destructive" : "default"}
         onConfirm={confirmToggle}
+      />
+
+      <ConfirmDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title={member.name + " 님의 임시 비밀번호를 새로 발급할까요?"}
+        description="지금 쓰는 비밀번호로는 더 이상 로그인할 수 없어요. 새 임시 비밀번호는 다음 창에서 한 번만 보여 줘요."
+        confirmLabel="발급"
+        tone="default"
+        onConfirm={confirmReset}
+      />
+      <TemporaryPasswordDialog
+        account={issued}
+        title="임시 비밀번호를 발급했어요"
+        onClose={() => setIssued(null)}
       />
 
       {showRole ? <RoleSheet member={member} open={roleOpen} onOpenChange={setRoleOpen} /> : null}

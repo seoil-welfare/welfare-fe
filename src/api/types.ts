@@ -219,6 +219,8 @@ export interface StaffApi {
   create(input: StaffInput): Promise<CreatedStaff>;
   /** 계정 사용 중지(false)·다시 사용(true). 팀장·국장만, 내 계정은 중지 못 함 */
   setActive(staffId: string, active: boolean): Promise<Staff>;
+  /** 임시 비밀번호 다시 발급. 팀장·국장만, 내 계정·사용 중지된 계정은 못 함. 국장 계정은 국장만 */
+  resetPassword(staffId: string): Promise<CreatedStaff>;
   /** 역할 변경 (담당자 ↔ 팀장). 팀장·국장만, 국장·내 계정·중지된 계정은 못 바꿈 */
   changeRole(staffId: string, role: ChangeableRole): Promise<Staff>;
   /** 관리 권한 이양. 국장만. previousRole이 deactivate면 서버가 내 세션을 끊는다 */
