@@ -7,6 +7,7 @@ import { registerSW } from "virtual:pwa-register";
 import { configureHttp } from "@/api/http/client";
 import { createQueryClient, queryKeys } from "@/api/queries";
 import { DraftProvider } from "@/app/DraftContext";
+import { listenForInstallPrompt } from "@/app/installApp";
 import { markSignedOut, type SignedOutReason } from "@/app/sessionExpired";
 import { AppRoutes } from "@/app/router";
 import "@/styles/globals.css";
@@ -40,6 +41,9 @@ const updateApp = registerSW({
     });
   },
 });
+
+// 홈 화면에 추가: 설치 가능 신호는 앱이 켜지자마자 올 수 있어 화면보다 먼저 듣는다 (마이페이지 버튼이 쓴다)
+listenForInstallPrompt();
 
 createRoot(root).render(
   <StrictMode>

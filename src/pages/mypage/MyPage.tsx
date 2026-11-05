@@ -7,6 +7,8 @@ import {
   ListChecks,
   LogOut,
   Printer,
+  Share,
+  Smartphone,
   UserPlus,
   Users,
   UserCog,
@@ -17,7 +19,8 @@ import { Separator, Switch } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { MainHeader } from "@/components/layout/AppHeader";
 import { ListRowButton, ListRowLink, ListRowStatic } from "@/components/common/ListRow";
-import { ConfirmDialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog, Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import {
   useLogout,
   useNotificationSettings,
@@ -27,6 +30,7 @@ import {
 } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
+import { promptInstall, useInstallMode } from "@/app/installApp";
 import { activeServiceUsers } from "@/services/diaryService";
 import { useState } from "react";
 
@@ -47,6 +51,17 @@ export function MyPage() {
   const usersQuery = useServiceUsers();
   const staffQuery = useStaffList();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  // 홈 화면에 추가: Chrome·Edge는 설치 창, 아이폰 Safari는 안내 창. 이미 설치했거나 지원하지 않으면 줄을 숨긴다
+  const installMode = useInstallMode();
+  const [iosGuideOpen, setIosGuideOpen] = useState(false);
+
+  async function handleInstall() {
+    if (installMode === "ios") {
+      setIosGuideOpen(true);
+      return;
+    }
+    if (await promptInstall()) toast.success("홈 화면에 추가했어요.");
+  }
   const userCount = usersQuery.data ? activeServiceUsers(usersQuery.data).length + "명" : "–";
   const staffCount = staffQuery.data ? staffQuery.data.length + "명" : "–";
 
@@ -153,6 +168,8 @@ export function MyPage() {
           <h2 className="px-1 type-heading">설정</h2>
           <Card variant="list">
             <ListRowStatic
+              // 스위치가 작아져 다른 줄과 같은 48px 높이로 맞춘다
+              tall={false}
               leading={<Bell className="size-5 text-primary" aria-hidden />}
               title="새 일지 알림 받기"
               trailing={
@@ -173,6 +190,16 @@ export function MyPage() {
                 />
               }
             />
+            {installMode === "prompt" || installMode === "ios" ? (
+              <>
+                <Separator />
+                <ListRowButton
+                  leading={<Smartphone className="size-5 text-primary" aria-hidden />}
+                  title="홈 화면에 추가"
+                  onClick={() => void handleInstall()}
+                />
+              </>
+            ) : null}
             <Separator />
             <ListRowLink
               to="/settings/password"
@@ -191,6 +218,30 @@ export function MyPage() {
         </section>
 
         <p className="px-1 py-2 type-caption text-muted-foreground">앱 버전 {APP_VERSION}</p>
+
+        {/* 아이폰·아이패드 Safari는 버튼으로 바로 설치할 수 없어 방법을 안내한다 */}
+        <Dialog open={iosGuideOpen} onOpenChange={setIosGuideOpen}>
+          <DialogContent title="홈 화면에 추가하기" description="Safari에서 아래 순서로 추가할 수 있어요.">
+            <ol className="flex flex-col gap-3 type-body">
+              <li>
+                <span className="tnum font-medium">1.</span> 공유 버튼{" "}
+                <Share className="inline size-5 align-text-bottom text-primary" aria-label="공유 아이콘" />
+                을 눌러요. 아이폰은 화면 아래, 아이패드는 위에 있어요.
+              </li>
+              <li>
+                <span className="tnum font-medium">2.</span> 목록에서 <strong>홈 화면에 추가</strong>를 골라요.
+              </li>
+              <li>
+                <span className="tnum font-medium">3.</span> 오른쪽 위 <strong>추가</strong>를 눌러요.
+              </li>
+            </ol>
+            <DialogClose asChild>
+              <Button block className="mt-5">
+                확인
+              </Button>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
 
         <ConfirmDialog
           open={logoutOpen}
