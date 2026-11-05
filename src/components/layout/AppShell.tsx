@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import { BottomNav, Sidebar } from "@/components/layout/navigation";
-import { IS_MOCK } from "@/config";
-import { DemoPanel } from "@/demo/DemoPanel";
 import { cn } from "@/lib/utils";
 
 /**
@@ -72,8 +70,6 @@ export function AppShell({
       </div>
       {bottom === "nav" ? <BottomNav /> : null}
       {bottom === "action" ? bottomBar : null}
-      {/* 시연 설정 패널은 mock 모드에서만 보인다 */}
-      {IS_MOCK ? <DemoPanel /> : null}
     </div>
   );
 }

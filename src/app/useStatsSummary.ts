@@ -1,7 +1,5 @@
 import { useStatsSummary as useStatsSummaryQuery } from "@/api/queries";
 import type { StatsSummary } from "@/api/types";
-import { IS_MOCK } from "@/config";
-import { useDemo } from "@/demo/DemoContext";
 import { statsSummary } from "@/services/statsService";
 import type { StatisticPeriod } from "@/types";
 
@@ -12,10 +10,7 @@ import type { StatisticPeriod } from "@/types";
  * 불러오기 전에는 0건 집계를 돌려준다. 화면은 query 상태(QueryGate)로 로딩·오류를 가린다.
  */
 export function useStatsSummary(userId: string, period: StatisticPeriod) {
-  const { flags } = useDemo();
   const query = useStatsSummaryQuery({ userId, ...period });
-  // 관찰용 상태: 통계 0건 (mock 모드 전용)
-  const summary: StatsSummary =
-    (IS_MOCK && flags.forceEmptyStats ? undefined : query.data) ?? statsSummary([], userId, period);
+  const summary: StatsSummary = query.data ?? statsSummary([], userId, period);
   return { query, summary };
 }

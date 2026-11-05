@@ -1,7 +1,7 @@
 /** 월간 기록(월별활동일지) 출력 값 검증 (개발 검증용). 모든 이름은 가상 데이터다 */
 import { readFileSync } from "node:fs";
 import PizZip from "pizzip";
-import { generateFixtures, SERVICE_USERS } from "@/data/fixtures";
+import { generateFixtures, SERVICE_USERS } from "./fixtures";
 import { DOCX_MIME } from "@/lib/export/dailyRecordDocx";
 import { MONTHLY_IMAGE_PATHS, renderMonthlyRecordDocx } from "@/lib/export/monthlyRecordDocx";
 import {

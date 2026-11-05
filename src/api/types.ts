@@ -13,7 +13,7 @@ import type {
 
 /**
  * 프론트가 기대하는 API 계약.
- * mock(src/api/mock)과 http(src/api/http) 구현이 같은 인터페이스를 따른다.
+ * http(src/api/http) 구현이 이 인터페이스를 따른다.
  * 엔드포인트·필드 상세는 docs/backend-integration.md에 정리한다.
  *
  * 공통 약속

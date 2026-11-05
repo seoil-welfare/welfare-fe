@@ -1,9 +1,5 @@
 /** 오늘의 소식 날짜 구분 검증 (개발 검증용) */
-import { DEMO_TODAY, SERVICE_USERS, STAFF, generateFixtures } from "@/data/fixtures";
-import { QueryClient } from "@tanstack/react-query";
-import { setMockLatency, toNewsEntries } from "@/api/mock/mockApi";
-import { writeDb } from "@/api/mock/mockDb";
-import { findOlderNewsDate } from "@/api/queries";
+import { DEMO_TODAY, SERVICE_USERS, STAFF, generateFixtures, toNewsEntries } from "./fixtures";
 import { groupNewsByDate, latestNewsDateBefore, newsItems } from "@/services/diaryService";
 import { addDays, dateGroupLabel, dateOf } from "@/lib/utils";
 
@@ -110,43 +106,6 @@ expect("9일 빈 구간을 한 번에 건너뜀", latestNewsDateBefore(gap, "202
 expect("다음 구간도 이어서 찾음", latestNewsDateBefore(gap, "2026-10-11", "all") === "2026-10-02", "2026-10-11 → 2026-10-02");
 expect("더 이전이 없으면 null", latestNewsDateBefore(gap, "2026-10-02", "all") === null, "null");
 
-// 화면과 같은 방식으로 mock 서버에 범위를 넓혀 가며 묻기
-async function checkWithMockServer() {
-  setMockLatency(false);
-  // 앱의 목 서버는 일지 없이 시작하므로, 위에서 만든 샘플 일지·소식을 넣고 묻는다
-  writeDb((db) => ({ ...db, diaries, events }));
-  const client = new QueryClient();
-  const limit = addDays(DEMO_TODAY, -365);
-  let cursor = addDays(DEMO_TODAY, -1);
-  const visited: string[] = [];
-  for (let i = 0; i < 400; i++) {
-    const found = await findOlderNewsDate(client, { before: cursor, limit, filter: "all" });
-    if (!found) break;
-    visited.push(found);
-    cursor = found;
-  }
-  const allDates = [...new Set(entries.map(({ event }) => dateOf(event.occurredAt)))]
-    .filter((d) => d < addDays(DEMO_TODAY, -1) && d >= limit)
-    .sort()
-    .reverse();
-  expect(
-    "버튼을 계속 누르면 소식이 있는 날만 빠짐없이 차례로 펼침",
-    JSON.stringify(visited) === JSON.stringify(allDates),
-    visited.length + "번 이동, 가장 오래된 " + (visited[visited.length - 1] ?? "-"),
-  );
-  expect(
-    "펼친 날짜의 캐시에는 그 날짜 이후 소식만 있음",
-    visited.every((d) =>
-      (client.getQueryData<typeof entries>(["news", d]) ?? []).every(
-        ({ event }) => dateOf(event.occurredAt) >= d,
-      ),
-    ),
-    "확인",
-  );
-}
-
-void checkWithMockServer().then(() => {
-  console.log("");
-  console.log(problems.length === 0 ? "모든 검증 통과" : problems.length + "개 실패");
-  process.exit(problems.length === 0 ? 0 : 1);
-});
+console.log("");
+console.log(problems.length === 0 ? "모든 검증 통과" : problems.length + "개 실패");
+process.exit(problems.length === 0 ? 0 : 1);

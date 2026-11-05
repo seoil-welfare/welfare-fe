@@ -7,18 +7,14 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/components/
 import { FieldError } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/misc";
 import { errorMessage, isApiError } from "@/api/errors";
-import { MOCK_PASSWORD } from "@/api/mock/mockApi";
 import { useLogin } from "@/api/queries";
 import { clearSignedOut, signedOutReason, type SignedOutReason } from "@/app/sessionExpired";
-import { IS_MOCK } from "@/config";
-import { DemoPanel } from "@/demo/DemoPanel";
 import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
 
 /**
  * 로그인 (FR-01~FR-03).
  * 입력 오류(형식)와 인증 실패(일치하지 않음)의 문구를 구분한다 (가이드 9장 15번).
  * 가운데 로고와 앱 이름, 아이콘이 붙은 둥근 입력칸, 둥근 로그인 버튼 순으로 둔다.
- * mock 모드에서는 demo.staff1 계정이 미리 입력되어 있다. 다른 데모 계정은 직접 입력한다.
  */
 const SIGNED_OUT_NOTICE: Record<SignedOutReason, { title: string; description: string }> = {
   expired: {
@@ -35,8 +31,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
 
-  const [loginId, setLoginId] = useState(IS_MOCK ? "demo.staff1" : "");
-  const [password, setPassword] = useState(IS_MOCK ? MOCK_PASSWORD : "");
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [autoLogin, setAutoLogin] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
@@ -80,7 +76,6 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      {IS_MOCK ? <DemoPanel /> : null}
       <AuthLayout title="케어로그" description="담당자 계정으로 로그인해 주세요.">
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 md:gap-3">
           <div>

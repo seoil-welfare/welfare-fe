@@ -8,7 +8,6 @@ import { configureHttp } from "@/api/http/client";
 import { createQueryClient, queryKeys } from "@/api/queries";
 import { DraftProvider } from "@/app/DraftContext";
 import { markSignedOut, type SignedOutReason } from "@/app/sessionExpired";
-import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
 import "@/styles/globals.css";
 
@@ -46,22 +45,20 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <DraftProvider>
-        <DemoProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            {/*
-              저장 피드백: 성공은 짧게, 실패는 재시도와 함께 (가이드 6장).
-              누른 버튼 가까이 보이게 화면 아래, 하단 버튼 바(약 73px + 홈 막대) 바로 위에 띄운다
-            */}
-            <Toaster
-              position="bottom-center"
-              richColors
-              closeButton
-              offset={{ bottom: TOAST_BOTTOM }}
-              mobileOffset={{ bottom: TOAST_BOTTOM }}
-            />
-          </BrowserRouter>
-        </DemoProvider>
+        <BrowserRouter>
+          <AppRoutes />
+          {/*
+            저장 피드백: 성공은 짧게, 실패는 재시도와 함께 (가이드 6장).
+            누른 버튼 가까이 보이게 화면 아래, 하단 버튼 바(약 73px + 홈 막대) 바로 위에 띄운다
+          */}
+          <Toaster
+            position="bottom-center"
+            richColors
+            closeButton
+            offset={{ bottom: TOAST_BOTTOM }}
+            mobileOffset={{ bottom: TOAST_BOTTOM }}
+          />
+        </BrowserRouter>
       </DraftProvider>
     </QueryClientProvider>
   </StrictMode>,

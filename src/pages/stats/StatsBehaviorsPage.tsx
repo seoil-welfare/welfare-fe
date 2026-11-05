@@ -13,7 +13,6 @@ import { BEHAVIOR_TYPES } from "@/data/catalog";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
 import { useStatsSummary } from "@/app/useStatsSummary";
-import { useDemo } from "@/demo/DemoContext";
 import { findServiceUser } from "@/services/diaryService";
 import {
   detailItemsFor,
@@ -35,25 +34,23 @@ import type { BehaviorType } from "@/types";
  * - 세부 행동별 가로 막대 + 발생 기록 최신순, 기록 선택 시 일지 상세로 이동
  */
 
-const RECORDS_PAGE_SIZE_DEMO_ONLY = 5;
+const RECORDS_PAGE_SIZE = 5;
 
 type Filter = BehaviorType | "all";
 
 export function StatsBehaviorsPage() {
-  const { flags } = useDemo();
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
   const today = useToday();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const [filter, setFilter] = useState<Filter>("all");
-  const [visibleRecords, setVisibleRecords] = useState(RECORDS_PAGE_SIZE_DEMO_ONLY);
+  const [visibleRecords, setVisibleRecords] = useState(RECORDS_PAGE_SIZE);
 
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
   const typeCounts = stats.behavior.byType;
 
-  // 유형 필터가 상단 요약까지 갱신하는지는 미확정이다 (FR-47). 데모 패널에서 켜고 끌 수 있다.
-  const summaryFilter: Filter = flags.behaviorFilterUpdatesSummary ? filter : "all";
-  const summary = summaryFor(stats, summaryFilter);
+  // 유형 필터를 고르면 상단 요약도 그 유형 기준으로 바뀐다 (FR-47)
+  const summary = summaryFor(stats, filter);
 
   const details = detailItemsFor(stats, filter);
   const records = recordsFor(stats, filter);
@@ -90,7 +87,7 @@ export function StatsBehaviorsPage() {
             value={filter}
             onValueChange={(next) => {
               setFilter(next);
-              setVisibleRecords(RECORDS_PAGE_SIZE_DEMO_ONLY);
+              setVisibleRecords(RECORDS_PAGE_SIZE);
             }}
             options={[
               {
@@ -150,7 +147,7 @@ export function StatsBehaviorsPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    setVisibleRecords((prev) => prev + RECORDS_PAGE_SIZE_DEMO_ONLY)
+                    setVisibleRecords((prev) => prev + RECORDS_PAGE_SIZE)
                   }
                   className="min-h-11 rounded-control type-body font-medium text-primary hover:bg-accent"
                 >

@@ -19,7 +19,7 @@ import type { BehaviorType } from "@/types";
  */
 
 function toItems(labels: readonly string[]): CategoryItem[] {
-  // mock·기본 목록은 코드가 없어 라벨을 코드로 쓴다
+  // 기본 목록은 코드가 없어 라벨을 코드로 쓴다
   return labels.map((label, index) => ({
     code: label,
     label,
@@ -29,7 +29,7 @@ function toItems(labels: readonly string[]): CategoryItem[] {
   }));
 }
 
-/** catalog.ts를 서버 응답 모양으로. mock 응답과 조회 전 기본값으로 쓴다 */
+/** catalog.ts를 서버 응답 모양으로. 서버 목록을 받기 전 기본값으로 쓴다 */
 export function defaultCategories(): Categories {
   return {
     weather: toItems(WEATHERS),

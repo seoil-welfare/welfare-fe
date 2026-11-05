@@ -84,7 +84,8 @@ const pwa = VitePWA({
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
-  const proxyTarget = env.VITE_API_PROXY_TARGET;
+  // 개발 서버(npm run dev)는 /api 요청을 로컬 백엔드로 넘긴다
+  const proxyTarget = env.VITE_API_PROXY_TARGET || "http://localhost:8080";
 
   return {
     plugins: [react(), tailwindWithNormalizedWatchFiles(), pwa],
@@ -97,8 +98,8 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
-      // http 모드 개발 시 /api 요청을 백엔드로 넘겨 CORS 없이 쿠키 세션을 쓸 수 있게 한다
-      proxy: proxyTarget ? { "/api": { target: proxyTarget, changeOrigin: true } } : undefined,
+      // /api 요청을 백엔드로 넘겨 CORS 없이 쿠키 세션을 쓸 수 있게 한다
+      proxy: { "/api": { target: proxyTarget, changeOrigin: true } },
     },
   };
 });

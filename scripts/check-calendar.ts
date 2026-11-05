@@ -3,7 +3,7 @@
  * 일지는 이용자 1명당 하루 1건이므로, 대상 이용자 전원이 일지를 가진 날짜에는
  * 작성 CTA가 없어야 하고, 남은 이용자가 있으면 그 이용자를 대상으로 열려야 한다.
  */
-import { DEMO_TODAY, SERVICE_USERS, generateFixtures } from "@/data/fixtures";
+import { DEMO_TODAY, SERVICE_USERS, generateFixtures } from "./fixtures";
 import { activeServiceUsers, dayCompletion, diariesOnDate } from "@/services/diaryService";
 import { addDays, parseISODate } from "@/lib/utils";
 
