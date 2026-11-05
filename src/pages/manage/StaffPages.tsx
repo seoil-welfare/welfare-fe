@@ -270,7 +270,7 @@ export function StaffNewPage() {
 }
 
 /**
- * 계정 추가 완료 팝업. 아이디와 임시 비밀번호를 보여 주고 함께 복사할 수 있다.
+ * 계정 추가 완료 팝업. 아이디와 임시 비밀번호를 보여 주고, 임시 비밀번호만 복사할 수 있다.
  * 닫으면 비밀번호를 다시 볼 수 없으므로 바깥을 눌러 닫히지 않게 하고, 닫을 때 목록으로 간다.
  */
 function CreatedAccountDialog({
@@ -283,10 +283,8 @@ function CreatedAccountDialog({
   async function copy() {
     if (!account) return;
     try {
-      await navigator.clipboard.writeText(
-        "아이디: " + account.loginId + "\n임시 비밀번호: " + account.temporaryPassword,
-      );
-      toast.success("아이디와 임시 비밀번호를 복사했어요.");
+      await navigator.clipboard.writeText(account.temporaryPassword);
+      toast.success("임시 비밀번호를 복사했어요.");
     } catch {
       toast.error("복사하지 못했어요. 화면을 보고 직접 전달해 주세요.");
     }
@@ -324,7 +322,7 @@ function CreatedAccountDialog({
             <div className="flex gap-2">
               <Button variant="outline" block onClick={copy}>
                 <Copy aria-hidden />
-                복사하기
+                비밀번호 복사
               </Button>
               <Button block onClick={onClose}>
                 확인
