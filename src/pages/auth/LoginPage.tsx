@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,7 +13,6 @@ import { clearSessionExpired, isSessionExpired } from "@/app/sessionExpired";
 import { IS_MOCK } from "@/config";
 import { DemoPanel } from "@/demo/DemoPanel";
 import { AuthLayout, PillField, authButtonClass, pillInputClass } from "@/components/auth/AuthLayout";
-import { cn } from "@/lib/utils";
 
 /**
  * 로그인 (FR-01~FR-03).
@@ -25,10 +24,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
 
-  // 회원가입을 마치고 오면 가입한 아이디를 채워 둔다
-  const signedUpId = (useLocation().state as { loginId?: string } | null)?.loginId;
-  const [loginId, setLoginId] = useState(signedUpId ?? (IS_MOCK ? "demo.staff1" : ""));
-  const [password, setPassword] = useState(signedUpId ? "" : IS_MOCK ? MOCK_PASSWORD : "");
+  const [loginId, setLoginId] = useState(IS_MOCK ? "demo.staff1" : "");
+  const [password, setPassword] = useState(IS_MOCK ? MOCK_PASSWORD : "");
   const [showPassword, setShowPassword] = useState(false);
   const [autoLogin, setAutoLogin] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
@@ -148,21 +145,6 @@ export function LoginPage() {
             className={authButtonClass}
           >
             {submitting ? <Spinner label="로그인 중…" /> : "로그인"}
-          </Button>
-
-          {/* 로그인과 같은 모양, 색만 반대(흰 바탕·남색 테두리). 로그인 버튼보다 눈에 덜 띄게 그림자를 옅게 둔다 */}
-          <Button
-            variant="outline"
-            size="lg"
-            block
-            asChild
-            className={cn(
-              authButtonClass,
-              "mt-0 border-primary bg-card text-primary hover:bg-accent md:mt-0",
-              "shadow-[0_6px_16px_-6px_rgb(21_46_99/0.18)] md:shadow-none",
-            )}
-          >
-            <Link to="/signup">회원가입</Link>
           </Button>
         </form>
 
