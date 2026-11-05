@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import { configureHttp } from "@/api/http/client";
 import { createQueryClient, queryKeys } from "@/api/queries";
 import { DraftProvider } from "@/app/DraftContext";
-import { markSessionExpired } from "@/app/sessionExpired";
+import { markSignedOut, type SignedOutReason } from "@/app/sessionExpired";
 import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
 import "@/styles/globals.css";
@@ -19,13 +19,16 @@ const queryClient = createQueryClient();
 // 하단 버튼 바(위아래 여백 12 + 버튼 48 + 테두리 1) 위로 12px 띄운다
 const TOAST_BOTTOM = "calc(85px + env(safe-area-inset-bottom, 0px))";
 
-// 세션이 만료되면 로그인 상태를 비운다. RequireAuth가 로그인 화면으로 보낸다.
-// 로그인해 있던 중이었을 때만 만료로 표시해서 로그인 화면에 안내 팝업을 띄운다.
+// 세션이 만료되거나 계정이 사용 중지되면 로그인 상태를 비운다. RequireAuth가 로그인 화면으로 보낸다.
+// 로그인해 있던 중이었을 때만 이유를 표시해서 로그인 화면에 알맞은 안내 팝업을 띄운다.
+function signOut(reason: SignedOutReason) {
+  if (queryClient.getQueryData(queryKeys.me)) markSignedOut(reason);
+  queryClient.setQueryData(queryKeys.me, null);
+}
+
 configureHttp({
-  onUnauthorized: () => {
-    if (queryClient.getQueryData(queryKeys.me)) markSessionExpired();
-    queryClient.setQueryData(queryKeys.me, null);
-  },
+  onUnauthorized: () => signOut("expired"),
+  onAccountDisabled: () => signOut("disabled"),
 });
 
 createRoot(root).render(

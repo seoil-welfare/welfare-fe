@@ -17,7 +17,7 @@ export function useRememberLastPage(): void {
   const location = useLocation();
   useEffect(() => {
     const path = location.pathname;
-    if (path.startsWith("/diaries") || path === "/login" || path === "/signup" || path === "/") return;
+    if (path.startsWith("/diaries") || path === "/login" || path === "/") return;
     lastPage = path + location.search;
   }, [location.pathname, location.search]);
 }

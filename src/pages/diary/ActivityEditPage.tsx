@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ChevronRight, Download } from "lucide-react";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { Field, FieldError } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Alert } from "@/components/ui/misc";
@@ -30,6 +31,7 @@ import { useDemo } from "@/demo/DemoContext";
 import {
   behaviorTypesMissingDetail,
   emptyActivity,
+  hasActivityInput,
   missingDetailMessage,
   sortActivities,
 } from "@/services/diaryService";
@@ -56,12 +58,21 @@ export function ActivityEditPage() {
   const [timeMissing, setTimeMissing] = useState(false);
   const timeSectionRef = useRef<HTMLDivElement>(null);
   const behaviorSectionRef = useRef<HTMLDivElement>(null);
+  // 입력한 내용을 버릴지 묻는 팝업 (← 와 '취소' 공통)
+  const [askDiscard, setAskDiscard] = useState(false);
 
   const isNew = activityId === "new" || activityId === undefined;
 
   // 라우트 이동(도전적 행동 상세)에도 선택값이 유지되도록 pendingActivity를 쓴다.
-  useEffect(() => {
-    if (pendingActivity) return;
+  // 주소가 가리키는 활동과 다른 활동이 남아 있으면(← 나 브라우저 뒤로가기로 버리고 나간 입력) 버리고 새로 불러온다 (QA 03-04).
+  // 화면이 그려지기 전에 바꿔서 옛 입력이 잠깐 보이지 않게 한다
+  useLayoutEffect(() => {
+    if (pendingActivity) {
+      const isStale = isNew
+        ? Boolean(draft?.activities.some((a) => a.id === pendingActivity.id)) // new 주소인데 저장된 활동이 남아 있다
+        : pendingActivity.id !== activityId;
+      if (!isStale) return;
+    }
     if (isNew) {
       setPendingActivity(emptyActivity(uid("act")));
       return;
@@ -174,9 +185,21 @@ export function ActivityEditPage() {
     navigate("/diaries/new");
   }
 
-  function cancel() {
+  // 입력한 게 있는지: 새 활동은 입력이 하나라도 있으면, 기존 활동 수정은 원래 값과 다르면
+  const original = draft.activities.find((a) => a.id === activity.id);
+  const hasInput = original
+    ? JSON.stringify(activity, ignoreEmpty) !== JSON.stringify(original, ignoreEmpty)
+    : hasActivityInput(activity);
+
+  function discard() {
     setPendingActivity(null);
     navigate("/diaries/new");
+  }
+
+  // ← 와 '취소'는 같게 동작한다. 입력한 게 없으면 바로 나가고, 있으면 버릴지 묻는다
+  function requestLeave() {
+    if (hasInput) setAskDiscard(true);
+    else discard();
   }
 
   return (
@@ -185,11 +208,12 @@ export function ActivityEditPage() {
         <AppHeader
           title={isNew ? "활동 입력" : "활동 수정"}
           action={
-            <Button variant="ghost" size="dense" onClick={cancel}>
+            <Button variant="ghost" size="dense" onClick={requestLeave}>
               취소
             </Button>
           }
           backTo="/diaries/new"
+          onBack={requestLeave}
         />
       }
       bottom="action"
@@ -402,8 +426,23 @@ export function ActivityEditPage() {
         </FormSection>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={askDiscard}
+        onOpenChange={setAskDiscard}
+        title="작성 중인 활동을 버릴까요?"
+        description="입력한 내용은 저장되지 않아요."
+        confirmLabel="버리기"
+        cancelLabel="화면에 남기"
+        onConfirm={discard}
+      />
     </AppShell>
   );
+}
+
+/** 입력 비교용. 빈 문자열은 값이 없는 것과 같게 본다 (입력했다 지운 경우를 '바뀜'으로 보지 않게) */
+function ignoreEmpty(_key: string, value: unknown): unknown {
+  return value === "" ? undefined : value;
 }
 
 /**

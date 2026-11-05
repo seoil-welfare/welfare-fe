@@ -78,7 +78,7 @@
 | 화면 제어 (현재) | 서버가 검증해야 할 것 |
 |---|---|
 | 로그인하지 않으면 모든 화면 접근 불가 | 모든 API에 세션 확인 |
-| 회원가입 직위는 `담당자` 하나만 보임 | 가입은 항상 `staff`. 팀장은 역할 변경, 국장은 관리 권한 이양으로만 된다 |
+| 회원가입 없음. 계정은 팀장·국장이 계정 추가로 만든다 | 계정 추가는 항상 `staff`. 팀장은 역할 변경, 국장은 관리 권한 이양으로만 된다. **`POST /auth/signup`은 지워야 함** |
 | 담당자 상세의 역할 변경은 팀장·국장에게, 관리 권한 이양은 국장에게만 보임. 국장·내 계정·중지된 계정에는 역할 변경이 안 보임 | `POST /staff/:id/role`, `POST /staff/:id/transfer-director` 권한 (아래 4장) |
 | 담당자 관리 메뉴는 팀장·국장에게만 보임 (FR-80·81, 권한 미확정) | `GET/POST /staff` 권한. **현재 일반 직원도 주소를 직접 입력하면 `/staff` 화면에 들어갈 수 있음** — 화면 차단 여부는 B-6에서 결정 |
 | 다른 직원이 작성 중인 일지는 "이어서 작성" 버튼 없음 | 작성 중 일지의 수정 권한(`PUT /diaries/:id`) |
@@ -95,7 +95,6 @@
 | 메서드 · 경로 | 요청 | 응답 |
 |---|---|---|
 | `POST /auth/login` | `{ loginId, password, autoLogin }` | `Staff` · 실패 시 401 |
-| `POST /auth/signup` | `{ loginId, password, name, birthDate }` | `Staff` · 아이디 중복은 409 `DUPLICATE_LOGIN_ID`, 비밀번호 규칙 위반은 400 `PASSWORD_POLICY`. 직위는 보내지 않으며 서버가 항상 담당자(`staff`)로 만든다 |
 | `POST /auth/logout` | – | 204 |
 | `GET /auth/me` | – | `Staff` · 로그인 전이면 401 |
 | `PUT /auth/password` | `{ currentPassword, newPassword }` | 204 · 불일치·규칙 위반은 400 + `message` |
@@ -106,7 +105,7 @@
 |---|---|---|
 | `GET /diaries?userId&from&to&status` | 모두 선택, `from`·`to`는 포함 범위 | `Diary[]` |
 | `GET /diaries/:id` | – | `Diary` · 없으면 404 |
-| `POST /diaries` | `SaveDiaryInput` (`diaryId` 없음) | `Diary` |
+| `POST /diaries` | `SaveDiaryInput` (`diaryId` 없음) | `Diary` · 오늘(한국 날짜) 이후 날짜면 400 `VALIDATION_ERROR` |
 | `PUT /diaries/:id` | `SaveDiaryInput` | `Diary` |
 
 `SaveDiaryInput` = 일지 내용 전체 + `status: "draft" | "completed"` + `updatedAt`. 활동 목록을 통째로 보냅니다(활동 단위 API 없음).
@@ -139,7 +138,7 @@ CalendarClientStatus = { clientId, clientName, status: "completed" | "draft" | "
 - `target`(대상 이용자 수)은 현재 이용 중인 이용자 수다. 지난 날짜도 같은 값을 쓴다 (기준은 회의에서 확인)
 - 종결된 이용자의 일지는 세지 않는다
 - 도전적 행동 건수 규칙은 통계와 같다 (상위 '기타'는 내용이 있을 때만 1건, 작성 중 일지 포함)
-- `canCreate`는 그날 일지가 없을 때만 `true` (B-1)
+- `canCreate`는 그날 일지가 없고, 오늘(한국 날짜) 이후 날짜가 아닐 때만 `true` (B-1). 화면은 이 값이 `false`인 미작성 줄을 누를 수 없게 하고 작성 버튼도 숨긴다
 
 ### 오늘의 소식
 
@@ -163,7 +162,7 @@ NewsEntry = {
 | `PUT /service-users/:id` | 같음 | `ServiceUser` |
 | `POST /service-users/:id/close` | – | `ServiceUser` (`status: "closed"`) |
 | `GET /staff` | – | `Staff[]` |
-| `POST /staff` | `{ name, loginId, department, position, role: "staff" }` | `Staff` · 아이디 중복은 409. 팀장·국장만. **담당자로만 만든다**(`role`이 `staff`가 아니면 400) |
+| `POST /staff` | `{ name, loginId, department, position, role: "staff" }` | `Staff` + `temporaryPassword` · 임시 비밀번호는 이 응답에서만 받으며 화면이 팝업으로 보여 준다. 아이디 중복은 409. 팀장·국장만. **담당자로만 만든다**(`role`이 `staff`가 아니면 400) |
 | `POST /staff/:id/deactivate` | – | `Staff` (`active: false`). 팀장·국장만, 국장 계정은 국장만, 내 계정은 400 (구현됨) |
 | `POST /staff/:id/activate` | – | `Staff` (`active: true`) (구현됨) |
 | `POST /staff/:id/role` | `{ role: "staff" \| "teamLead" }` | `Staff` (role·position 바뀜). 팀장·국장만(403). 국장 계정 403, 내 계정·중지된 계정·`director` 400. 이미 그 역할이면 200 |
@@ -282,7 +281,7 @@ GET /stats/summary?userId&unit=week|month|quarter|year&year&month&quarter&week
 ## 8. 통계
 
 - **집계 위치**: 서버(`GET /stats/summary`, 7-2). 화면은 [`useStatsSummary.ts`](../src/app/useStatsSummary.ts)로 숫자만 받습니다.
-- **집계 범위**: 선택한 이용자의 작성 완료 일지. 추이 그래프는 아래 구간 수만큼, 이전 동기간 비교(FR-34)는 바로 앞 같은 단위 기간입니다.
+- **집계 범위**: 선택한 이용자의 작성 완료 일지. 추이 그래프는 아래 구간 수만큼, 이전 동기간 비교(FR-34)는 바로 앞 같은 단위 기간입니다. `previousEmpty`는 그 기간의 작성 완료 일지가 0건일 때만 `true`입니다(도전적 행동 0건과 구분).
 
 | 조회 단위 | 추이 구간 (FR-35 제안값) | 추이 그래프가 덮는 기간 |
 |---|---|---|

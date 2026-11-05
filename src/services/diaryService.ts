@@ -98,13 +98,18 @@ export function calendarDayCounts(
   return days;
 }
 
-/** GET /calendar/days/{date} 응답과 같은 값. mock 구현이 쓴다 */
+/**
+ * GET /calendar/days/{date} 응답과 같은 값. mock 구현이 쓴다.
+ * 새 일지는 그날 일지가 없고, 오늘이거나 지난 날일 때만 쓸 수 있다 (백엔드 CalendarService와 같은 규칙)
+ */
 export function calendarClientStatuses(
   diaries: readonly Diary[],
   serviceUsers: readonly ServiceUser[],
   date: string,
+  today: string,
 ): CalendarClientStatus[] {
   const dayDiaries = diariesOnDate(diaries, date);
+  const future = date > today; // 'YYYY-MM-DD' 글자는 사전순 비교가 곧 날짜순 비교다
   return activeServiceUsers(serviceUsers).map((user) => {
     const diary = dayDiaries.find((d) => d.userId === user.id);
     return {
@@ -114,7 +119,7 @@ export function calendarClientStatuses(
       diaryId: diary?.id,
       authorId: diary?.authorId,
       behaviorCount: diary ? countDiaryBehaviors(diary) : 0,
-      canCreate: !diary,
+      canCreate: !diary && !future,
     };
   });
 }

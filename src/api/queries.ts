@@ -16,7 +16,6 @@ import type {
   SaveDiaryInput,
   StatsQuery,
   ServiceUserInput,
-  SignupInput,
   StaffInput,
   ChangeableRole,
   PreviousDirectorRole,
@@ -93,15 +92,6 @@ export function useLogin() {
       client.clear();
       client.setQueryData(queryKeys.me, staff);
     },
-  });
-}
-
-export function useSignup() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (input: SignupInput) => api.auth.signup(input),
-    // 담당자 목록에 바로 보이게 한다
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.staff }),
   });
 }
 
@@ -274,6 +264,26 @@ export function useSaveDiary() {
         queryKeys.stats,
         queryKeys.news,
       ]),
+  });
+}
+
+/**
+ * 작성 중인 일지 삭제. 성공하든(204) 이미 지워졌든(404) 목록은 서버 기준으로 다시 불러온다.
+ * 400·403은 일지가 그대로이므로 다시 불러오지 않는다.
+ */
+export function useDeleteDiary() {
+  const client = useQueryClient();
+  const refresh = (diaryId: string) => {
+    client.removeQueries({ queryKey: queryKeys.diary(diaryId) });
+    void client.invalidateQueries({ queryKey: queryKeys.diaries });
+    void client.invalidateQueries({ queryKey: queryKeys.calendar });
+  };
+  return useMutation({
+    mutationFn: (diaryId: string) => api.diaries.delete(diaryId),
+    onSuccess: (_data, diaryId) => refresh(diaryId),
+    onError: (error, diaryId) => {
+      if (isApiError(error) && error.status === 404) refresh(diaryId);
+    },
   });
 }
 

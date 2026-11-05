@@ -12,7 +12,9 @@ import { setMockLatency } from "@/api/mock/mockApi";
 import { DraftProvider } from "@/app/DraftContext";
 import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
+import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
 import { DEMO_TODAY, generateFixtures } from "@/data/fixtures";
+import { addDays } from "@/lib/utils";
 
 // mock 서버가 localStorage에서 세션을 복원하도록 persist 상태를 주입한다.
 const store = new Map<string, string>([
@@ -40,7 +42,6 @@ const diaryId = [...generateFixtures(DEMO_TODAY).diaries].sort((a, b) =>
 const ROUTES = [
   "/",
   "/login",
-  "/signup",
   "/home",
   "/news",
   "/diaries/new",
@@ -115,6 +116,27 @@ async function renderWithData(route: string): Promise<{ html: string; failedQuer
 async function main() {
   let failures = 0;
 
+  // 통계 요약 카드의 '진행 중' 표시. 화면 데이터에 기대지 않게 정해진 값으로 컴포넌트만 그린다
+  const summary = { count: 3, days: 2, delta: -21, previousEmpty: false };
+  const progressCases = [
+    { label: "진행 중 + 이전 기록 있음 → 표시", inProgress: true, previousEmpty: false, expected: true },
+    { label: "끝난 기간 → 표시 없음", inProgress: false, previousEmpty: false, expected: false },
+    { label: "이전 기록 없음 → 표시 없음", inProgress: true, previousEmpty: true, expected: false },
+  ];
+  for (const c of progressCases) {
+    const html = renderToString(
+      <BehaviorSummaryMetrics
+        summary={{ ...summary, previousEmpty: c.previousEmpty }}
+        inProgress={c.inProgress}
+        today={DEMO_TODAY}
+      />,
+    );
+    const marked = html.includes("이전 기간 대비 · 진행 중") && html.includes("아직 진행 중인 기간이에요");
+    const ok = marked === c.expected;
+    console.log("  " + (ok ? "OK " : "FAIL ") + c.label);
+    if (!ok) failures += 1;
+  }
+
   for (const route of ROUTES) {
     try {
       const { html, failedQueries } = await renderWithData(route);
@@ -133,6 +155,20 @@ async function main() {
       console.log("     " + (error instanceof Error ? error.message : String(error)));
     }
   }
+
+  // 주소에 내일 날짜를 직접 넣으면 작성 화면 대신 안내가 나와야 한다 (일지를 시작하지 않음)
+  const futureRoute = "/diaries/new?date=" + addDays(DEMO_TODAY, 1);
+  const { html: futureHtml } = await renderWithData(futureRoute);
+  const FUTURE_MESSAGE = "오늘 이후 날짜의 일지는 쓸 수 없어요.";
+  const blocked = futureHtml.includes(FUTURE_MESSAGE);
+  console.log("  " + (blocked ? "OK " : "FAIL ") + futureRoute.padEnd(48) + " (미래 날짜 안내)");
+  if (!blocked) failures += 1;
+  // 오늘 날짜는 안내가 나오면 안 된다 (안내가 늘 뜨는 잘못을 잡는다)
+  const todayRoute = "/diaries/new?date=" + DEMO_TODAY;
+  const { html: todayHtml } = await renderWithData(todayRoute);
+  const open = !todayHtml.includes(FUTURE_MESSAGE);
+  console.log("  " + (open ? "OK " : "FAIL ") + todayRoute.padEnd(48) + " (오늘은 안내 없음)");
+  if (!open) failures += 1;
 
   console.log("");
   console.log(failures === 0 ? "모든 라우트 렌더 성공" : failures + "개 라우트 실패");

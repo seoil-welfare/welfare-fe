@@ -3,6 +3,7 @@ import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
 import type { Api, CategoryItem, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
 import { addDays, dateOf, uid } from "@/lib/utils";
+import { todayIso } from "@/lib/today";
 import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
 import { defaultCategories } from "@/services/categoryService";
 import { statsSummary } from "@/services/statsService";
@@ -98,6 +99,11 @@ export function toNewsEntries(
 }
 
 function saveDiary(input: SaveDiaryInput, author: Staff): Diary {
+  // 새 일지는 오늘까지만 쓸 수 있다 (백엔드 DiaryService 규칙 9와 같음).
+  // 수정(diaryId 있음)은 날짜를 바꿀 수 없어서 막지 않는다
+  if (!input.diaryId && input.date > todayIso()) {
+    throw new ApiError(400, "오늘 이후 날짜의 일지는 쓸 수 없어요.", "VALIDATION_ERROR");
+  }
   const now = new Date().toISOString();
   let saved: Diary | null = null;
 
@@ -184,6 +190,12 @@ function updateServiceUser(userId: string, patch: Partial<ServiceUser>): Service
   return clone(db.serviceUsers.find((u) => u.id === userId)!);
 }
 
+/** 백엔드 AuthService.temporaryPassword와 같은 글자(헷갈리는 0 O 1 l I 제외)로 12자 */
+function mockTemporaryPassword(): string {
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export const mockApi: Api = {
   auth: {
     async login({ loginId, password }) {
@@ -202,29 +214,6 @@ export const mockApi: Api = {
       }
       writeDb((db) => ({ ...db, session: { currentStaffId: member.id } }));
       return clone(member);
-    },
-    // 직위는 받지 않고 항상 담당자로 가입시킨다 (백엔드 AuthService.signup과 같음)
-    async signup({ loginId, password, name, birthDate }) {
-      await writeLatency();
-      const id = loginId.trim().toLowerCase();
-      if (readDb().staff.some((s) => s.loginId === id)) {
-        throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
-      }
-      const created: Staff = {
-        id: uid("stf"),
-        name: name.trim(),
-        department: "주간활동지원팀",
-        position: ROLE_POSITION.staff,
-        role: "staff",
-        loginId: id,
-        birthDate,
-      };
-      writeDb((db) => ({
-        ...db,
-        staff: [...db.staff, created],
-        passwords: { ...db.passwords, [created.id]: password },
-      }));
-      return clone(created);
     },
     async logout() {
       writeDb((db) => ({ ...db, session: { currentStaffId: null } }));
@@ -266,6 +255,24 @@ export const mockApi: Api = {
       await writeLatency();
       return saveDiary(input, requireSession());
     },
+    // 백엔드 DELETE /api/diaries/{id}와 같은 규칙
+    async delete(diaryId) {
+      await writeLatency();
+      const me = requireSession();
+      const diary = readDb().diaries.find((d) => d.id === diaryId);
+      if (!diary) throw notFound("일지");
+      if (diary.status === "completed") {
+        throw new ApiError(400, "작성 완료된 일지는 삭제할 수 없어요.", "VALIDATION_ERROR");
+      }
+      if (diary.authorId !== me.id && me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "작성자 또는 팀장·국장만 삭제할 수 있어요.", "FORBIDDEN");
+      }
+      writeDb((db) => ({
+        ...db,
+        diaries: db.diaries.filter((d) => d.id !== diaryId),
+        events: db.events.filter((e) => e.diaryId !== diaryId),
+      }));
+    },
   },
 
   calendar: {
@@ -282,7 +289,7 @@ export const mockApi: Api = {
     async clientStatuses(date) {
       await readLatency();
       const db = readDb();
-      return calendarClientStatuses(db.diaries, db.serviceUsers, date);
+      return calendarClientStatuses(db.diaries, db.serviceUsers, date, todayIso());
     },
   },
 
@@ -291,7 +298,9 @@ export const mockApi: Api = {
     async summary({ userId, ...period }) {
       await readLatency();
       if (!userId) throw new ApiError(400, "userId가 필요해요.", "VALIDATION_ERROR");
-      return statsSummary(readDb().diaries, userId, period);
+      // 고정 목록이 아니라 지금의 참여 활동 목록 기준 (팀장이 추가한 활동 포함, 백엔드와 같음)
+      const participationOrder = participationItems().map((item) => item.label);
+      return statsSummary(readDb().diaries, userId, period, participationOrder);
     },
   },
 
@@ -348,8 +357,13 @@ export const mockApi: Api = {
         throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
       }
       const created: Staff = { ...input, position: ROLE_POSITION.staff, id: uid("stf") };
-      writeDb((db) => ({ ...db, staff: [...db.staff, created] }));
-      return clone(created);
+      const temporaryPassword = mockTemporaryPassword();
+      writeDb((db) => ({
+        ...db,
+        staff: [...db.staff, created],
+        passwords: { ...db.passwords, [created.id]: temporaryPassword },
+      }));
+      return { ...clone(created), temporaryPassword };
     },
     // 규칙은 백엔드 AuthService.setStaffActive와 같다
     async setActive(staffId, active) {

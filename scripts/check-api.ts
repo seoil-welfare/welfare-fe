@@ -60,6 +60,29 @@ async function main() {
   const author = await mockApi.auth.login({ loginId: "demo.staff1", password: "demo1234", autoLogin: false });
   expect("로그인 후 me", (await mockApi.auth.me())?.id === author.id, author.id);
 
+  console.log("\n[미래 날짜]");
+  const tomorrow = addDays(DEMO_TODAY, 1);
+  expect(
+    "내일 날짜로 새 일지 저장은 400",
+    (await rejects(() => mockApi.diaries.save({ ...emptyDraft(user.id, tomorrow), status: "draft" }))) === 400,
+    tomorrow,
+  );
+  expect(
+    "거부된 저장은 아무것도 남기지 않음",
+    (await mockApi.diaries.list({ from: tomorrow, to: tomorrow })).length === 0,
+    "0건",
+  );
+  expect(
+    "내일 달력은 아무도 새로 쓸 수 없음",
+    (await mockApi.calendar.clientStatuses(tomorrow)).every((s) => !s.canCreate),
+    "canCreate 전부 false",
+  );
+  expect(
+    "오늘 달력은 일지 없는 이용자가 새로 쓸 수 있음",
+    (await mockApi.calendar.clientStatuses(DEMO_TODAY)).some((s) => s.canCreate),
+    "canCreate true 있음",
+  );
+
   console.log("\n[작성 중 → 작성 완료]");
   const eventsBefore = readDb().events.length;
   const activity = emptyActivity("act-temp-1");
@@ -157,6 +180,41 @@ async function main() {
   );
   expect("없는 일지는 404", (await rejects(() => mockApi.diaries.get("nope"))) === 404, "notFound");
 
+  console.log("\n[추가한 참여 활동의 통계]");
+  // 팀장이 참여 활동을 추가하고 그 활동으로 일지를 쓰면, 통계 기준 목록에도 나와야 한다 (백엔드는 DB 목록 기준)
+  await mockApi.auth.login({ loginId: "demo.lead", password: "demo1234", autoLogin: false });
+  await mockApi.categories.addParticipation("원예활동");
+  await mockApi.categories.addParticipation("가상신규활동"); // 일지에 쓰지 않는 활동 (0건)
+  const other = users[1];
+  const garden = emptyActivity("act-garden");
+  garden.startTime = "10:00";
+  garden.endTime = "11:00";
+  garden.participation = ["원예활동"];
+  garden.reaction = ["적극적 참여"];
+  await mockApi.diaries.save({ ...emptyDraft(other.id, date), activities: [garden], status: "completed" });
+  const added = await mockApi.stats.summary({ userId: other.id, ...currentPeriod("month", date) });
+  const gardenReaction = added.activities.reactionByParticipation.find((p) => p.label === "원예활동");
+  expect(
+    "활동별 이용자 반응 기준 목록에 추가한 활동 포함",
+    gardenReaction !== undefined,
+    added.activities.reactionByParticipation.map((p) => p.label).join(", "),
+  );
+  expect(
+    "추가한 활동의 반응이 집계됨",
+    gardenReaction?.reaction.find((r) => r.label === "적극적 참여")?.count === 1,
+    (gardenReaction?.reaction ?? []).filter((r) => r.count > 0).map((r) => r.label + " " + r.count).join(", ") || "없음",
+  );
+  expect(
+    "0건인 추가 활동도 참여 활동 건수에 나옴",
+    added.participation.some((p) => p.label === "가상신규활동" && p.count === 0),
+    "가상신규활동 " + (added.participation.find((p) => p.label === "가상신규활동")?.count ?? "없음"),
+  );
+  expect(
+    "0건인 추가 활동도 활동별 도전적 행동에 나옴",
+    added.activities.behaviorByParticipation.some((p) => p.label === "가상신규활동"),
+    added.activities.behaviorByParticipation.length + "개 항목",
+  );
+
   console.log("\n[역할 변경 · 관리 권한 이양] (be-지시-직원권한관리.md와 같은 규칙)");
   const login = (loginId: string) => mockApi.auth.login({ loginId, password: "demo1234", autoLogin: false });
   const lead = await login("demo.lead");
@@ -167,6 +225,14 @@ async function main() {
     )) === 400,
     "담당자로만",
   );
+  const added = await mockApi.staff.create({ name: "x", loginId: "check.new", department: "x", position: "x", role: "staff" });
+  expect("계정 추가는 임시 비밀번호 12자를 준다", added.temporaryPassword.length === 12, added.role);
+  expect(
+    "추가한 계정은 임시 비밀번호로 로그인",
+    (await mockApi.auth.login({ loginId: "check.new", password: added.temporaryPassword, autoLogin: false })).id === added.id,
+    "check.new",
+  );
+  await login("demo.lead");
   const promoted = await mockApi.staff.changeRole("stf-02", "teamLead");
   expect("팀장이 담당자를 팀장으로", promoted.role === "teamLead" && promoted.position === "팀장", promoted.position);
   const demoted = await mockApi.staff.changeRole("stf-02", "staff");

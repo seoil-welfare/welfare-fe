@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
-import { MetricCard } from "@/components/common/MetricCard";
 import { EmptyState } from "@/components/common/states";
 import { HorizontalBars } from "@/components/stats/charts";
 import { PillToggle } from "@/components/ui/toggle-group";
@@ -16,7 +15,15 @@ import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/ap
 import { useStatsSummary } from "@/app/useStatsSummary";
 import { useDemo } from "@/demo/DemoContext";
 import { findServiceUser } from "@/services/diaryService";
-import { detailItemsFor, recordsFor, summaryFor } from "@/services/statsService";
+import {
+  detailItemsFor,
+  isPeriodInProgress,
+  periodRange,
+  recordsFor,
+  summaryFor,
+} from "@/services/statsService";
+import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
+import { useToday } from "@/lib/today";
 import { useStatsContext } from "@/app/StatsContext";
 import { formatShortDate, formatTimeRange, weekdayLabel } from "@/lib/utils";
 import type { BehaviorType } from "@/types";
@@ -36,6 +43,7 @@ export function StatsBehaviorsPage() {
   const { flags } = useDemo();
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
+  const today = useToday();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleRecords, setVisibleRecords] = useState(RECORDS_PAGE_SIZE_DEMO_ONLY);
@@ -70,20 +78,11 @@ export function StatsBehaviorsPage() {
       <div className="flex flex-col gap-3">
         <StatsScopeSection userName={serviceUser?.name} />
 
-        <div className="grid grid-cols-3 gap-3">
-          <MetricCard
-            value={summary.count}
-            unit="건"
-            description="기록 건수"
-            tone={summary.count > 0 ? "behavior" : "default"}
-          />
-          <MetricCard value={summary.days} unit="일" description="발생 일수" />
-          <MetricCard
-            value={summary.previousEmpty ? "–" : (summary.delta > 0 ? "+" : "") + summary.delta}
-            unit={summary.previousEmpty ? undefined : "건"}
-            description={summary.previousEmpty ? "이전 기간 기록 없음" : "이전 기간 대비"}
-          />
-        </div>
+        <BehaviorSummaryMetrics
+          summary={summary}
+          inProgress={isPeriodInProgress(periodRange(period), today)}
+          today={today}
+        />
 
         <FormSection title="유형 필터">
           <PillToggle
