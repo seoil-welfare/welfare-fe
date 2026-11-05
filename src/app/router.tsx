@@ -24,6 +24,7 @@ import { StatsCategoryPage } from "@/pages/stats/StatsCategoryPage";
 import { MyPage } from "@/pages/mypage/MyPage";
 import { UserDetailPage, UserNewPage, UsersPage } from "@/pages/manage/UsersPages";
 import { StaffNewPage, StaffPage } from "@/pages/manage/StaffPages";
+import { StaffDetailPage } from "@/pages/manage/StaffDetailPage";
 import { ExportPage } from "@/pages/export/ExportPage";
 import { ParticipationPage } from "@/pages/manage/ParticipationPage";
 import { PasswordPage, ProfilePage } from "@/pages/mypage/SettingsPages";
@@ -108,6 +109,7 @@ export function AppRoutes() {
         <Route path="/users/:userId" element={<UserDetailPage />} />
         <Route path="/staff" element={<StaffPage />} />
         <Route path="/staff/new" element={<StaffNewPage />} />
+        <Route path="/staff/:staffId" element={<StaffDetailPage />} />
         <Route path="/exports/:kind" element={<ExportPage />} />
         <Route path="/settings/password" element={<PasswordPage />} />
         <Route path="/settings/participation" element={<ParticipationPage />} />

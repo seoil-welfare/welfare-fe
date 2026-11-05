@@ -66,6 +66,8 @@ const ROUTES = [
   "/users/nope",
   "/staff",
   "/staff/new",
+  "/staff/stf-04",
+  "/staff/nope",
   "/exports/diaries",
   "/exports/monthly",
   "/settings/password",
