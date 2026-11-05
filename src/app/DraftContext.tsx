@@ -77,8 +77,8 @@ interface DraftContextValue {
   setEditScrollY: (value: number | null) => void;
   /** 자동 임시저장 상태와 마지막으로 저장한 시각 */
   autosave: { status: AutosaveStatus; savedAt: Date | null };
-  /** 지금 바로 임시저장한다 (상단 '임시저장' 버튼) */
-  saveNow: () => Promise<void>;
+  /** 지금 바로 임시저장하고 결과를 돌려준다 (상단 '임시저장' 버튼) */
+  saveNow: () => Promise<SaveAttempt>;
   /**
    * '작성 완료'·'나중에 이어서' 직전에 부른다. 진행 중인 자동 저장을 기다리고 자동 저장을 멈춘 뒤,
    * 자동 저장으로 생긴 일지 id를 돌려준다 (같은 일지를 두 번 만들지 않게).
@@ -90,6 +90,18 @@ interface DraftContextValue {
   setAutosaveBlocked: (blocked: boolean) => void;
   /** 저장이 409 DIARY_UPDATED_BY_OTHER로 거절됐을 때 부른다. 최신 내용을 불러올지 묻는다 */
   reportUpdatedByOther: () => void;
+}
+
+/**
+ * 임시저장 결과.
+ * saved: 저장했거나 서버에 이미 같은 내용이 있다 / nothing: 입력이 없어 저장할 게 없다
+ * blocked: 같은 날짜에 이미 일지가 있다 / conflicted: 다른 사람이 먼저 저장했다
+ * busy: 작성 완료 등을 처리하는 중이다 / error: 저장 요청이 실패했다 (error에 원인)
+ */
+export interface SaveAttempt {
+  id: string | undefined;
+  status: "saved" | "nothing" | "blocked" | "conflicted" | "busy" | "error";
+  error?: unknown;
 }
 
 /** 서버에 마지막으로 저장된 이 일지의 id와 updatedAt */
@@ -157,26 +169,29 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setAskReload(true);
   }, []);
 
-  const runSave = useCallback(async (options?: { keepalive?: boolean }): Promise<string | undefined> => {
+  const attemptSave = useCallback(async (options?: { keepalive?: boolean }): Promise<SaveAttempt> => {
     if (inFlight.current) await inFlight.current;
     const current = draftRef.current;
     const built = autosavePayload(current, pendingRef.current);
-    if (!current || !built || paused.current || blocked.current || conflicted.current) {
-      return current?.diaryId;
-    }
+    // 저장하지 않은 이유를 돌려준다 ('임시저장' 버튼이 알맞은 안내를 하도록)
+    if (!current || !built) return { id: current?.diaryId, status: "nothing" };
+    if (paused.current) return { id: current.diaryId, status: "busy" };
+    if (blocked.current) return { id: current.diaryId, status: "blocked" };
+    if (conflicted.current) return { id: current.diaryId, status: "conflicted" };
     // 바로 앞 저장 결과가 아직 draft에 반영되기 전일 수 있다. id와 updatedAt은 마지막 저장 결과를 쓴다
     const saved = savedVersion.current;
     const payload: SaveDiaryInput = saved.diaryId
       ? { ...built, diaryId: saved.diaryId, updatedAt: saved.updatedAt }
       : built;
     const key = contentKey(payload);
-    if (key === lastSavedKey.current) return current.diaryId;
+    // 이미 서버에 있는 내용과 같아서 보내지 않았다. 저장된 것으로 본다
+    if (key === lastSavedKey.current) return { id: current.diaryId, status: "saved" };
 
     // 탭이 실제로 닫히는 중이라 응답을 기다릴 수 없다. http 모드는 keepalive로 보내고 결과는 확인하지 않는다
     // (mock 모드는 실제 네트워크가 없어 보통 저장으로도 끊기지 않는다)
     if (options?.keepalive) {
       if (!IS_MOCK) saveDiaryBeforeUnload(payload);
-      return current.diaryId;
+      return { id: current.diaryId, status: "saved" };
     }
 
     setAutosave((prev) => ({ ...prev, status: "saving" }));
@@ -206,20 +221,27 @@ export function DraftProvider({ children }: { children: ReactNode }) {
         });
         setAutosave({ status: "saved", savedAt: new Date() });
         void queryClient.invalidateQueries({ queryKey: queryKeys.diaries });
-        return diary.id;
+        return { id: diary.id, status: "saved" } as SaveAttempt;
       })
-      .catch((error: unknown) => {
-        if (isUpdatedByOther(error)) reportUpdatedByOther();
+      .catch((error: unknown): SaveAttempt => {
+        const byOther = isUpdatedByOther(error);
+        if (byOther) reportUpdatedByOther();
         // 실패해도 입력은 화면에 남아 있다. 다음 입력 때 다시 시도한다
         setAutosave((prev) => ({ ...prev, status: "error" }));
-        return current.diaryId;
-      })
-      .finally(() => {
-        inFlight.current = null;
+        return { id: current.diaryId, status: byOther ? "conflicted" : "error", error };
       });
-    inFlight.current = promise;
+    const tracked = promise.then((result) => result.id).finally(() => {
+      inFlight.current = null;
+    });
+    inFlight.current = tracked;
     return promise;
   }, [queryClient, reportUpdatedByOther]);
+
+  // 자동 저장·화면 가려짐 때는 결과 종류가 필요 없다 (일지 id만)
+  const runSave = useCallback(
+    async (options?: { keepalive?: boolean }): Promise<string | undefined> => (await attemptSave(options)).id,
+    [attemptSave],
+  );
 
   // 입력이 멈추면 저장한다
   const payloadKey = useMemo(() => {
@@ -276,9 +298,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  const saveNow = useCallback(async () => {
-    await runSave();
-  }, [runSave]);
+  const saveNow = useCallback(async (): Promise<SaveAttempt> => attemptSave(), [attemptSave]);
 
   const beginCommit = useCallback(async () => {
     paused.current = true;

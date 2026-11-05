@@ -29,7 +29,9 @@ import {
   activitySummary,
   countActivityBehaviors,
   diariesOnDate,
+  findActivityMissingBehaviorDetail,
   isUntouchedDraft,
+  missingDetailMessage,
   sortActivities,
   toSaveInput,
 } from "@/services/diaryService";
@@ -69,6 +71,8 @@ export function DiaryEditPage() {
   } = useDraft();
   // 삭제 확인 팝업을 띄울 활동
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
+  // 활동이 없는 일지를 완료할지 묻는 팝업
+  const [askEmptyComplete, setAskEmptyComplete] = useState(false);
   // 작성 중 일지 삭제 확인 팝업
   const [askDeleteDiary, setAskDeleteDiary] = useState(false);
   const saveDiary = useSaveDiary();
@@ -230,11 +234,39 @@ export function DiaryEditPage() {
       });
       return;
     }
-    await saveNow();
-    toast.success("임시 저장했어요.", { description: "홈의 '이어서 작성하기'에서 다시 열 수 있어요." });
+    const result = await saveNow();
+    // 실제로 저장됐을 때만 성공 안내를 한다 (QA 03-05)
+    switch (result.status) {
+      case "saved":
+        toast.success("임시 저장했어요.", { description: "홈의 '이어서 작성하기'에서 다시 열 수 있어요." });
+        break;
+      case "nothing":
+        toast.info("입력한 내용이 없어 저장하지 않았어요.");
+        break;
+      case "blocked":
+        toast.error("이 이용자는 이 날짜에 이미 일지가 있어 저장하지 못했어요.", {
+          description: "일지는 이용자 한 명당 하루 한 건이에요.",
+        });
+        break;
+      case "conflicted":
+        toast.error("다른 분이 먼저 이 일지를 수정해서 저장하지 못했어요.", {
+          description: "최신 내용을 불러온 뒤 다시 저장해 주세요.",
+        });
+        break;
+      case "busy":
+        toast.info("저장하는 중이에요. 잠시 뒤 다시 눌러 주세요.");
+        break;
+      default:
+        // 서버 message가 있으면 그걸 먼저 보여 준다
+        toast.error(
+          isApiError(result.error) && result.error.status !== NETWORK_ERROR_STATUS
+            ? result.error.message
+            : "임시 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+        );
+    }
   }
 
-  async function handleCommit(status: DiaryStatus) {
+  async function handleCommit(status: DiaryStatus, emptyConfirmed = false) {
     if (!draft || saveDiary.isPending) return; // 중복 제출 차단
     if (existingForTarget) {
       toast.error(
@@ -244,6 +276,24 @@ export function DiaryEditPage() {
         { description: "일지는 이용자 한 명당 하루 한 건이에요." },
       );
       return;
+    }
+    if (status === "completed") {
+      // 체크한 도전적 행동 유형에 세부 행동이 없는 활동이 있으면 완료하지 않는다 (QA 03-06).
+      // 작성 중 저장은 막지 않는다. 이전에 저장된 잘못된 활동도 여기서 걸린다
+      const problem = findActivityMissingBehaviorDetail(draft.activities);
+      if (problem) {
+        toast.error(
+          formatTimeRange(problem.activity.startTime, problem.activity.endTime) +
+            " 활동: " +
+            missingDetailMessage(problem.types),
+        );
+        return;
+      }
+      // 활동이 없는 일지는 막지 않고 한 번 확인한다 (QA 03-02). 수정 완료도 같다
+      if (draft.activities.length === 0 && !emptyConfirmed) {
+        setAskEmptyComplete(true);
+        return;
+      }
     }
     // 자동 저장이 진행 중이면 기다렸다가, 거기서 만들어진 일지로 저장한다 (일지가 두 건 생기지 않게)
     // updatedAt도 자동 저장이 받은 최신 값으로 보낸다 (내 자동 저장을 다른 사람의 수정으로 오해하지 않게)
@@ -549,6 +599,17 @@ export function DiaryEditPage() {
           if (deleteTarget) removeActivity(deleteTarget.id);
           setDeleteTarget(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={askEmptyComplete}
+        onOpenChange={setAskEmptyComplete}
+        title="활동 없이 완료할까요?"
+        description="활동 기록이 없는 일지로 완료돼요. 통계에도 들어가요."
+        confirmLabel="완료"
+        cancelLabel="돌아가기"
+        tone="default"
+        onConfirm={() => void handleCommit("completed", true)}
       />
 
       <ConfirmDialog

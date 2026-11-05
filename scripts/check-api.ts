@@ -225,11 +225,11 @@ async function main() {
     )) === 400,
     "담당자로만",
   );
-  const added = await mockApi.staff.create({ name: "x", loginId: "check.new", department: "x", position: "x", role: "staff" });
-  expect("계정 추가는 임시 비밀번호 12자를 준다", added.temporaryPassword.length === 12, added.role);
+  const newAccount = await mockApi.staff.create({ name: "x", loginId: "check.new", department: "x", position: "x", role: "staff" });
+  expect("계정 추가는 임시 비밀번호 12자를 준다", newAccount.temporaryPassword.length === 12, newAccount.role);
   expect(
     "추가한 계정은 임시 비밀번호로 로그인",
-    (await mockApi.auth.login({ loginId: "check.new", password: added.temporaryPassword, autoLogin: false })).id === added.id,
+    (await mockApi.auth.login({ loginId: "check.new", password: newAccount.temporaryPassword, autoLogin: false })).id === newAccount.id,
     "check.new",
   );
   await login("demo.lead");
