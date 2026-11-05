@@ -47,10 +47,13 @@ export function AppHeader({
   closeTo,
   action,
   className,
+  onBack,
 }: {
   title: string;
   /** 이전 경로. 생략하면 history back */
   backTo?: string;
+  /** 주면 ← 를 눌렀을 때 이동 대신 이 함수를 부른다 (나가기 전에 확인이 필요한 화면용) */
+  onBack?: () => void;
   /** 닫기 경로 (X 아이콘) */
   closeTo?: string;
   action?: ReactNode;
@@ -82,7 +85,7 @@ export function AppHeader({
           variant="ghost"
           size="icon"
           aria-label="이전 화면으로"
-          onClick={() => (backTo ? navigate(backTo) : navigate(-1))}
+          onClick={() => (onBack ? onBack() : backTo ? navigate(backTo) : navigate(-1))}
           className="shrink-0"
         >
           <ChevronLeft aria-hidden />
