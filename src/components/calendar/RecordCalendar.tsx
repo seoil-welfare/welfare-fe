@@ -27,7 +27,6 @@ export function RecordCalendar({
   onSelectDate,
   onMonthChange,
   completionOf,
-  indicator,
 }: {
   year: number;
   month: number;
@@ -36,8 +35,6 @@ export function RecordCalendar({
   onSelectDate: (date: string) => void;
   onMonthChange: (year: number, month: number) => void;
   completionOf: (date: string) => DayCompletion | null;
-  /** DEMO_ONLY — 'completion' (이번 회의 제안안, 기본) / 'gauge' (기존 가이드 비교용) */
-  indicator: "completion" | "gauge";
 }) {
   const days = calendarGrid(year, month);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -111,7 +108,6 @@ export function RecordCalendar({
               selected={date === selectedDate}
               isToday={date === today}
               completion={completionOf(date)}
-              indicator={indicator}
               onSelect={() => {
                 const d = parseISODate(date);
                 // 월 바깥 날짜를 누르면 그 달로 이동한다 (disabled가 아니다)
@@ -195,7 +191,6 @@ function DayCell({
   selected,
   isToday,
   completion,
-  indicator,
   onSelect,
 }: {
   date: string;
@@ -203,7 +198,6 @@ function DayCell({
   selected: boolean;
   isToday: boolean;
   completion: DayCompletion | null;
-  indicator: "completion" | "gauge";
   onSelect: () => void;
 }) {
   const d = parseISODate(date);
@@ -261,22 +255,14 @@ function DayCell({
       */}
       <span aria-hidden className="flex h-4 items-center justify-center">
         {completion ? (
-          indicator === "completion" ? (
-            <span
-              className={cn(
-                "tnum text-xs leading-none",
-                selected ? "text-primary-foreground/90" : "text-muted-foreground",
-              )}
-            >
-              {indicatorText}
-            </span>
-          ) : (
-            <Gauge
-              completed={completion.completed}
-              total={completion.total}
-              selected={selected}
-            />
-          )
+          <span
+            className={cn(
+              "tnum text-xs leading-none",
+              selected ? "text-primary-foreground/90" : "text-muted-foreground",
+            )}
+          >
+            {indicatorText}
+          </span>
         ) : null}
       </span>
 
@@ -293,44 +279,5 @@ function DayCell({
         )}
       />
     </button>
-  );
-}
-
-/** 기존 UI 가이드 7장의 원형 게이지 — 비교용 (DEMO_ONLY) */
-function Gauge({
-  completed,
-  total,
-  selected,
-}: {
-  completed: number;
-  total: number;
-  selected: boolean;
-}) {
-  const ratio = total > 0 ? completed / total : 0;
-  const radius = 5;
-  const circumference = 2 * Math.PI * radius;
-  return (
-    <svg width={14} height={14} viewBox="0 0 14 14" aria-hidden className="shrink-0">
-      <circle
-        cx={7}
-        cy={7}
-        r={radius}
-        fill="none"
-        strokeWidth={2}
-        stroke={selected ? "rgb(255 255 255 / 0.35)" : "var(--secondary)"}
-      />
-      <circle
-        cx={7}
-        cy={7}
-        r={radius}
-        fill="none"
-        strokeWidth={2}
-        strokeLinecap="round"
-        stroke={selected ? "#ffffff" : "var(--chart-1)"}
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * (1 - ratio)}
-        transform="rotate(-90 7 7)"
-      />
-    </svg>
   );
 }

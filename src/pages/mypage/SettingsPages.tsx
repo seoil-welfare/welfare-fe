@@ -14,7 +14,7 @@ import { errorMessage } from "@/api/errors";
 import { useChangePassword } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
 
-/** 비밀번호 변경 (FR-83). mock 모드에서는 실제로 변경하지 않는다 */
+/** 비밀번호 변경 (FR-83) */
 export function PasswordPage() {
   const navigate = useNavigate();
   const changePassword = useChangePassword();

@@ -13,7 +13,6 @@ import { api } from "@/api";
 import { isUpdatedByOther } from "@/api/errors";
 import { saveDiaryBeforeUnload } from "@/api/http/httpApi";
 import { queryKeys } from "@/api/queries";
-import { IS_MOCK } from "@/config";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import {
   draftFromDiary,
@@ -50,7 +49,7 @@ export type AutosaveStatus = "idle" | "saving" | "saved" | "error";
  * 떠나기 전 경고·끝까지 저장하기 (QA 03-01, 04-01)
  * - 서버에 아직 저장 안 된 입력(완료 일지 수정 중이면 불러온 내용과 달라진 입력)이 있을 때
  *   새로고침·탭 닫기를 하면 브라우저 기본 경고를 띄운다. 작성 완료 등으로 나가는 중에는 띄우지 않는다.
- * - 탭을 닫는 중(pagehide)에는 보통 fetch가 끊길 수 있어, http 모드는 keepalive로 다시 보낸다.
+ * - 탭을 닫는 중(pagehide)에는 보통 fetch가 끊길 수 있어 keepalive로 다시 보낸다.
  * - 작성 중 일지가 서버에 저장되면 그 id만 sessionStorage에 기억해 둔다. 새로고침으로 /diaries/new가
  *   빈 화면이 되면 이 id로 불러와 이어서 쓴다 (일지 내용 자체는 기기에 남기지 않는다).
  */
@@ -187,10 +186,9 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     // 이미 서버에 있는 내용과 같아서 보내지 않았다. 저장된 것으로 본다
     if (key === lastSavedKey.current) return { id: current.diaryId, status: "saved" };
 
-    // 탭이 실제로 닫히는 중이라 응답을 기다릴 수 없다. http 모드는 keepalive로 보내고 결과는 확인하지 않는다
-    // (mock 모드는 실제 네트워크가 없어 보통 저장으로도 끊기지 않는다)
+    // 탭이 실제로 닫히는 중이라 응답을 기다릴 수 없다. keepalive로 보내고 결과는 확인하지 않는다
     if (options?.keepalive) {
-      if (!IS_MOCK) saveDiaryBeforeUnload(payload);
+      saveDiaryBeforeUnload(payload);
       return { id: current.diaryId, status: "saved" };
     }
 

@@ -1,8 +1,6 @@
 import { OTHER_LABEL, behaviorTypeLabel } from "@/data/catalog";
-import { addDays, dateOf } from "@/lib/utils";
+import { dateOf } from "@/lib/utils";
 import type {
-  CalendarClientStatus,
-  CalendarDayCount,
   DiaryRef,
   NewsEntry,
   SaveDiaryInput,
@@ -35,7 +33,7 @@ export function findStaff(staff: readonly Staff[], staffId: string): Staff | und
   return staff.find((s) => s.id === staffId);
 }
 
-/** 사용 중지된 계정이 아닌지. active를 생략한 mock 데이터는 사용 중으로 본다 */
+/** 사용 중지된 계정이 아닌지. active가 없으면 사용 중으로 본다 */
 export function isStaffActive(staff: Staff): boolean {
   return staff.active !== false;
 }
@@ -74,54 +72,6 @@ export function dayCompletion(
     saved: saved.length,
     hasBehavior: saved.some((d) => countDiaryBehaviors(d) > 0),
   };
-}
-
-/** GET /calendar 응답과 같은 값. mock 구현이 쓴다 */
-export function calendarDayCounts(
-  diaries: readonly Diary[],
-  serviceUsers: readonly ServiceUser[],
-  from: string,
-  to: string,
-): CalendarDayCount[] {
-  const days: CalendarDayCount[] = [];
-  for (let date = from; date <= to; date = addDays(date, 1)) {
-    const completion = dayCompletion(diaries, serviceUsers, date);
-    if (!completion) continue;
-    days.push({
-      date,
-      completed: completion.completed,
-      draft: completion.saved - completion.completed,
-      target: completion.total,
-      hasBehavior: completion.hasBehavior,
-    });
-  }
-  return days;
-}
-
-/**
- * GET /calendar/days/{date} 응답과 같은 값. mock 구현이 쓴다.
- * 새 일지는 그날 일지가 없고, 오늘이거나 지난 날일 때만 쓸 수 있다 (백엔드 CalendarService와 같은 규칙)
- */
-export function calendarClientStatuses(
-  diaries: readonly Diary[],
-  serviceUsers: readonly ServiceUser[],
-  date: string,
-  today: string,
-): CalendarClientStatus[] {
-  const dayDiaries = diariesOnDate(diaries, date);
-  const future = date > today; // 'YYYY-MM-DD' 글자는 사전순 비교가 곧 날짜순 비교다
-  return activeServiceUsers(serviceUsers).map((user) => {
-    const diary = dayDiaries.find((d) => d.userId === user.id);
-    return {
-      clientId: user.id,
-      clientName: user.name,
-      status: diary ? diary.status : "none",
-      diaryId: diary?.id,
-      authorId: diary?.authorId,
-      behaviorCount: diary ? countDiaryBehaviors(diary) : 0,
-      canCreate: !diary && !future,
-    };
-  });
 }
 
 /** 일지 1건의 도전적 행동 세부 항목 선택 건수 (FR-58) */

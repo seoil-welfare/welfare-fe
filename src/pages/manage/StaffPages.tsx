@@ -243,7 +243,7 @@ export function StaffNewPage() {
               <Input
                 id="staff-login"
                 value={loginId}
-                placeholder="demo.staff6"
+                placeholder="예: hong.gildong"
                 aria-invalid={errors.loginId ? true : undefined}
                 onChange={(event) => setLoginId(event.target.value)}
               />

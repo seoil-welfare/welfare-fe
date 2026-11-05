@@ -17,7 +17,6 @@ import {
   useCalendarDays,
   useStaffList,
 } from "@/api/queries";
-import { useDemo } from "@/demo/DemoContext";
 import { useToday } from "@/lib/today";
 import { findStaff, type DayCompletion } from "@/services/diaryService";
 import { calendarGrid } from "@/services/statsService";
@@ -25,12 +24,10 @@ import { formatLongDate, parseISODate } from "@/lib/utils";
 
 /**
  * 달력 (2.1.7 — 정식 FR 미작성).
- * 날짜 지표는 이번 회의 제안안인 완료 비율 N/3을 기본값으로 쓴다 (지시서 4.3).
- * 승인 전 제안이며, 데모 패널에서 기존 원형 게이지와 비교할 수 있다.
+ * 날짜 지표는 완료 일지 수 / 대상 이용자 수로 보여 준다 (지시서 4.3).
  * 1024px 이상에서 가용 폭을 충족할 때만 달력 + 상세 2열이다 (가이드 5-2).
  */
 export function CalendarPage() {
-  const { flags } = useDemo();
   const navigate = useNavigate();
   const today = useToday();
 
@@ -79,14 +76,11 @@ export function CalendarPage() {
             onSelectDate={setSelectedDate}
             onMonthChange={(year, month) => setView({ year, month })}
             completionOf={(date) => completionByDate.get(date) ?? null}
-            indicator={flags.calendarIndicator}
           />
           <div className="mt-4 flex flex-col gap-2">
             <ul className="flex flex-wrap gap-x-4 gap-y-1 type-caption text-muted-foreground">
               <li className="tnum">
-                {flags.calendarIndicator === "completion"
-                  ? "숫자: 완료 일지 수 / 대상 이용자 " + statuses.length + "명"
-                  : "원형 게이지: 완료 비율 (비교용)"}
+                {"숫자: 완료 일지 수 / 대상 이용자 " + statuses.length + "명"}
               </li>
               <li className="flex items-center gap-1">
                 <span aria-hidden className="size-1.5 rounded-full bg-behavior" />

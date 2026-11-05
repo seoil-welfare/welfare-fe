@@ -27,7 +27,6 @@ import {
 import { useDraft } from "@/app/DraftContext";
 import { useCategoryChoices } from "@/app/useCategoryChoices";
 import { choiceLabels } from "@/services/categoryService";
-import { useDemo } from "@/demo/DemoContext";
 import {
   behaviorTypesMissingDetail,
   emptyActivity,
@@ -51,7 +50,6 @@ import type { Activity, BehaviorType } from "@/types";
 export function ActivityEditPage() {
   const navigate = useNavigate();
   const { activityId } = useParams();
-  const { flags } = useDemo();
   const choices = useCategoryChoices();
   const { draft, pendingActivity, setPendingActivity, upsertActivity } = useDraft();
   // 활동 시간은 필수다. '저장'을 눌렀는데 비어 있으면 표시한다
@@ -296,7 +294,7 @@ export function ActivityEditPage() {
             otherValue={activity.preSupportOther}
             onOtherChange={(value) => patch({ preSupportOther: value })}
             // U2_REVIEW — '없음' 배타 동작. 계획서 FR-21에 정의되어 있으나 가이드 U2에서 재확인 필요
-            exclusiveNone={flags.exclusiveNone}
+            exclusiveNone
           />
         </FormSection>
 
