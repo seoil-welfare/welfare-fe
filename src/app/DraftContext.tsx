@@ -11,7 +11,9 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api";
 import { isUpdatedByOther } from "@/api/errors";
+import { saveDiaryBeforeUnload } from "@/api/http/httpApi";
 import { queryKeys } from "@/api/queries";
+import { IS_MOCK } from "@/config";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import {
   draftFromDiary,
@@ -44,6 +46,13 @@ export type AutosaveStatus = "idle" | "saving" | "saved" | "error";
  * - 저장할 때마다 받은 updatedAt을 draft에 넣어 두고, 다음 수정(PUT)에 그대로 보낸다.
  * - 그사이 다른 사람이 저장했으면 서버가 409로 거절한다. 그러면 자동 저장을 멈추고,
  *   입력을 버리기 전에 확인을 받은 뒤 최신 내용을 다시 불러온다.
+ *
+ * 떠나기 전 경고·끝까지 저장하기 (QA 03-01, 04-01)
+ * - 서버에 아직 저장 안 된 입력(완료 일지 수정 중이면 불러온 내용과 달라진 입력)이 있을 때
+ *   새로고침·탭 닫기를 하면 브라우저 기본 경고를 띄운다. 작성 완료 등으로 나가는 중에는 띄우지 않는다.
+ * - 탭을 닫는 중(pagehide)에는 보통 fetch가 끊길 수 있어, http 모드는 keepalive로 다시 보낸다.
+ * - 작성 중 일지가 서버에 저장되면 그 id만 sessionStorage에 기억해 둔다. 새로고침으로 /diaries/new가
+ *   빈 화면이 되면 이 id로 불러와 이어서 쓴다 (일지 내용 자체는 기기에 남기지 않는다).
  */
 interface DraftContextValue {
   draft: DiaryDraft | null;
@@ -99,9 +108,13 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   const lastSavedKey = useRef<string | null>(null);
   // 자동 저장 직후에는 draft 상태가 아직 바뀌기 전일 수 있어 따로 기억한다 ('작성 완료'가 옛 updatedAt을 보내지 않게)
   const savedVersion = useRef<SavedVersion>({});
+  // 완료 일지를 불러온 그대로의 내용. 자동 저장이 없는 완료 일지 수정 중 '바뀐 게 있는지'를 여기에 비교한다 (QA 04-01)
+  const originalContentKey = useRef<string | null>(null);
 
   const startDraft = useCallback((userId: string, date: string) => {
     savedVersion.current = {};
+    originalContentKey.current = null;
+    forgetRememberedDraftId();
     setDraft(emptyDraft(userId, date));
   }, []);
 
@@ -109,8 +122,13 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     const next = draftFromDiary(diary);
     // 불러온 그대로는 다시 저장하지 않는다. 고친 게 생기면 그때 저장한다
     lastSavedKey.current = next.editingCompleted ? null : contentKey(toSaveInput(next, "draft"));
+    // 완료 일지를 수정하는 중에는 자동 저장이 없으니, 떠나기 전 경고는 이 값과 비교해 바뀐 게 있는지 본다 (QA 04-01)
+    originalContentKey.current = contentKey(toSaveInput(next, "draft"));
     savedVersion.current = { diaryId: diary.id, updatedAt: diary.updatedAt };
     setDraft(next);
+    // 작성 중 일지만 되살릴 수 있게 id를 기억한다. 완료 일지는 자동 저장 대상이 아니다 (QA 03-01)
+    if (next.editingCompleted) forgetRememberedDraftId();
+    else rememberDraftId(diary.id);
   }, []);
 
   const updateDraft = useCallback((partial: Partial<DiaryDraft>) => {
@@ -139,7 +157,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setAskReload(true);
   }, []);
 
-  const runSave = useCallback(async (): Promise<string | undefined> => {
+  const runSave = useCallback(async (options?: { keepalive?: boolean }): Promise<string | undefined> => {
     if (inFlight.current) await inFlight.current;
     const current = draftRef.current;
     const built = autosavePayload(current, pendingRef.current);
@@ -154,11 +172,20 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     const key = contentKey(payload);
     if (key === lastSavedKey.current) return current.diaryId;
 
+    // 탭이 실제로 닫히는 중이라 응답을 기다릴 수 없다. http 모드는 keepalive로 보내고 결과는 확인하지 않는다
+    // (mock 모드는 실제 네트워크가 없어 보통 저장으로도 끊기지 않는다)
+    if (options?.keepalive) {
+      if (!IS_MOCK) saveDiaryBeforeUnload(payload);
+      return current.diaryId;
+    }
+
     setAutosave((prev) => ({ ...prev, status: "saving" }));
     const promise = api.diaries
       .save(payload)
       .then((diary) => {
         lastSavedKey.current = contentKey({ ...payload, diaryId: diary.id });
+        // 작성 중 일지만 되살릴 수 있게 id를 기억한다 (QA 03-01)
+        rememberDraftId(diary.id);
         const latest = draftRef.current;
         if (
           latest &&
@@ -211,13 +238,43 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     function flush() {
       if (document.visibilityState === "hidden") void runSave();
     }
+    // pagehide: 탭이 실제로 닫히거나 새로고침되는 중이다. 보통 fetch는 이 중에 끊길 수 있어 keepalive로 보낸다 (QA 03-01)
+    function flushOnPagehide() {
+      if (inFlight.current) return; // 이미 보내고 있는 요청이 있으면 중복으로 보내지 않는다
+      void runSave({ keepalive: true });
+    }
     document.addEventListener("visibilitychange", flush);
-    window.addEventListener("pagehide", flush);
+    window.addEventListener("pagehide", flushOnPagehide);
     return () => {
       document.removeEventListener("visibilitychange", flush);
-      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("pagehide", flushOnPagehide);
     };
   }, [runSave]);
+
+  // 떠나기 전 경고 (beforeunload, QA 03-01·04-01): 서버에 아직 저장 안 된 입력이 있으면 브라우저 기본 경고를 띄운다.
+  // beginCommit~discardDraft 사이(작성 완료·수정 완료·삭제로 나가는 중, paused=true)에는 경고하지 않는다
+  const hasUnsavedChanges = useCallback((): boolean => {
+    const current = draftRef.current;
+    if (!current || paused.current) return false;
+    if (current.editingCompleted) {
+      // 완료 일지 수정 중은 자동 저장이 없다. 불러온 내용과 달라졌는지로 판단한다
+      return contentKey(toSaveInput(current, "draft")) !== (originalContentKey.current ?? "");
+    }
+    if (inFlight.current) return true; // 저장이 끝나기 전이다
+    const built = autosavePayload(current, pendingRef.current);
+    if (!built) return false; // 저장할 입력이 없다 (빈 새 일지 등)
+    return contentKey(built) !== lastSavedKey.current;
+  }, []);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!hasUnsavedChanges()) return;
+      event.preventDefault();
+      event.returnValue = ""; // 일부 브라우저는 반환값이 있어야 경고를 띄운다
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const saveNow = useCallback(async () => {
     await runSave();
@@ -243,10 +300,12 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setEditScrollY(null);
     lastSavedKey.current = null;
     savedVersion.current = {};
+    originalContentKey.current = null;
     paused.current = false;
     conflicted.current = false;
     setAskReload(false);
     setAutosave({ status: "idle", savedAt: null });
+    forgetRememberedDraftId();
   }, []);
 
   /** 다른 사람이 저장한 최신 내용으로 draft를 바꾼다. 활동 화면에서 쓰던 활동도 버린다 */
@@ -357,6 +416,37 @@ export function useDraft(): DraftContextValue {
 function contentKey(input: SaveDiaryInput): string {
   const { updatedAt: _updatedAt, ...content } = input;
   return JSON.stringify(content);
+}
+
+/**
+ * 새로고침 뒤에도 작성 중 일지를 이어받을 수 있게 diaryId만 기억한다 (QA 03-01).
+ * 일지 내용·이용자 이름은 담지 않는다 (명세 8.4, 기기에 기록을 남기지 않는다).
+ * 탭을 닫으면 사라지는 sessionStorage를 쓰고, 시크릿 모드 등에서 막히면 그냥 되살리기만 못 한다.
+ */
+const DRAFT_ID_STORAGE_KEY = "wonkwang:draft-diary-id";
+
+function rememberDraftId(diaryId: string): void {
+  try {
+    window.sessionStorage.setItem(DRAFT_ID_STORAGE_KEY, diaryId);
+  } catch {
+    // 무시한다
+  }
+}
+
+export function readRememberedDraftId(): string | null {
+  try {
+    return window.sessionStorage.getItem(DRAFT_ID_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function forgetRememberedDraftId(): void {
+  try {
+    window.sessionStorage.removeItem(DRAFT_ID_STORAGE_KEY);
+  } catch {
+    // 무시한다
+  }
 }
 
 /**

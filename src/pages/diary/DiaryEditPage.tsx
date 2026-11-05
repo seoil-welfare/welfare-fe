@@ -16,9 +16,10 @@ import { FormSection } from "@/components/common/FormSection";
 import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
 import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
+import { api } from "@/api";
 import { errorMessage, isApiError, isUpdatedByOther, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { combineQueries, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
-import { useDraft } from "@/app/DraftContext";
+import { forgetRememberedDraftId, readRememberedDraftId, useDraft } from "@/app/DraftContext";
 import { getLastPage } from "@/app/lastPage";
 import { useCategoryChoices } from "@/app/useCategoryChoices";
 import { choiceLabels } from "@/services/categoryService";
@@ -53,6 +54,7 @@ export function DiaryEditPage() {
   const {
     draft,
     startDraft,
+    continueDraft,
     updateDraft,
     discardDraft,
     removeActivity,
@@ -100,9 +102,43 @@ export function DiaryEditPage() {
   // 저장을 마치고 상세로 넘어가는 중이다. 이때 draft가 비어도 새 일지를 만들지 않는다
   const committedRef = useRef(false);
 
+  // 새로고침으로 draft가 사라진 뒤, 서버에 저장되어 있던 작성 중 일지를 기억한 id로 되살린다 (QA 03-01).
+  // 끝나기 전에는 아래 '새 일지 만들기' effect가 먼저 실행되면 안 되므로 restoring으로 기다리게 한다
+  const [restoring, setRestoring] = useState(() => Boolean(readRememberedDraftId()));
+  useEffect(() => {
+    if (!restoring) return;
+    const diaryId = readRememberedDraftId();
+    if (!diaryId) {
+      setRestoring(false);
+      return;
+    }
+    let active = true;
+    api.diaries
+      .get(diaryId)
+      .then((diary) => {
+        if (!active) return;
+        // 완료된 일지는 '이어 쓰기' 대상이 아니다. continueDraft가 그 경우 id를 지운다
+        if (diary.status !== "completed") continueDraft(diary);
+        else forgetRememberedDraftId();
+      })
+      .catch((error) => {
+        if (!active) return;
+        // 지워졌거나(404) 권한이 없으면(403) 기억한 id를 지운다. 그 외(네트워크 등)는 다음에 다시 시도한다
+        if (isApiError(error) && (error.status === 404 || error.status === 403)) {
+          forgetRememberedDraftId();
+        }
+      })
+      .finally(() => {
+        if (active) setRestoring(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [restoring, continueDraft]);
+
   // 라우트 이동으로 입력이 사라지지 않게 draft를 유지한다. 없으면 새로 만든다.
   useEffect(() => {
-    if (committedRef.current) return;
+    if (committedRef.current || restoring) return;
     // 이전 날짜의 결과(placeholder)로 기본 이용자를 고르지 않는다
     if (draft || users.length === 0 || !dayQuery.data || dayQuery.isPlaceholderData) return;
     // 일지는 이용자 1명당 하루 1건이다. 대상이 지정되지 않았다면
@@ -110,7 +146,7 @@ export function DiaryEditPage() {
     const saved = diariesOnDate(dayQuery.data, targetDate);
     const firstAvailable = users.find((user) => !saved.some((d) => d.userId === user.id));
     startDraft(requestedUserId ?? firstAvailable?.id ?? users[0].id, targetDate);
-  }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData]);
+  }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData, restoring]);
 
   // 활동 화면에서 돌아오면 넘어가기 전 스크롤 위치로 되돌린다 (화면이 그려지기 전에 맞춰 깜빡임을 막는다)
   const hasDraft = Boolean(draft);
@@ -126,9 +162,14 @@ export function DiaryEditPage() {
   }
 
   if (!draft) {
+    // 되살릴 일지가 있는지 확인하는 동안에는 '작성할 이용자가 없어요'를 먼저 보여 주지 않는다
+    const loadState = combineQueries([usersQuery, dayQuery]);
     return (
       <AppShell header={<AppHeader title="일지 작성" backTo="/home" />} bottom="nav">
-        <QueryGate state={combineQueries([usersQuery, dayQuery])} skeleton={<ListSkeleton rows={2} />}>
+        <QueryGate
+          state={{ ...loadState, isPending: loadState.isPending || restoring }}
+          skeleton={<ListSkeleton rows={2} />}
+        >
           {() => (
             <Card variant="form">
               <EmptyState message="작성할 이용자가 없어요. 먼저 이용자를 등록해 주세요." />
