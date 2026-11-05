@@ -48,4 +48,4 @@ closes #
 돌려 본 명령과 결과를 적습니다. 실패했거나 건너뛴 것도 그대로 적어 주세요.
 -->
 
-- `npm run verify` (build + smoke + check:data + check:api)
+- `npm run verify` (build + check:data)
