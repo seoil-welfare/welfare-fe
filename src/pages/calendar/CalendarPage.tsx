@@ -61,7 +61,8 @@ export function CalendarPage() {
   const statuses = dayQuery.data ?? [];
   const staff = staffQuery.data ?? [];
 
-  // 일지는 이용자 1명당 하루 1건이라, 일지가 없는 이용자만 새로 작성할 수 있다
+  // 일지는 이용자 1명당 하루 1건이라, 일지가 없는 이용자만 새로 작성할 수 있다.
+  // 오늘 이후 날짜는 서버가 모두 canCreate = false로 주므로 아래 작성 버튼도 저절로 사라진다
   const usersWithoutDiary = statuses.filter((s) => s.canCreate);
 
   return (
@@ -125,11 +126,15 @@ export function CalendarPage() {
                     <ul className="divide-y divide-border">
                       {statuses.map((user) => {
                         const author = user.authorId ? findStaff(staff, user.authorId) : undefined;
+                        // 일지도 없고 새로 쓸 수도 없는 줄 (오늘 이후 날짜). 서버가 준 canCreate를 그대로 따른다
+                        const blocked = !user.diaryId && !user.canCreate;
 
                         return (
                           <li key={user.clientId}>
                             <button
                               type="button"
+                              // 눌러도 갈 곳이 없으니 버튼을 끈다. 작성 화면으로 넘어가지 않는다
+                              disabled={blocked}
                               onClick={() => {
                                 if (user.diaryId) {
                                   navigate("/diaries/" + user.diaryId);
@@ -140,7 +145,7 @@ export function CalendarPage() {
                                   );
                                 }
                               }}
-                              className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent"
+                              className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left enabled:hover:bg-accent"
                             >
                               <Avatar name={user.clientName} />
                               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -152,7 +157,9 @@ export function CalendarPage() {
                                       (user.behaviorCount > 0
                                         ? " · 도전적 행동 " + user.behaviorCount + "건"
                                         : "")
-                                    : "일지를 작성하면 여기에 보여요"}
+                                    : blocked
+                                      ? "오늘 이후 날짜는 아직 쓸 수 없어요"
+                                      : "일지를 작성하면 여기에 보여요"}
                                 </span>
                               </span>
                               {user.status !== "none" ? (
@@ -164,7 +171,8 @@ export function CalendarPage() {
                                 </Badge>
                               ) : (
                                 <span className="flex shrink-0 items-center gap-1 type-caption text-muted-foreground">
-                                  <Plus className="size-4" aria-hidden />
+                                  {/* + 아이콘은 '눌러서 작성'을 뜻하므로 쓸 수 없는 줄에서는 뺀다 */}
+                                  {blocked ? null : <Plus className="size-4" aria-hidden />}
                                   미작성
                                 </span>
                               )}

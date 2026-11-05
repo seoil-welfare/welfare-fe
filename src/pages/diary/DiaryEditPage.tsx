@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Save, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppShell } from "@/components/layout/AppShell";
@@ -18,7 +18,7 @@ import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { api } from "@/api";
 import { errorMessage, isApiError, isUpdatedByOther, NETWORK_ERROR_STATUS } from "@/api/errors";
-import { combineQueries, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
+import { combineQueries, useDeleteDiary, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
 import { forgetRememberedDraftId, readRememberedDraftId, useDraft } from "@/app/DraftContext";
 import { getLastPage } from "@/app/lastPage";
 import { useCategoryChoices } from "@/app/useCategoryChoices";
@@ -69,20 +69,28 @@ export function DiaryEditPage() {
   } = useDraft();
   // 삭제 확인 팝업을 띄울 활동
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
+  // 작성 중 일지 삭제 확인 팝업
+  const [askDeleteDiary, setAskDeleteDiary] = useState(false);
   const saveDiary = useSaveDiary();
+  const deleteDiary = useDeleteDiary();
   const choices = useCategoryChoices(); // 날씨·컨디션 선택지 (GET /categories)
   const usersQuery = useServiceUsers();
   const users = activeServiceUsers(usersQuery.data ?? []);
 
   const requestedUserId = params.get("userId");
   const requestedDate = params.get("date");
+  // 주소에 오늘 이후 날짜를 직접 넣고 들어온 경우. 일지를 시작하지 않고 안내 화면만 보여 준다.
+  // 달력은 서버의 canCreate로 이미 막지만, 주소창 입력은 거기를 거치지 않는다. 저장은 서버가 최종으로 막는다
+  const futureRequest = requestedDate !== null && requestedDate > today;
   const targetDate = draft?.date ?? requestedDate ?? today;
   // 이용자 1명당 하루 1건 규칙을 안내하려고 그 날짜의 일지를 불러온다
   const dayQuery = useDiaries({ from: targetDate, to: targetDate });
 
   // 달력 등에서 이용자·날짜를 지정해 들어왔는데 쓰던 draft와 다른 경우 (날짜가 없으면 오늘)
   const hasRequest = requestedUserId !== null || requestedDate !== null;
+  // 미래 날짜 요청은 받아들이지 않으므로, 쓰던 draft와 다르다고 보지 않는다 (쓰던 draft를 버리지 않게)
   const requestMismatch =
+    !futureRequest &&
     draft !== null &&
     hasRequest &&
     ((requestedUserId !== null && requestedUserId !== draft.userId) ||
@@ -96,8 +104,9 @@ export function DiaryEditPage() {
 
   // 지정한 대상을 반영했으면 주소에서 지운다. 화면에서 이용자를 바꿔도 다시 비교하지 않게 한다
   useEffect(() => {
-    if (draft && hasRequest && !requestMismatch) setParams({}, { replace: true });
-  }, [draft, hasRequest, requestMismatch, setParams]);
+    // 미래 날짜 요청은 주소에 남겨 둔다. 지우면 안내 화면 대신 쓰던 draft가 보여 헷갈린다
+    if (draft && hasRequest && !requestMismatch && !futureRequest) setParams({}, { replace: true });
+  }, [draft, hasRequest, requestMismatch, futureRequest, setParams]);
 
   // 저장을 마치고 상세로 넘어가는 중이다. 이때 draft가 비어도 새 일지를 만들지 않는다
   const committedRef = useRef(false);
@@ -139,6 +148,7 @@ export function DiaryEditPage() {
   // 라우트 이동으로 입력이 사라지지 않게 draft를 유지한다. 없으면 새로 만든다.
   useEffect(() => {
     if (committedRef.current || restoring) return;
+    if (futureRequest) return; // 오늘 이후 날짜로는 새 일지를 시작하지 않는다
     // 이전 날짜의 결과(placeholder)로 기본 이용자를 고르지 않는다
     if (draft || users.length === 0 || !dayQuery.data || dayQuery.isPlaceholderData) return;
     // 일지는 이용자 1명당 하루 1건이다. 대상이 지정되지 않았다면
@@ -146,7 +156,7 @@ export function DiaryEditPage() {
     const saved = diariesOnDate(dayQuery.data, targetDate);
     const firstAvailable = users.find((user) => !saved.some((d) => d.userId === user.id));
     startDraft(requestedUserId ?? firstAvailable?.id ?? users[0].id, targetDate);
-  }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData, restoring]);
+  }, [draft, users, startDraft, requestedUserId, targetDate, dayQuery.data, dayQuery.isPlaceholderData, restoring, futureRequest]);
 
   // 활동 화면에서 돌아오면 넘어가기 전 스크롤 위치로 되돌린다 (화면이 그려지기 전에 맞춰 깜빡임을 막는다)
   const hasDraft = Boolean(draft);
@@ -159,6 +169,23 @@ export function DiaryEditPage() {
   /** 활동 화면으로 넘어가기 직전에 현재 위치를 기억한다 */
   function rememberScroll() {
     setEditScrollY(window.scrollY);
+  }
+
+  if (futureRequest) {
+    return (
+      <AppShell header={<AppHeader title="일지 작성" backTo="/calendar" />} bottom="nav">
+        <Card variant="form">
+          <EmptyState
+            message="오늘 이후 날짜의 일지는 쓸 수 없어요."
+            action={
+              <Button asChild>
+                <Link to="/calendar">달력으로 돌아가기</Link>
+              </Button>
+            }
+          />
+        </Card>
+      </AppShell>
+    );
   }
 
   if (!draft) {
@@ -260,6 +287,41 @@ export function DiaryEditPage() {
     );
   }
 
+  // 서버에 저장된 작성 중 일지만 삭제할 수 있다 (새 일지·완료 일지 수정 중에는 버튼을 숨긴다)
+  const canDeleteDiary = Boolean(draft.diaryId) && !isEditingCompleted;
+
+  async function handleDeleteDiary() {
+    if (!draft?.diaryId || deleteDiary.isPending) return;
+    // 자동 저장을 멈추고 진행 중인 저장을 기다린다. 안 그러면 삭제 도중·직후 자동 저장이 일지를 다시 만든다
+    const saved = await beginCommit();
+    const diaryId = saved.diaryId ?? draft.diaryId;
+
+    const finish = () => {
+      // draft를 비우면 위 effect가 빈 일지를 새로 만들 수 있어 먼저 막는다
+      committedRef.current = true;
+      discardDraft();
+      navigate("/home", { replace: true });
+    };
+
+    deleteDiary.mutate(diaryId, {
+      onSuccess: () => {
+        finish();
+        toast.success("작성 중인 일지를 삭제했어요.");
+      },
+      onError: (error) => {
+        // 이미 지워진 일지다. 작성 중 상태를 정리하고 홈으로 간다
+        if (isApiError(error) && error.status === 404) {
+          finish();
+          toast.error(errorMessage(error));
+          return;
+        }
+        // 403·400 등: 일지는 그대로이니 화면에 머물고 자동 저장을 다시 켠다
+        cancelCommit();
+        toast.error(errorMessage(error));
+      },
+    });
+  }
+
   return (
     <AppShell
       header={
@@ -341,6 +403,9 @@ export function DiaryEditPage() {
                 })}
               </SelectContent>
             </Select>
+            {canDeleteDiary ? (
+              <FieldDescription>이용자를 잘못 골랐다면 일지를 삭제하고 다시 쓰세요.</FieldDescription>
+            ) : null}
           </Field>
 
           <Field>
@@ -445,7 +510,28 @@ export function DiaryEditPage() {
           </Field>
         </FormSection>
 
+        {canDeleteDiary ? (
+          <Button
+            variant="ghost"
+            size="dense"
+            className="self-center text-destructive hover:text-destructive"
+            disabled={deleteDiary.isPending || saving !== null}
+            onClick={() => setAskDeleteDiary(true)}
+          >
+            <Trash2 aria-hidden />
+            작성 중인 일지 삭제
+          </Button>
+        ) : null}
       </div>
+
+      <ConfirmDialog
+        open={askDeleteDiary}
+        onOpenChange={setAskDeleteDiary}
+        title="작성 중인 일지를 삭제할까요?"
+        description="삭제하면 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onConfirm={() => void handleDeleteDiary()}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}

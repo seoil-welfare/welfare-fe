@@ -28,6 +28,8 @@ export const httpApi: Api = {
       diaryId
         ? request("/diaries/" + encodeURIComponent(diaryId), { method: "PUT", body })
         : request("/diaries", { method: "POST", body }),
+    // 204 No Content. client.ts의 request가 빈 응답을 undefined로 돌려준다
+    delete: (diaryId) => request("/diaries/" + encodeURIComponent(diaryId), { method: "DELETE" }),
   },
   calendar: {
     days: (query) => request("/calendar", { query: { ...query } }),

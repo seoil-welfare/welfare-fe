@@ -106,7 +106,7 @@
 |---|---|---|
 | `GET /diaries?userId&from&to&status` | 모두 선택, `from`·`to`는 포함 범위 | `Diary[]` |
 | `GET /diaries/:id` | – | `Diary` · 없으면 404 |
-| `POST /diaries` | `SaveDiaryInput` (`diaryId` 없음) | `Diary` |
+| `POST /diaries` | `SaveDiaryInput` (`diaryId` 없음) | `Diary` · 오늘(한국 날짜) 이후 날짜면 400 `VALIDATION_ERROR` |
 | `PUT /diaries/:id` | `SaveDiaryInput` | `Diary` |
 
 `SaveDiaryInput` = 일지 내용 전체 + `status: "draft" | "completed"` + `updatedAt`. 활동 목록을 통째로 보냅니다(활동 단위 API 없음).
@@ -139,7 +139,7 @@ CalendarClientStatus = { clientId, clientName, status: "completed" | "draft" | "
 - `target`(대상 이용자 수)은 현재 이용 중인 이용자 수다. 지난 날짜도 같은 값을 쓴다 (기준은 회의에서 확인)
 - 종결된 이용자의 일지는 세지 않는다
 - 도전적 행동 건수 규칙은 통계와 같다 (상위 '기타'는 내용이 있을 때만 1건, 작성 중 일지 포함)
-- `canCreate`는 그날 일지가 없을 때만 `true` (B-1)
+- `canCreate`는 그날 일지가 없고, 오늘(한국 날짜) 이후 날짜가 아닐 때만 `true` (B-1). 화면은 이 값이 `false`인 미작성 줄을 누를 수 없게 하고 작성 버튼도 숨긴다
 
 ### 오늘의 소식
 
