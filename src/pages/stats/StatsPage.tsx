@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AppShell } from "@/components/layout/AppShell";
 import { MainHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
-import { MetricCard } from "@/components/common/MetricCard";
 import { ChartSkeleton, EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { BehaviorDonut, HorizontalBars, TrendBars } from "@/components/stats/charts";
@@ -15,7 +14,8 @@ import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/ap
 import { useStatsSummary } from "@/app/useStatsSummary";
 import { useToday } from "@/lib/today";
 import { activeServiceUsers } from "@/services/diaryService";
-import { currentPeriod, nonZero, periodRange, summaryFor } from "@/services/statsService";
+import { currentPeriod, isPeriodInProgress, nonZero, periodRange, summaryFor } from "@/services/statsService";
+import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
 import { useStatsContext } from "@/app/StatsContext";
 import type { CountItem } from "@/types";
 
@@ -106,24 +106,11 @@ export function StatsPage() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <MetricCard
-                    value={summary.count}
-                    unit="건"
-                    description="기록 건수"
-                    tone={summary.count > 0 ? "behavior" : "default"}
-                  />
-                  <MetricCard value={summary.days} unit="일" description="발생 일수" />
-                  <MetricCard
-                    value={
-                      summary.previousEmpty
-                        ? "–"
-                        : (summary.delta > 0 ? "+" : "") + summary.delta
-                    }
-                    unit={summary.previousEmpty ? undefined : "건"}
-                    description={summary.previousEmpty ? "이전 기간 기록 없음" : "이전 기간 대비"}
-                  />
-                </div>
+                <BehaviorSummaryMetrics
+                  summary={summary}
+                  inProgress={isPeriodInProgress(range, today)}
+                  today={today}
+                />
 
                 <FormSection title="기간 추이" description={"단위: 건 · " + range.label + " 강조"}>
                   <TrendBars points={trend} />
