@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PillToggle } from "@/components/ui/toggle-group";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -21,7 +20,7 @@ import { combineQueries, useCreateStaff, useStaffList } from "@/api/queries";
 import { isStaffActive } from "@/services/diaryService";
 import { matchesStaffQuery, sortStaff } from "@/services/staffService";
 import { cn } from "@/lib/utils";
-import { ROLE_POSITION, type Staff, type UserRole } from "@/types";
+import { ROLE_POSITION, type Staff } from "@/types";
 
 /**
  * 담당자 관리 목록 (2.1.13/FR-80, 명세서 SF-01) / 계정 추가 (FR-81, SF-02).
@@ -170,7 +169,6 @@ export function StaffNewPage() {
   const [name, setName] = useState("");
   const [loginId, setLoginId] = useState("");
   const [department, setDepartment] = useState("주간활동지원팀");
-  const [role, setRole] = useState<UserRole>("staff");
   const [errors, setErrors] = useState<{ name?: string; loginId?: string }>({});
 
   function submit() {
@@ -186,8 +184,8 @@ export function StaffNewPage() {
         name: name.trim(),
         loginId: loginId.trim(),
         department,
-        position: role === "teamLead" ? "팀장" : "사회복지사",
-        role,
+        position: ROLE_POSITION.staff,
+        role: "staff", // 계정 추가는 담당자로만. 팀장은 상세 화면의 역할 변경으로
       },
       {
         onSuccess: () => {
@@ -223,7 +221,10 @@ export function StaffNewPage() {
       }
     >
       <div className="flex flex-col gap-3">
-        <FormSection title="계정 정보">
+        <FormSection
+          title="계정 정보"
+          description="담당자 역할로 만들어져요. 팀장은 계정을 만든 뒤 담당자 상세에서 바꿀 수 있어요."
+        >
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="staff-name">이름</FieldLabel>
@@ -253,18 +254,6 @@ export function StaffNewPage() {
                 value={department}
                 onChange={(event) => setDepartment(event.target.value)}
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="staff-role">직위</FieldLabel>
-              <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                <SelectTrigger id="staff-role" aria-label="직위">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="staff">사회복지사</SelectItem>
-                  <SelectItem value="teamLead">팀장</SelectItem>
-                </SelectContent>
-              </Select>
             </Field>
           </FieldGroup>
         </FormSection>

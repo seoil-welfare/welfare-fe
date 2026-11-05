@@ -319,13 +319,20 @@ export const mockApi: Api = {
       await readLatency();
       return clone(readDb().staff);
     },
+    // 규칙은 백엔드 AuthService.createStaff와 같다. 계정 추가는 담당자로만
     async create(input) {
       await writeLatency();
-      requireSession();
+      const me = requireSession();
+      if (me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "계정 추가는 팀장·국장만 할 수 있어요.", "FORBIDDEN");
+      }
+      if ((input.role as string) !== "staff") {
+        throw new ApiError(400, "계정 추가는 담당자로만 할 수 있어요. 팀장은 역할 변경으로 바꿔 주세요.", "VALIDATION_ERROR");
+      }
       if (readDb().staff.some((s) => s.loginId === input.loginId)) {
         throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
       }
-      const created: Staff = { ...input, id: uid("stf") };
+      const created: Staff = { ...input, position: ROLE_POSITION.staff, id: uid("stf") };
       writeDb((db) => ({ ...db, staff: [...db.staff, created] }));
       return clone(created);
     },

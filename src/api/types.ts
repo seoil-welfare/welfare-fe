@@ -105,12 +105,13 @@ export interface ServiceUserInput {
   assignedStaffId: string;
 }
 
+/** 계정 추가. 역할은 항상 담당자(staff)다. 팀장은 역할 변경으로 바꾼다 */
 export interface StaffInput {
   name: string;
   loginId: string;
   department: string;
   position: string;
-  role: UserRole;
+  role: Extract<UserRole, "staff">;
 }
 
 export interface AuthApi {
