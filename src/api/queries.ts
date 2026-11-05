@@ -18,6 +18,8 @@ import type {
   ServiceUserInput,
   SignupInput,
   StaffInput,
+  ChangeableRole,
+  PreviousDirectorRole,
 } from "@/api/types";
 import { addDays, dateOf } from "@/lib/utils";
 import { latestNewsDateBefore } from "@/services/diaryService";
@@ -348,6 +350,39 @@ export function useSetStaffActive() {
       api.staff.setActive(staffId, active),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.staff }),
     onError: () => refetchAfterFailure(client, [queryKeys.staff]),
+  });
+}
+
+export function useChangeStaffRole() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ staffId, role }: { staffId: string; role: ChangeableRole }) =>
+      api.staff.changeRole(staffId, role),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.staff }),
+    onError: () => refetchAfterFailure(client, [queryKeys.staff]),
+  });
+}
+
+/**
+ * 관리 권한 이양. 내 역할이 바뀌므로 me도 다시 받는다.
+ * 계정 사용 중지를 골랐으면 서버가 세션을 끊었으니 로그아웃처럼 캐시를 비운다.
+ * 다시 불러오면 401이 나서 세션 만료 팝업이 뜨기 때문에 invalidate하지 않는다.
+ */
+export function useTransferDirector() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ staffId, previousRole }: { staffId: string; previousRole: PreviousDirectorRole }) =>
+      api.staff.transferDirector(staffId, previousRole),
+    onSuccess: (result) => {
+      if (result.previous.active === false) {
+        client.clear();
+        client.setQueryData(queryKeys.me, null);
+        return;
+      }
+      client.setQueryData(queryKeys.me, result.previous);
+      return client.invalidateQueries({ queryKey: queryKeys.staff });
+    },
+    onError: () => refetchAfterFailure(client, [queryKeys.staff, queryKeys.me]),
   });
 }
 

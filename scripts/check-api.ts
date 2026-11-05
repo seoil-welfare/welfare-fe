@@ -157,6 +157,54 @@ async function main() {
   );
   expect("없는 일지는 404", (await rejects(() => mockApi.diaries.get("nope"))) === 404, "notFound");
 
+  console.log("\n[역할 변경 · 관리 권한 이양] (be-지시-직원권한관리.md와 같은 규칙)");
+  const login = (loginId: string) => mockApi.auth.login({ loginId, password: "demo1234", autoLogin: false });
+  const lead = await login("demo.lead");
+  expect(
+    "계정 추가에 팀장 역할은 400",
+    (await rejects(() =>
+      mockApi.staff.create({ name: "x", loginId: "check.lead", department: "x", position: "x", role: "teamLead" as "staff" }),
+    )) === 400,
+    "담당자로만",
+  );
+  const promoted = await mockApi.staff.changeRole("stf-02", "teamLead");
+  expect("팀장이 담당자를 팀장으로", promoted.role === "teamLead" && promoted.position === "팀장", promoted.position);
+  const demoted = await mockApi.staff.changeRole("stf-02", "staff");
+  expect("팀장이 팀장을 담당자로", demoted.role === "staff", demoted.position);
+  expect("국장 계정 역할 변경은 403", (await rejects(() => mockApi.staff.changeRole("stf-05", "staff"))) === 403, "FORBIDDEN");
+  expect("내 역할 변경은 400", (await rejects(() => mockApi.staff.changeRole(lead.id, "staff"))) === 400, "VALIDATION_ERROR");
+  expect(
+    "역할 변경으로 국장은 400",
+    (await rejects(() => mockApi.staff.changeRole("stf-02", "director" as "staff"))) === 400,
+    "이양으로만",
+  );
+  expect(
+    "팀장의 이양은 403",
+    (await rejects(() => mockApi.staff.transferDirector("stf-02", "teamLead"))) === 403,
+    "국장만",
+  );
+  await login("demo.staff2");
+  expect("담당자의 역할 변경은 403", (await rejects(() => mockApi.staff.changeRole("stf-03", "teamLead"))) === 403, "FORBIDDEN");
+
+  await login("demo.director");
+  const moved = await mockApi.staff.transferDirector("stf-04", "teamLead");
+  const directors = (await mockApi.staff.list()).filter((s) => s.role === "director");
+  expect(
+    "이양 후 팀장으로 남기",
+    moved.director.id === "stf-04" && moved.previous.role === "teamLead" && moved.previous.active !== false,
+    moved.director.name + " / " + moved.previous.name + " " + moved.previous.position,
+  );
+  expect("이양 후 국장은 한 명", directors.length === 1, directors.length + "명");
+
+  await login("demo.lead"); // 이제 국장
+  const handed = await mockApi.staff.transferDirector("stf-05", "deactivate");
+  expect(
+    "이양 후 계정 사용 중지",
+    handed.previous.active === false && handed.previous.role === "teamLead" && handed.director.id === "stf-05",
+    handed.previous.name + " active=" + handed.previous.active,
+  );
+  expect("사용 중지를 고르면 세션이 끊김", (await mockApi.auth.me()) === null, "me() null");
+
   console.log("");
   console.log(problems.length === 0 ? "모든 검증 통과" : problems.length + "개 실패");
   process.exit(problems.length === 0 ? 0 : 1);

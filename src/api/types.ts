@@ -219,6 +219,21 @@ export interface StaffApi {
   create(input: StaffInput): Promise<Staff>;
   /** 계정 사용 중지(false)·다시 사용(true). 팀장·국장만, 내 계정은 중지 못 함 */
   setActive(staffId: string, active: boolean): Promise<Staff>;
+  /** 역할 변경 (담당자 ↔ 팀장). 팀장·국장만, 국장·내 계정·중지된 계정은 못 바꿈 */
+  changeRole(staffId: string, role: ChangeableRole): Promise<Staff>;
+  /** 관리 권한 이양. 국장만. previousRole이 deactivate면 서버가 내 세션을 끊는다 */
+  transferDirector(staffId: string, previousRole: PreviousDirectorRole): Promise<DirectorTransferResult>;
+}
+
+/** 역할 변경으로 줄 수 있는 역할. 국장은 이양으로만 된다 */
+export type ChangeableRole = Exclude<UserRole, "director">;
+
+/** 이양 뒤 원래 국장: 팀장으로 남기 / 계정 사용 중지(역할은 팀장) */
+export type PreviousDirectorRole = "teamLead" | "deactivate";
+
+export interface DirectorTransferResult {
+  director: Staff; // 새 국장
+  previous: Staff; // 원래 국장 (나)
 }
 
 /** 선택 항목 1개. 일지에는 아직 label을 저장한다 (code 저장 전환은 B-4) */
