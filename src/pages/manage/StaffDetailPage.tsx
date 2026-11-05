@@ -1,28 +1,36 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/misc";
+import { ConfirmDialog, Dialog, DialogContent, SheetContent } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupIndicator, RadioGroupItem, Separator } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { ListRowButton, ListRowStatic } from "@/components/common/ListRow";
+import { ListRowButton } from "@/components/common/ListRow";
 import { QueryGate } from "@/components/common/QueryGate";
 import { EmptyState } from "@/components/common/states";
 import { errorMessage } from "@/api/errors";
-import { combineQueries, useSetStaffActive, useStaffList } from "@/api/queries";
+import {
+  combineQueries,
+  useChangeStaffRole,
+  useSetStaffActive,
+  useStaffList,
+  useTransferDirector,
+} from "@/api/queries";
+import type { ChangeableRole, PreviousDirectorRole } from "@/api/types";
 import { useCurrentStaff } from "@/app/auth";
 import { isStaffActive } from "@/services/diaryService";
 import { canChangeRole, canToggleActive, canTransferDirector } from "@/services/staffService";
 import { StaffAvatar } from "@/pages/manage/StaffPages";
+import { cn } from "@/lib/utils";
 import { ROLE_POSITION, type Staff } from "@/types";
 
 /**
  * 담당자 상세 (/staff/:staffId). 담당자 관리 목록에서 행을 누르면 온다.
  * 데이터는 GET /staff 목록 캐시에서 id로 찾는다 (상세 조회 API 없음).
- * 권한 관리(역할 변경·관리 권한 이양)와 계정 상태(사용 중지·다시 사용)는 보일 사람에게만 보인다.
+ * 권한 관리(역할 변경 바텀시트·관리 권한 이양 팝업)와 계정 상태(사용 중지·다시 사용)는 보일 사람에게만 보인다.
  * 보일지는 services/staffService, 실제 허용은 서버가 정한다.
  */
 export function StaffDetailPage() {
@@ -57,6 +65,8 @@ function StaffDetail({ member }: { member: Staff }) {
   const viewer = useCurrentStaff();
   const setActive = useSetStaffActive();
   const [confirmOpen, setConfirmOpen] = useState(false); // 사용 중지·다시 사용 확인 창
+  const [roleOpen, setRoleOpen] = useState(false); // 역할 변경 바텀시트
+  const [transferOpen, setTransferOpen] = useState(false); // 관리 권한 이양 팝업
   const active = isStaffActive(member);
   const showRole = canChangeRole(viewer, member);
   const showTransfer = canTransferDirector(viewer, member);
@@ -96,20 +106,20 @@ function StaffDetail({ member }: { member: Staff }) {
       {showRole || showTransfer ? (
         <Section title="권한 관리">
           {showRole ? (
-            <ListRowStatic
+            <ListRowButton
               tall
               title="역할 변경"
               subtitle={"현재 역할 · " + ROLE_POSITION[member.role]}
-              trailing={<PendingBadge />}
+              onClick={() => setRoleOpen(true)}
             />
           ) : null}
           {showRole && showTransfer ? <Separator /> : null}
           {showTransfer ? (
-            <ListRowStatic
+            <ListRowButton
               tall
               title="관리 권한 이양"
               subtitle={member.name + " 님에게 국장 권한 넘기기"}
-              trailing={<PendingBadge />}
+              onClick={() => setTransferOpen(true)}
             />
           ) : null}
         </Section>
@@ -140,6 +150,11 @@ function StaffDetail({ member }: { member: Staff }) {
         tone={active ? "destructive" : "default"}
         onConfirm={confirmToggle}
       />
+
+      {showRole ? <RoleSheet member={member} open={roleOpen} onOpenChange={setRoleOpen} /> : null}
+      {showTransfer ? (
+        <TransferDialog member={member} open={transferOpen} onOpenChange={setTransferOpen} />
+      ) : null}
     </div>
   );
 }
@@ -163,11 +178,179 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// TODO(4단계): 역할 변경 바텀시트·이양 팝업을 붙이면 지운다
-function PendingBadge() {
+const ROLE_OPTIONS: readonly Option<ChangeableRole>[] = [
+  { value: "teamLead", label: "팀장", description: "담당자 관리와 일지 항목 관리를 할 수 있어요." },
+  { value: "staff", label: "담당자", description: "일지 작성과 조회를 할 수 있어요." },
+];
+
+/** 역할 변경 바텀시트. 담당자와 팀장 중 고른다 (POST /staff/:id/role) */
+function RoleSheet({
+  member,
+  open,
+  onOpenChange,
+}: {
+  member: Staff;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const changeRole = useChangeStaffRole();
+  const current = member.role as ChangeableRole; // 국장은 이 시트를 열 수 없다 (canChangeRole)
+  const [role, setRole] = useState<ChangeableRole>(current);
+
+  function submit() {
+    changeRole.mutate(
+      { staffId: member.id, role },
+      {
+        onSuccess: (updated) => {
+          toast.success(updated.name + " 님의 역할을 " + ROLE_POSITION[updated.role] + "(으)로 바꿨어요.");
+          onOpenChange(false);
+        },
+        onError: (error) => toast.error(errorMessage(error, "역할을 바꾸지 못했어요.")),
+      },
+    );
+  }
+
   return (
-    <Badge variant="outline" tone="neutral">
-      준비 중
-    </Badge>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setRole(current); // 열 때마다 지금 역할에서 시작
+        onOpenChange(next);
+      }}
+    >
+      <SheetContent title="역할 변경">
+        <p className="pb-3 type-body text-muted-foreground">{member.name} 님의 역할을 골라 주세요.</p>
+        <OptionList label="역할" options={ROLE_OPTIONS} value={role} onChange={setRole} />
+        <Button block className="mt-4" disabled={role === current || changeRole.isPending} onClick={submit}>
+          {changeRole.isPending ? "바꾸는 중…" : "변경하기"}
+        </Button>
+      </SheetContent>
+    </Dialog>
+  );
+}
+
+const PREVIOUS_OPTIONS: readonly Option<PreviousDirectorRole>[] = [
+  { value: "teamLead", label: "팀장으로 남기", description: "팀장 권한으로 계속 사용해요." },
+  {
+    value: "deactivate",
+    label: "계정 사용 중지",
+    description: "바로 로그아웃되고, 이 계정으로 다시 로그인할 수 없어요.",
+  },
+];
+
+/** 관리 권한 이양 팝업. 넘긴 뒤 내 계정을 팀장으로 둘지 사용 중지할지 고른다 (POST /staff/:id/transfer-director) */
+function TransferDialog({
+  member,
+  open,
+  onOpenChange,
+}: {
+  member: Staff;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const navigate = useNavigate();
+  const transfer = useTransferDirector();
+  const [previousRole, setPreviousRole] = useState<PreviousDirectorRole>("teamLead"); // 기본은 팀장
+
+  function submit() {
+    transfer.mutate(
+      { staffId: member.id, previousRole },
+      {
+        onSuccess: ({ director, previous }) => {
+          onOpenChange(false);
+          if (previous.active === false) {
+            toast.success("관리 권한을 넘기고 계정을 사용 중지했어요.");
+            navigate("/login", { replace: true });
+            return;
+          }
+          toast.success(director.name + " 님이 국장이 됐어요.");
+          navigate("/staff", { replace: true });
+        },
+        onError: (error) => toast.error(errorMessage(error, "관리 권한을 넘기지 못했어요.")),
+      },
+    );
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setPreviousRole("teamLead");
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        title={member.name + " 님에게 관리 권한을 넘길까요?"}
+        description={member.name + " 님이 국장이 돼요. 국장은 한 명이라 넘긴 뒤에는 새 국장만 다시 넘길 수 있어요."}
+      >
+        <p className="mb-2 type-body font-medium text-foreground">넘긴 뒤 내 계정</p>
+        <OptionList
+          label="넘긴 뒤 내 계정"
+          options={PREVIOUS_OPTIONS}
+          value={previousRole}
+          onChange={setPreviousRole}
+        />
+        <div className="mt-6 flex gap-3">
+          <Button variant="outline" block onClick={() => onOpenChange(false)}>
+            취소
+          </Button>
+          <Button variant="destructive" block disabled={transfer.isPending} onClick={submit}>
+            {transfer.isPending ? "넘기는 중…" : "권한 넘기기"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface Option<T extends string> {
+  value: T;
+  label: string;
+  description: string;
+}
+
+/** 설명이 붙은 단일 선택 목록 (바텀시트·팝업 공용) */
+function OptionList<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly Option<T>[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const id = useId();
+  return (
+    <RadioGroup
+      aria-label={label}
+      value={value}
+      onValueChange={(next) => onChange(next as T)}
+      className="flex flex-col gap-2"
+    >
+      {options.map((option) => (
+        <label
+          key={option.value}
+          htmlFor={id + option.value}
+          className={cn(
+            "flex cursor-pointer items-start gap-3 rounded-control border px-4 py-3 transition-colors duration-150",
+            value === option.value ? "border-primary bg-accent" : "border-input bg-card hover:bg-accent",
+          )}
+        >
+          <RadioGroupItem
+            id={id + option.value}
+            value={option.value}
+            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-input data-[state=checked]:border-primary"
+          >
+            <RadioGroupIndicator className="size-2.5 rounded-full bg-primary" />
+          </RadioGroupItem>
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="type-body font-medium text-foreground">{option.label}</span>
+            <span className="type-caption text-muted-foreground">{option.description}</span>
+          </span>
+        </label>
+      ))}
+    </RadioGroup>
   );
 }
