@@ -167,6 +167,14 @@ async function main() {
     )) === 400,
     "담당자로만",
   );
+  const added = await mockApi.staff.create({ name: "x", loginId: "check.new", department: "x", position: "x", role: "staff" });
+  expect("계정 추가는 임시 비밀번호 12자를 준다", added.temporaryPassword.length === 12, added.role);
+  expect(
+    "추가한 계정은 임시 비밀번호로 로그인",
+    (await mockApi.auth.login({ loginId: "check.new", password: added.temporaryPassword, autoLogin: false })).id === added.id,
+    "check.new",
+  );
+  await login("demo.lead");
   const promoted = await mockApi.staff.changeRole("stf-02", "teamLead");
   expect("팀장이 담당자를 팀장으로", promoted.role === "teamLead" && promoted.position === "팀장", promoted.position);
   const demoted = await mockApi.staff.changeRole("stf-02", "staff");
