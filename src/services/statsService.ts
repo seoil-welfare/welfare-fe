@@ -60,6 +60,14 @@ export function weekCountOfMonth(year: number, month: number): number {
   return weeksInMonth(year, month).length;
 }
 
+/**
+ * 오늘이 이 기간 안에 있는지 (아직 끝나지 않은 기간).
+ * 이전 기간은 꽉 찬 기간 전체라서, 진행 중인 기간의 증감은 실제보다 줄어든 것처럼 보일 수 있다
+ */
+export function isPeriodInProgress(range: PeriodRange, today: string): boolean {
+  return range.start <= today && today <= range.end; // 'YYYY-MM-DD'는 글자 비교가 곧 날짜 비교
+}
+
 export function periodRange(period: StatisticPeriod): PeriodRange {
   const { unit, year } = period;
   if (unit === "year") {

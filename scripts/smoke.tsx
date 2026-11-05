@@ -12,6 +12,7 @@ import { setMockLatency } from "@/api/mock/mockApi";
 import { DraftProvider } from "@/app/DraftContext";
 import { DemoProvider } from "@/demo/DemoContext";
 import { AppRoutes } from "@/app/router";
+import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
 import { DEMO_TODAY, generateFixtures } from "@/data/fixtures";
 
 // mock 서버가 localStorage에서 세션을 복원하도록 persist 상태를 주입한다.
@@ -114,6 +115,27 @@ async function renderWithData(route: string): Promise<{ html: string; failedQuer
 
 async function main() {
   let failures = 0;
+
+  // 통계 요약 카드의 '진행 중' 표시. 화면 데이터에 기대지 않게 정해진 값으로 컴포넌트만 그린다
+  const summary = { count: 3, days: 2, delta: -21, previousEmpty: false };
+  const progressCases = [
+    { label: "진행 중 + 이전 기록 있음 → 표시", inProgress: true, previousEmpty: false, expected: true },
+    { label: "끝난 기간 → 표시 없음", inProgress: false, previousEmpty: false, expected: false },
+    { label: "이전 기록 없음 → 표시 없음", inProgress: true, previousEmpty: true, expected: false },
+  ];
+  for (const c of progressCases) {
+    const html = renderToString(
+      <BehaviorSummaryMetrics
+        summary={{ ...summary, previousEmpty: c.previousEmpty }}
+        inProgress={c.inProgress}
+        today={DEMO_TODAY}
+      />,
+    );
+    const marked = html.includes("이전 기간 대비 · 진행 중") && html.includes("아직 진행 중인 기간이에요");
+    const ok = marked === c.expected;
+    console.log("  " + (ok ? "OK " : "FAIL ") + c.label);
+    if (!ok) failures += 1;
+  }
 
   for (const route of ROUTES) {
     try {
