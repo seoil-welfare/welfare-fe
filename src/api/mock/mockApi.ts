@@ -2,7 +2,7 @@ import { ApiError, NETWORK_ERROR_STATUS } from "@/api/errors";
 import { readDb, writeDb, type MockNotificationState } from "@/api/mock/mockDb";
 import type { Api, CategoryItem, NewsEntry, SaveDiaryInput } from "@/api/types";
 import { getFlags } from "@/demo/flagStore";
-import { addDays, dateOf, uid } from "@/lib/utils";
+import { addDays, dateOf, toISODate, uid } from "@/lib/utils";
 import { calendarClientStatuses, calendarDayCounts, isStaffActive } from "@/services/diaryService";
 import { defaultCategories } from "@/services/categoryService";
 import { statsSummary } from "@/services/statsService";
@@ -264,6 +264,10 @@ export const mockApi: Api = {
     },
     async save(input) {
       await writeLatency();
+      // 오늘 이후 날짜에는 일지를 쓸 수 없다 (백엔드와 같은 규칙, QA 05-01)
+      if (input.date > toISODate(new Date())) {
+        throw new ApiError(400, "오늘 이후 날짜에는 일지를 쓸 수 없어요.", "VALIDATION_ERROR");
+      }
       return saveDiary(input, requireSession());
     },
     // 백엔드 DELETE /api/diaries/{id}와 같은 규칙

@@ -1,5 +1,5 @@
 import { OTHER_LABEL } from "@/data/catalog";
-import { addDays, dateOf } from "@/lib/utils";
+import { addDays, dateOf, toISODate } from "@/lib/utils";
 import type {
   CalendarClientStatus,
   CalendarDayCount,
@@ -97,11 +97,15 @@ export function calendarDayCounts(
   return days;
 }
 
-/** GET /calendar/days/{date} 응답과 같은 값. mock 구현이 쓴다 */
+/**
+ * GET /calendar/days/{date} 응답과 같은 값. mock 구현이 쓴다.
+ * 오늘 이후 날짜에는 일지를 쓸 수 없어 canCreate가 false다 (QA 05-01).
+ */
 export function calendarClientStatuses(
   diaries: readonly Diary[],
   serviceUsers: readonly ServiceUser[],
   date: string,
+  today: string = toISODate(new Date()),
 ): CalendarClientStatus[] {
   const dayDiaries = diariesOnDate(diaries, date);
   return activeServiceUsers(serviceUsers).map((user) => {
@@ -113,7 +117,7 @@ export function calendarClientStatuses(
       diaryId: diary?.id,
       authorId: diary?.authorId,
       behaviorCount: diary ? countDiaryBehaviors(diary) : 0,
-      canCreate: !diary,
+      canCreate: !diary && date <= today,
     };
   });
 }

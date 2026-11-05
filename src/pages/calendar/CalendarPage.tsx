@@ -61,8 +61,10 @@ export function CalendarPage() {
   const statuses = dayQuery.data ?? [];
   const staff = staffQuery.data ?? [];
 
+  // 오늘 이후 날짜에는 일지를 쓸 수 없다. 서버 응답과 상관없이 화면에서도 막는다 (QA 05-01)
+  const isFuture = selectedDate > today;
   // 일지는 이용자 1명당 하루 1건이라, 일지가 없는 이용자만 새로 작성할 수 있다
-  const usersWithoutDiary = statuses.filter((s) => s.canCreate);
+  const usersWithoutDiary = isFuture ? [] : statuses.filter((s) => s.canCreate);
 
   return (
     <AppShell width="full" header={<MainHeader />}>
@@ -130,6 +132,8 @@ export function CalendarPage() {
                           <li key={user.clientId}>
                             <button
                               type="button"
+                              // 아직 오지 않은 날의 미작성 이용자는 누를 수 없다
+                              disabled={user.status === "none" && isFuture}
                               onClick={() => {
                                 if (user.diaryId) {
                                   navigate("/diaries/" + user.diaryId);
@@ -140,7 +144,7 @@ export function CalendarPage() {
                                   );
                                 }
                               }}
-                              className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent"
+                              className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
                             >
                               <Avatar name={user.clientName} />
                               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -152,7 +156,9 @@ export function CalendarPage() {
                                       (user.behaviorCount > 0
                                         ? " · 도전적 행동 " + user.behaviorCount + "건"
                                         : "")
-                                    : "일지를 작성하면 여기에 보여요"}
+                                    : isFuture
+                                      ? "아직 오지 않은 날이에요."
+                                      : "일지를 작성하면 여기에 보여요"}
                                 </span>
                               </span>
                               {user.status !== "none" ? (
@@ -162,7 +168,7 @@ export function CalendarPage() {
                                 >
                                   {user.status === "completed" ? "등록" : "작성 중"}
                                 </Badge>
-                              ) : (
+                              ) : isFuture ? null : (
                                 <span className="flex shrink-0 items-center gap-1 type-caption text-muted-foreground">
                                   <Plus className="size-4" aria-hidden />
                                   미작성
