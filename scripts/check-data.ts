@@ -2,7 +2,7 @@
  * 집계 검증 (개발 검증용).
  * fixture가 시연에 필요한 분포를 갖는지, 통계 집계 규칙이 기대대로 동작하는지 확인한다.
  */
-import { DEMO_TODAY, SERVICE_USERS, generateFixtures } from "@/data/fixtures";
+import { DEMO_TODAY, SERVICE_USERS, generateFixtures } from "./fixtures";
 import { countDiaryBehaviors } from "@/services/diaryService";
 import { addDays } from "@/lib/utils";
 import {

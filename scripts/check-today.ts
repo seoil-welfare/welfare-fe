@@ -1,6 +1,5 @@
 /** 오늘 날짜의 시연 상태 검증 (개발 검증용). 오늘은 일지를 비워 두고 소식만 있다 */
-import { DEMO_TODAY, generateFixtures, SERVICE_USERS, STAFF } from "@/data/fixtures";
-import { toNewsEntries } from "@/api/mock/mockApi";
+import { DEMO_TODAY, generateFixtures, SERVICE_USERS, STAFF, toNewsEntries } from "./fixtures";
 import { dayCompletion, newsItems } from "@/services/diaryService";
 
 const { diaries, events } = generateFixtures(DEMO_TODAY);

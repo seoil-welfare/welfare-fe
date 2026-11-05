@@ -8,7 +8,8 @@ import {
   REACTION_OPTIONS,
   WEATHERS,
 } from "@/data/catalog";
-import { addDays, parseISODate, pickSome, seededRandom, toISODate } from "@/lib/utils";
+import type { NewsEntry } from "@/api/types";
+import { addDays, dateOf, parseISODate, pickSome, seededRandom, toISODate } from "@/lib/utils";
 import type {
   Activity,
   BehaviorSelection,
@@ -19,7 +20,8 @@ import type {
 } from "@/types";
 
 /**
- * 가상 데이터. 실명·주민등록번호·실제 행동기록을 쓰지 않는다 (지시서 0-8).
+ * 검증 스크립트(scripts/check-*.ts) 전용 가상 데이터. 앱에는 들어가지 않는다.
+ * 실명·주민등록번호·실제 행동기록을 쓰지 않는다 (지시서 0-8).
  * 모든 인물은 가상이며 실존 직원·이용자가 아니다.
  */
 
@@ -143,7 +145,7 @@ interface GeneratedData {
 }
 
 /**
- * 검증 스크립트(scripts/check-*.ts)용 샘플 일지를 만든다. 앱의 목 서버는 일지를 비운 채 시작한다.
+ * 검증 스크립트(scripts/check-*.ts)용 샘플 일지를 만든다.
  * - 최근 약 10주, 완료 / 작성 중 / 미작성 분포를 섞는다
  * - 오늘은 비우고, 시연 상태(쓰다 만 일지·다른 담당자 작성 중)는 바로 전 평일에 둔다
  * - 기록이 0건인 통계 항목이 생기도록 일부 카테고리는 선택하지 않는다
@@ -345,4 +347,23 @@ export function generateFixtures(today: string = DEMO_TODAY): GeneratedData {
 
   events.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   return { diaries, events };
+}
+
+/**
+ * 일지·이벤트 → 소식 목록 (GET /news 응답과 같은 모양, 최신순).
+ * 백엔드 /news가 하는 일을 검증 스크립트에서 흉내 낸다.
+ */
+export function toNewsEntries(
+  events: readonly DiaryEvent[],
+  diaries: readonly Diary[],
+  since: string,
+): NewsEntry[] {
+  const byId = new Map(diaries.map((d) => [d.id, d]));
+  return events
+    .filter((event) => dateOf(event.occurredAt) >= since)
+    .flatMap((event) => {
+      const diary = byId.get(event.diaryId);
+      return diary ? [{ event, diary: { id: diary.id, userId: diary.userId, date: diary.date } }] : [];
+    })
+    .sort((a, b) => b.event.occurredAt.localeCompare(a.event.occurredAt));
 }

@@ -1,7 +1,7 @@
 /** 일일 기록지 출력 값 검증 (개발 검증용). 모든 이름·생년월일은 가상 데이터다 */
 import { readFileSync } from "node:fs";
 import PizZip from "pizzip";
-import { generateFixtures, SERVICE_USERS } from "@/data/fixtures";
+import { generateFixtures, SERVICE_USERS } from "./fixtures";
 import { DOCX_MIME, renderDailyRecordBundleDocx, renderDailyRecordDocx } from "@/lib/export/dailyRecordDocx";
 import { dailyRecordData, dailyRecordFileName, diaryBundleFileName } from "@/services/dailyRecordService";
 import type { Diary, ServiceUser } from "@/types";
