@@ -54,6 +54,13 @@ export const httpApi: Api = {
       request("/staff/" + encodeURIComponent(staffId) + (active ? "/activate" : "/deactivate"), {
         method: "POST",
       }),
+    changeRole: (staffId, role) =>
+      request("/staff/" + encodeURIComponent(staffId) + "/role", { method: "POST", body: { role } }),
+    transferDirector: (staffId, previousRole) =>
+      request("/staff/" + encodeURIComponent(staffId) + "/transfer-director", {
+        method: "POST",
+        body: { previousRole },
+      }),
   },
   notifications: {
     summary: () => request("/notifications/summary"),

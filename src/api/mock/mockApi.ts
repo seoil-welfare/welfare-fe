@@ -62,6 +62,21 @@ function requireSession(): Staff {
   return staff;
 }
 
+function findStaff(staffId: string): Staff {
+  const staff = readDb().staff.find((s) => s.id === staffId);
+  if (!staff) throw notFound("직원");
+  return staff;
+}
+
+/** 직원 한 명의 값을 바꾸고 바뀐 정보를 돌려준다 */
+function updateStaff(staffId: string, patch: Partial<Staff>): Staff {
+  writeDb((db) => ({
+    ...db,
+    staff: db.staff.map((s) => (s.id === staffId ? { ...s, ...patch } : s)),
+  }));
+  return clone(findStaff(staffId));
+}
+
 function notFound(what: string): ApiError {
   return new ApiError(404, "찾을 수 없는 " + what + "예요.");
 }
@@ -319,13 +334,20 @@ export const mockApi: Api = {
       await readLatency();
       return clone(readDb().staff);
     },
+    // 규칙은 백엔드 AuthService.createStaff와 같다. 계정 추가는 담당자로만
     async create(input) {
       await writeLatency();
-      requireSession();
+      const me = requireSession();
+      if (me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "계정 추가는 팀장·국장만 할 수 있어요.", "FORBIDDEN");
+      }
+      if ((input.role as string) !== "staff") {
+        throw new ApiError(400, "계정 추가는 담당자로만 할 수 있어요. 팀장은 역할 변경으로 바꿔 주세요.", "VALIDATION_ERROR");
+      }
       if (readDb().staff.some((s) => s.loginId === input.loginId)) {
         throw new ApiError(409, "이미 사용 중인 아이디예요.", "DUPLICATE_LOGIN_ID");
       }
-      const created: Staff = { ...input, id: uid("stf") };
+      const created: Staff = { ...input, position: ROLE_POSITION.staff, id: uid("stf") };
       writeDb((db) => ({ ...db, staff: [...db.staff, created] }));
       return clone(created);
     },
@@ -349,6 +371,57 @@ export const mockApi: Api = {
         staff: db.staff.map((s) => (s.id === staffId ? { ...s, active } : s)),
       }));
       return clone(readDb().staff.find((s) => s.id === staffId)!);
+    },
+    // 규칙은 백엔드 AuthService.changeRole과 같다 (be-지시-직원권한관리.md 2.1)
+    async changeRole(staffId, role) {
+      await writeLatency();
+      const me = requireSession();
+      if (me.role !== "teamLead" && me.role !== "director") {
+        throw new ApiError(403, "역할 변경은 팀장·국장만 할 수 있어요.", "FORBIDDEN");
+      }
+      if ((role as string) !== "staff" && (role as string) !== "teamLead") {
+        throw new ApiError(400, "역할은 담당자 또는 팀장만 고를 수 있어요.", "VALIDATION_ERROR");
+      }
+      const target = findStaff(staffId);
+      if (target.role === "director") {
+        throw new ApiError(403, "국장 계정의 역할은 바꿀 수 없어요.", "FORBIDDEN");
+      }
+      if (target.id === me.id) {
+        throw new ApiError(400, "내 계정의 역할은 바꿀 수 없어요.", "VALIDATION_ERROR");
+      }
+      if (target.active === false) {
+        throw new ApiError(400, "사용 중지된 계정의 역할은 바꿀 수 없어요.", "VALIDATION_ERROR");
+      }
+      return updateStaff(staffId, { role, position: ROLE_POSITION[role] });
+    },
+    // 규칙은 백엔드 AuthService.transferDirector와 같다 (be-지시-직원권한관리.md 2.2)
+    async transferDirector(staffId, previousRole) {
+      await writeLatency();
+      const me = requireSession();
+      if (me.role !== "director") {
+        throw new ApiError(403, "관리 권한 이양은 국장만 할 수 있어요.", "FORBIDDEN");
+      }
+      if (previousRole !== "teamLead" && previousRole !== "deactivate") {
+        throw new ApiError(400, "이양 뒤 내 계정을 어떻게 할지 골라 주세요.", "VALIDATION_ERROR");
+      }
+      const target = findStaff(staffId);
+      if (target.id === me.id) {
+        throw new ApiError(400, "내 계정에는 넘길 수 없어요.", "VALIDATION_ERROR");
+      }
+      if (target.active === false) {
+        throw new ApiError(400, "사용 중지된 계정에는 넘길 수 없어요.", "VALIDATION_ERROR");
+      }
+      // 원래 국장을 먼저 내리고 받는 사람을 올린다 (국장은 늘 한 명)
+      const previous = updateStaff(me.id, {
+        role: "teamLead",
+        position: ROLE_POSITION.teamLead,
+        ...(previousRole === "deactivate" ? { active: false } : {}),
+      });
+      const director = updateStaff(staffId, { role: "director", position: ROLE_POSITION.director });
+      if (previousRole === "deactivate") {
+        writeDb((db) => ({ ...db, session: { currentStaffId: null } })); // 서버처럼 세션을 끊는다
+      }
+      return { director, previous };
     },
   },
 

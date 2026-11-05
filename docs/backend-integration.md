@@ -78,6 +78,8 @@
 | 화면 제어 (현재) | 서버가 검증해야 할 것 |
 |---|---|
 | 로그인하지 않으면 모든 화면 접근 불가 | 모든 API에 세션 확인 |
+| 회원가입 직위는 `담당자` 하나만 보임 | 가입은 항상 `staff`. 팀장은 역할 변경, 국장은 관리 권한 이양으로만 된다 |
+| 담당자 상세의 역할 변경은 팀장·국장에게, 관리 권한 이양은 국장에게만 보임. 국장·내 계정·중지된 계정에는 역할 변경이 안 보임 | `POST /staff/:id/role`, `POST /staff/:id/transfer-director` 권한 (아래 4장) |
 | 담당자 관리 메뉴는 팀장·국장에게만 보임 (FR-80·81, 권한 미확정) | `GET/POST /staff` 권한. **현재 일반 직원도 주소를 직접 입력하면 `/staff` 화면에 들어갈 수 있음** — 화면 차단 여부는 B-6에서 결정 |
 | 다른 직원이 작성 중인 일지는 "이어서 작성" 버튼 없음 | 작성 중 일지의 수정 권한(`PUT /diaries/:id`) |
 | 완료 일지의 전체 수정(상세 하단 `수정하기`)·활동 수정 진입 제한 없음 (FR-63 수정 권한 미확정) | 완료 일지 수정 권한·기간 |
@@ -93,6 +95,7 @@
 | 메서드 · 경로 | 요청 | 응답 |
 |---|---|---|
 | `POST /auth/login` | `{ loginId, password, autoLogin }` | `Staff` · 실패 시 401 |
+| `POST /auth/signup` | `{ loginId, password, name, birthDate }` | `Staff` · 아이디 중복은 409 `DUPLICATE_LOGIN_ID`, 비밀번호 규칙 위반은 400 `PASSWORD_POLICY`. 직위는 보내지 않으며 서버가 항상 담당자(`staff`)로 만든다 |
 | `POST /auth/logout` | – | 204 |
 | `GET /auth/me` | – | `Staff` · 로그인 전이면 401 |
 | `PUT /auth/password` | `{ currentPassword, newPassword }` | 204 · 불일치·규칙 위반은 400 + `message` |
@@ -160,12 +163,17 @@ NewsEntry = {
 | `PUT /service-users/:id` | 같음 | `ServiceUser` |
 | `POST /service-users/:id/close` | – | `ServiceUser` (`status: "closed"`) |
 | `GET /staff` | – | `Staff[]` |
-| `POST /staff` | `{ name, loginId, department, position, role }` | `Staff` · 아이디 중복은 409 |
+| `POST /staff` | `{ name, loginId, department, position, role: "staff" }` | `Staff` · 아이디 중복은 409. 팀장·국장만. **담당자로만 만든다**(`role`이 `staff`가 아니면 400) |
 | `POST /staff/:id/deactivate` | – | `Staff` (`active: false`). 팀장·국장만, 국장 계정은 국장만, 내 계정은 400 (구현됨) |
 | `POST /staff/:id/activate` | – | `Staff` (`active: true`) (구현됨) |
+| `POST /staff/:id/role` | `{ role: "staff" \| "teamLead" }` | `Staff` (role·position 바뀜). 팀장·국장만(403). 국장 계정 403, 내 계정·중지된 계정·`director` 400. 이미 그 역할이면 200 |
+| `POST /staff/:id/transfer-director` | `{ previousRole: "teamLead" \| "deactivate" }` (생략하면 `teamLead`) | `{ director: Staff, previous: Staff }`. 국장만(403). 내 계정·중지된 계정 400. `deactivate`면 원래 국장은 팀장 + `active: false`가 되고 서버가 그 요청의 세션을 끊는다 |
 
 - `GET /staff`는 사용 중지된 직원도 `active: false`로 함께 줍니다. 담당자 목록에 '사용 중지' 배지로 보이고, 이용자의 담당 직원 선택지에서는 빠집니다.
 - 사용 중지 계정으로 로그인하면 403 `ACCOUNT_DISABLED`이고, 로그인 화면은 서버 문구를 그대로 보여 줍니다.
+- 역할: 국장(`director`) > 팀장(`teamLead`) > 담당자(`staff`). **국장은 한 명**이고 관리 권한 이양으로만 바뀝니다.
+- 역할 변경·이양의 오류는 상태 코드와 `message`만 봅니다. `message`를 그대로 토스트에 띄웁니다.
+- 이양에서 `deactivate`를 고르면 프론트는 응답의 `previous.active === false`를 보고 캐시를 비운 뒤 로그인 화면으로 보냅니다(세션 만료 팝업 없음).
 
 ### 알림 (구현됨)
 
