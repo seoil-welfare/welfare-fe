@@ -129,6 +129,11 @@ export interface DiaryApi {
   /** 없으면 404 ApiError */
   get(diaryId: string): Promise<Diary>;
   save(input: SaveDiaryInput): Promise<Diary>;
+  /**
+   * 작성 중인 일지 삭제 (204). 작성자 또는 팀장·국장만.
+   * 없으면 404, 작성 완료 일지는 400 VALIDATION_ERROR, 권한이 없으면 403 FORBIDDEN
+   */
+  delete(diaryId: string): Promise<void>;
 }
 
 export interface StatsQuery extends StatisticPeriod {
