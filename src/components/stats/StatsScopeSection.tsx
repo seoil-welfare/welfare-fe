@@ -2,7 +2,7 @@ import { FormSection } from "@/components/common/FormSection";
 import { PeriodPicker, UnitToggle } from "@/components/stats/PeriodPicker";
 import { useStatsContext } from "@/app/StatsContext";
 import { useToday } from "@/lib/today";
-import { currentPeriod, periodRange } from "@/services/statsService";
+import { currentPeriod } from "@/services/statsService";
 
 /**
  * 통계 상세 화면 상단의 조회 대상·기간 (FR-44, FR-45, FR-51, FR-52).
@@ -16,10 +16,7 @@ export function StatsScopeSection({ userName }: { userName?: string }) {
     <FormSection>
       <div className="flex flex-col gap-2">
         <h2 className="type-heading">{userName ?? "이용자"} 님</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="tnum type-body text-muted-foreground">{periodRange(period).label}</p>
-          <PeriodPicker period={period} onChange={setPeriod} today={today} />
-        </div>
+        <PeriodPicker period={period} onChange={setPeriod} today={today} className="self-start" />
         <UnitToggle
           unit={unit}
           onUnitChange={(next) => {
