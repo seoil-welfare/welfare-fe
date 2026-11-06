@@ -32,7 +32,7 @@ export function MetricCard({
         {value}
         {unit ? <span className="ml-0.5 type-body font-medium">{unit}</span> : null}
       </span>
-      <span className="type-caption text-muted-foreground break-keep">{description}</span>
+      <span className="type-caption text-muted-foreground break-keep text-balance">{description}</span>
     </Card>
   );
 }

@@ -56,9 +56,9 @@ export function StatsActivitiesPage() {
         <StatsScopeSection userName={serviceUser?.name} />
 
         <div className="grid grid-cols-3 gap-3">
-          <MetricCard value={summary.totalCount} unit="건" description="전체 참여 활동 기록" />
-          <MetricCard value={summary.kindCount} unit="종" description="기록된 활동 종류" />
-          <MetricCard value={summary.otherCount} unit="건" description="‘기타’ 직접 입력" />
+          <MetricCard value={summary.totalCount} unit="건" description="전체 활동" />
+          <MetricCard value={summary.kindCount} unit="종" description="활동 종류" />
+          <MetricCard value={summary.otherCount} unit="건" description="‘기타’ 입력" />
         </div>
 
         <FormSection title="활동별 참여 건수" description="모든 활동 카테고리를 표시합니다.">

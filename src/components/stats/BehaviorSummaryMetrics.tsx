@@ -4,10 +4,10 @@ import { formatShortDate } from "@/lib/utils";
 import type { BehaviorSummary } from "@/services/statsService";
 
 /**
- * 도전적 행동 요약 카드 3개 (기록 건수 · 발생 일수 · 이전 기간 대비, FR-32~34).
+ * 도전적 행동 요약 카드 3개 (기록 건수 · 발생 일수 · 직전 대비, FR-32~34).
  * 통계 메인과 도전적 행동 상세가 같이 쓴다.
  *
- * 진행 중인 기간(오늘이 기간 안)이면 증감 카드에 '진행 중'을 붙이고 아래에 안내 한 줄을 둔다.
+ * 진행 중인 기간(오늘이 기간 안)이면 카드 아래에 안내 한 줄을 둔다.
  * 이전 기간은 꽉 찬 기간 전체라서, 덜 찬 이번 기간과 비교한 증감이 실제로 줄어든 것처럼 보이지 않게 한다.
  */
 export function BehaviorSummaryMetrics({
@@ -35,13 +35,7 @@ export function BehaviorSummaryMetrics({
         <MetricCard
           value={summary.previousEmpty ? "–" : (summary.delta > 0 ? "+" : "") + summary.delta}
           unit={summary.previousEmpty ? undefined : "건"}
-          description={
-            summary.previousEmpty
-              ? "이전 기간 기록 없음"
-              : showProgress
-                ? "이전 기간 대비 · 진행 중"
-                : "이전 기간 대비"
-          }
+          description="직전 대비" // 360px 3열에서 한 줄에 들어가게 짧게. 진행 중 안내는 아래 줄에 둔다
         />
       </div>
       {showProgress ? (
