@@ -34,26 +34,34 @@ export interface PeriodRange {
   label: string;
 }
 
-/** 해당 월의 1일이 포함된 주를 1주차로 센다 (주차 계산 방식은 미확정 — 시연 기준) */
+/**
+ * 해당 월의 주차 목록. 주는 일요일~토요일이고 월 안에서 자른다.
+ * 하루짜리 주(1일이 토요일, 말일이 일요일)는 옆 주에 붙인다. 이전 주와 비교할 때 증감이 크게 왜곡되기 때문.
+ * 서버 StatsPeriod.weeksInMonth와 같은 규칙이므로 바꿀 때는 두 곳을 함께 바꾼다.
+ */
 function weeksInMonth(year: number, month: number): PeriodRange[] {
   const lastDay = new Date(year, month, 0).getDate();
-  const ranges: PeriodRange[] = [];
-  let cursor = 1;
-  let week = 1;
-  while (cursor <= lastDay) {
-    const date = new Date(year, month - 1, cursor);
-    // 주의 끝(토요일) 또는 월말까지
-    const daysToSaturday = 6 - date.getDay();
-    const endDay = Math.min(cursor + daysToSaturday, lastDay);
-    ranges.push({
-      start: toISODate(new Date(year, month - 1, cursor)),
-      end: toISODate(new Date(year, month - 1, endDay)),
-      label: year + "년 " + month + "월 " + week + "주차",
-    });
-    cursor = endDay + 1;
-    week += 1;
+  const spans: { from: number; to: number }[] = []; // 날짜(일) 범위
+  for (let from = 1; from <= lastDay; ) {
+    const to = Math.min(from + 6 - new Date(year, month - 1, from).getDay(), lastDay); // 그 주 토요일 또는 말일
+    spans.push({ from, to });
+    from = to + 1;
   }
-  return ranges;
+  if (spans.length > 1 && spans[0].from === spans[0].to) spans.splice(0, 2, { from: 1, to: spans[1].to });
+  const last = spans.length - 1;
+  if (last > 0 && spans[last].from === spans[last].to) spans.splice(last - 1, 2, { from: spans[last - 1].from, to: lastDay });
+
+  return spans.map(({ from, to }, i) => ({
+    start: toISODate(new Date(year, month - 1, from)),
+    end: toISODate(new Date(year, month - 1, to)),
+    label: year + "년 " + month + "월 " + (i + 1) + "주차",
+  }));
+}
+
+/** 주 단위 기간 이름 + 날짜 범위. 예: 2026년 8월 5주차 (30~31일). 주차마다 날짜 수가 달라 조회 단위 아래에 보여 준다 */
+export function weekLabelWithDays(period: StatisticPeriod): string {
+  const { start, end, label } = periodRange(period);
+  return label + " (" + Number(start.slice(8)) + "~" + Number(end.slice(8)) + "일)";
 }
 
 export function weekCountOfMonth(year: number, month: number): number {
