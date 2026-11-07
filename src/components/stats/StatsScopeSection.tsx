@@ -19,6 +19,7 @@ export function StatsScopeSection({ userName }: { userName?: string }) {
         <PeriodPicker period={period} onChange={setPeriod} today={today} className="self-start" />
         <UnitToggle
           unit={unit}
+          period={period}
           onUnitChange={(next) => {
             setUnit(next);
             setPeriod(currentPeriod(next, today));

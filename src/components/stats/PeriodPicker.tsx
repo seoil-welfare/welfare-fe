@@ -3,7 +3,7 @@ import { CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogTrigger, SheetContent } from "@/components/ui/dialog";
 import { SegmentedToggle } from "@/components/ui/toggle-group";
-import { periodLabel, selectableYears, weekCountOfMonth } from "@/services/statsService";
+import { periodLabel, selectableYears, weekCountOfMonth, weekLabelWithDays } from "@/services/statsService";
 import type { StatPeriodUnit, StatisticPeriod } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -24,20 +24,27 @@ const UNIT_OPTIONS: readonly { value: StatPeriodUnit; label: string }[] = [
 export function UnitToggle({
   unit,
   onUnitChange,
+  period,
   className,
 }: {
   unit: StatPeriodUnit;
   onUnitChange: (unit: StatPeriodUnit) => void;
+  period: StatisticPeriod; // 주 단위일 때 아래 줄에 날짜 범위를 보여 준다
   className?: string;
 }) {
   return (
-    <SegmentedToggle
-      label="통계 조회 단위"
-      value={unit}
-      onValueChange={onUnitChange}
-      options={UNIT_OPTIONS}
-      className={className}
-    />
+    <>
+      <SegmentedToggle
+        label="통계 조회 단위"
+        value={unit}
+        onValueChange={onUnitChange}
+        options={UNIT_OPTIONS}
+        className={className}
+      />
+      {period.unit === "week" ? (
+        <p className="tnum type-caption text-muted-foreground">{weekLabelWithDays(period)}</p>
+      ) : null}
+    </>
   );
 }
 
