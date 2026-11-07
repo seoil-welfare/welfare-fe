@@ -16,11 +16,10 @@ export function StatsScopeSection({ userName }: { userName?: string }) {
     <FormSection>
       <div className="flex flex-col gap-2">
         <h2 className="type-heading">{userName ?? "이용자"} 님</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <PeriodPicker period={period} onChange={setPeriod} today={today} />
-        </div>
+        <PeriodPicker period={period} onChange={setPeriod} today={today} className="self-start" />
         <UnitToggle
           unit={unit}
+          period={period}
           onUnitChange={(next) => {
             setUnit(next);
             setPeriod(currentPeriod(next, today));

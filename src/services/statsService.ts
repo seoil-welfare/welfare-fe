@@ -57,6 +57,12 @@ export function weekCountOfMonth(year: number, month: number): number {
   return weeksInMonth(year, month).length;
 }
 
+/** 월·연 경계를 넘는 주도 실제 날짜를 명확히 표시한다. */
+export function weekLabelWithDays(period: StatisticPeriod): string {
+  const { start, end, label } = periodRange(period);
+  return label + " (" + start + " ~ " + end + ")";
+}
+
 /**
  * 오늘이 이 기간 안에 있는지 (아직 끝나지 않은 기간).
  * 이전 기간은 꽉 찬 기간 전체라서, 진행 중인 기간의 증감은 실제보다 줄어든 것처럼 보일 수 있다

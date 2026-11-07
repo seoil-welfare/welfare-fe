@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { currentPeriod, periodRange, previousPeriod, trendPeriods, weekCountOfMonth } from "../src/services/statsService";
+import { currentPeriod, periodRange, previousPeriod, trendPeriods, weekCountOfMonth, weekLabelWithDays } from "../src/services/statsService";
 import { addDays } from "../src/lib/utils";
 
 const cases = [
@@ -10,6 +10,9 @@ const cases = [
   [2027, 1, "2026-12-27", "2027-01-02"], [2028, 2, "2028-01-30", "2028-02-05"],
 ] as const;
 for (const [year, month, start, end] of cases) {
+  test(`06-08 ${year}-${month} 주간 실제 날짜 표시`, () => {
+    expect(weekLabelWithDays({ unit: "week", year, month, week: 1 })).toBe(`${year}년 ${month}월 1주차 (${start} ~ ${end})`);
+  });
   test(`06-08 ${year}-${month} 월 경계·윤년·연 경계 7일`, () => {
     expect(periodRange({ unit: "week", year, month, week: 1 })).toMatchObject({ start, end });
     for (let week = 1; week <= weekCountOfMonth(year, month); week++) {

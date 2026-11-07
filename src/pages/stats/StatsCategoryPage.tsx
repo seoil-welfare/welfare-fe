@@ -72,7 +72,7 @@ function StatsCategoryContent({ meta }: { meta: (typeof CATEGORY_META)[string] }
         <StatsScopeSection userName={serviceUser?.name} />
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
-          <MetricCard value={total} unit="건" description={"전체 " + meta.unitLabel} />
+          <MetricCard value={total} unit="건" description="전체 선택" />
           <MetricCard value={recorded} unit="종" description="항목 종류" />
           <MetricCard value={stats.completedDiaries} unit="건" description="완료 일지" />
         </div>

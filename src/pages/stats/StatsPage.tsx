@@ -80,6 +80,7 @@ export function StatsPage() {
           </label>
           <UnitToggle
             unit={unit}
+            period={period}
             onUnitChange={(next) => {
               setUnit(next);
               setPeriod(currentPeriod(next, today));
