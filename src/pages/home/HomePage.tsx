@@ -44,7 +44,7 @@ const DRAFT_LOOKBACK_DAYS = 14;
  * - 상단 바로가기: ① 이어서 작성(쓰던 일지가 있을 때만) ② 일지 작성 ③ 이용자 등록
  * - 오늘 날짜와 로그인한 계정명을 표시한다
  * - 오늘의 소식은 최신순 최대 5건 (FR-07 원안 3건에서 늘림). 0건이면 안내 문구
- *   카드는 하단 메뉴 위까지 늘어나고, 그 높이를 5칸으로 똑같이 나눈다. 소식이 5건보다 적어도 칸 높이는 같다
+ *   모바일은 하단 메뉴 위까지 5칸으로 나누고, PC는 소식 내용 높이에 맞춘다
  * - 소식 영역 전체는 0건일 때도 클릭 가능하다. '더 보기'는 소식 개수와 상관없이 항상 보인다
  * - '오늘 일지 작성'은 담당 이용자에게 오늘 일지가 이미 있으면 새로 만들지 않고 그 일지로 안내한다
  *   (이용자 1명당 하루 1건)
@@ -205,7 +205,7 @@ export function HomePage() {
 
 function TodayNewsCard({ items: visibleNews }: { items: NewsItem[] }) {
   return (
-    <Card variant="list" elevation="home" className="flex flex-1 flex-col">
+    <Card variant="list" elevation="home" className="flex flex-1 flex-col md:flex-none">
       {/* 소식 영역은 0건일 때도 눌러서 소식 화면으로 갈 수 있다 (FR-07) */}
       <Link
         to="/news"
@@ -233,8 +233,7 @@ function TodayNewsCard({ items: visibleNews }: { items: NewsItem[] }) {
       ) : (
         // 카드 높이를 5칸으로 나눈다. 화면이 낮아도 한 칸은 64px 아래로 줄지 않는다 (그때는 화면이 스크롤된다)
         <ul
-          className="grid flex-1 divide-y divide-border"
-          style={{ gridTemplateRows: "repeat(" + HOME_NEWS_LIMIT + ", minmax(4rem, 1fr))" }}
+          className="grid flex-1 grid-rows-[repeat(5,minmax(4rem,1fr))] divide-y divide-border md:flex-none md:grid-rows-none md:auto-rows-auto"
         >
           {visibleNews.map((item) => (
             <li key={item.event.id} className="flex">

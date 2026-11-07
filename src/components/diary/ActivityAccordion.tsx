@@ -61,7 +61,7 @@ export function ActivityAccordion({
               <AccordionContent>
                 <dl className="flex flex-col gap-3">
                   <DetailRow label="활동 상세 내용">
-                    <p className="type-body-long whitespace-pre-wrap">
+                    <p className="type-body-long whitespace-pre-wrap break-keep wrap-anywhere">
                       {activity.detail.trim() || "작성된 내용이 없어요."}
                     </p>
                   </DetailRow>

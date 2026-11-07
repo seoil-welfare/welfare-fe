@@ -1,7 +1,7 @@
 import { behaviorDetailLabel, behaviorTypeLabel, OTHER_LABEL } from "@/data/catalog";
-import { labelsOf, sortActivities } from "@/services/diaryService";
+import { behaviorEntries, labelsOf, sortActivities } from "@/services/diaryService";
 import { parseISODate, weekdayLabel } from "@/lib/utils";
-import type { Activity, Diary, ServiceUser } from "@/types";
+import type { Activity, Diary, ServiceUser, Staff } from "@/types";
 
 /**
  * 일일 기록지(docx) 출력용 값 만들기.
@@ -32,6 +32,9 @@ export interface DailyRecordRow {
 /** 템플릿 전체 값. 키 이름이 템플릿의 자리표시자와 같다 */
 export interface DailyRecordData {
   clientName: string;
+  authorName: string;
+  behaviorCount: number;
+  behaviorRecords: { time: string; behaviors: string; support: string }[];
   /** 생년월일 6자리 (YYMMDD) */
   birth6: string;
   year: number;
@@ -51,13 +54,13 @@ const UNCHECKED = "□";
 /** 가상이용자 A_2026-09-21_일일기록지.docx — 파일 이름에 못 쓰는 글자는 _로 바꾼다 */
 export function dailyRecordFileName(diary: Diary, client: ServiceUser): string {
   const name = client.name.replace(/[\\/:*?"<>|]/g, "_");
-  return name + "_" + diary.date + "_일일기록지.docx";
+  return name + "_" + diary.date + "_일별활동일지.docx";
 }
 
 /** 가상이용자 A_2026-10-01~2026-10-31_일지모음.docx (일지 모아 출력) */
 export function diaryBundleFileName(client: ServiceUser, from: string, to: string): string {
   const name = client.name.replace(/[\\/:*?"<>|]/g, "_");
-  return name + "_" + from + "~" + to + "_일지모음.docx";
+  return name + "_" + from + "~" + to + "_일별활동일지.docx";
 }
 
 /** 2001-03-05 → 010305 */
@@ -67,14 +70,10 @@ export function toBirth6(birthDate: string): string {
 
 /** 도전적 행동을 '영역 - 항목' 줄 목록으로. 상위 '기타'는 세부 항목이 없어 '기타(내용)'만 적는다 */
 export function behaviorLines(activity: Activity): string[] {
-  if (!activity.hasBehavior) return [];
-  return activity.behaviors.flatMap((selection) => {
-    const area = behaviorTypeLabel(selection.type);
-    if (selection.type === "other") return labelsOf([OTHER_LABEL], selection.otherText);
-    return labelsOf(
-      selection.detailIds.map((id) => behaviorDetailLabel(selection.type, id)),
-      selection.otherText,
-    ).map((item) => area + " - " + item);
+  return behaviorEntries(activity).map((entry) => {
+    const area = behaviorTypeLabel(entry.type);
+    if (entry.type === "other") return labelsOf([OTHER_LABEL], entry.otherText)[0];
+    return area + " - " + labelsOf([behaviorDetailLabel(entry.type, entry.detailId)], entry.otherText)[0];
   });
 }
 
@@ -94,10 +93,18 @@ function toRow(activity: Activity): DailyRecordRow {
   };
 }
 
-export function dailyRecordData(diary: Diary, client: ServiceUser): DailyRecordData {
+export function dailyRecordData(diary: Diary, client: ServiceUser, staff: readonly Staff[] = []): DailyRecordData {
+  if (diary.userId !== client.id || diary.status !== "completed") throw new Error("대상 이용자의 작성 완료 일지만 출력할 수 있어요.");
   const date = parseISODate(diary.date);
+  const activities = sortActivities(diary.activities).map(toRow);
   return {
     clientName: client.name,
+    authorName: staff.find((person) => person.id === diary.authorId)?.name ?? "",
+    behaviorCount: diary.activities.reduce((sum, activity) => sum + behaviorLines(activity).length, 0),
+    behaviorRecords: activities.filter((row) => row.behaviors).map((row) => ({
+      time: row.time, behaviors: row.behaviors,
+      support: [row.preSupport && "사전 지원: " + row.preSupport, row.positiveSupport && "긍정행동지원: " + row.positiveSupport].filter(Boolean).join("\n"),
+    })),
     birth6: toBirth6(client.birthDate),
     year: date.getFullYear(),
     month: date.getMonth() + 1,
@@ -106,7 +113,7 @@ export function dailyRecordData(diary: Diary, client: ServiceUser): DailyRecordD
     weather: diary.weather,
     condition: labelsOf([diary.condition], diary.conditionOther)[0],
     // 일지 상세 화면과 같은 순서(시작 시간순)로 적는다
-    activities: sortActivities(diary.activities).map(toRow),
+    activities,
     notes: diary.notes,
   };
 }

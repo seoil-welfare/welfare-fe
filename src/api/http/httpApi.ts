@@ -47,6 +47,8 @@ export const httpApi: Api = {
       request("/service-users/" + encodeURIComponent(userId), { method: "PUT", body: input }),
     close: (userId) =>
       request("/service-users/" + encodeURIComponent(userId) + "/close", { method: "POST" }),
+    reopen: (userId) =>
+      request("/service-users/" + encodeURIComponent(userId) + "/reopen", { method: "POST" }),
   },
   staff: {
     list: () => request("/staff"),

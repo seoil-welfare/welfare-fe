@@ -131,6 +131,31 @@ export function MultiChoiceGroup({
   );
 }
 
+/** 참여 정도 1개와 기타를 독립적으로 고른다. 과거 복수 값은 숨기지 않고 수정하도록 안내한다. */
+export function ReactionChoiceGroup({ label, options, values, onChange, otherValue, onOtherChange, hideLabel = false }: BaseProps & {
+  values: readonly string[]; onChange: (values: string[]) => void;
+}) {
+  const name = useId();
+  const levels = options.filter((option) => option !== OTHER_LABEL);
+  const hasOther = values.includes(OTHER_LABEL);
+  return (
+    <fieldset className="flex flex-col gap-2 border-0 p-0">
+      <legend className={hideLabel ? "sr-only" : "mb-2 type-body font-medium"}>{label}</legend>
+      <FieldDescription>참여 정도는 하나만, 기타는 함께 고를 수 있어요.</FieldDescription>
+      {values.filter((value) => value !== OTHER_LABEL).length > 1 ? (
+        <p className="type-caption text-destructive" role="alert">기존 참여 정도가 여러 개예요. 하나를 다시 골라 주세요.</p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {levels.map((option) => <Chip key={option} type="radio" name={name} label={option}
+          checked={values.includes(option)} onChange={() => onChange([option, ...(hasOther ? [OTHER_LABEL] : [])])} />)}
+        {options.includes(OTHER_LABEL) ? <Chip type="checkbox" name={name + "-other"} label={OTHER_LABEL}
+          checked={hasOther} onChange={() => onChange(hasOther ? values.filter((v) => v !== OTHER_LABEL) : [...values, OTHER_LABEL])} /> : null}
+      </div>
+      {onOtherChange ? <OtherInput id={name + "-text"} selected={hasOther} value={otherValue ?? ""} onChange={onOtherChange} /> : null}
+    </fieldset>
+  );
+}
+
 function Chip({
   type,
   name,

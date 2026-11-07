@@ -94,7 +94,7 @@ export function HomeShortcuts({ items }: { items: Shortcut[] }) {
               aria-label={item.title + ' 카드로 이동'}
               aria-current={index === active ? 'true' : undefined}
               onClick={() => scrollToCard(index)}
-              className="flex h-6 items-center"
+              className="flex size-11 items-center justify-center"
             >
               <span
                 className={cn(

@@ -8,6 +8,7 @@ import {
 import { api } from "@/api";
 import { isApiError } from "@/api/errors";
 import type {
+  Categories,
   CalendarQuery,
   DiaryQuery,
   LoginInput,
@@ -23,6 +24,7 @@ import type {
 import { addDays, dateOf } from "@/lib/utils";
 import { latestNewsDateBefore } from "@/services/diaryService";
 import type { Diary } from "@/types";
+import { publishParticipationRename } from "@/services/participationChanges";
 
 /**
  * 서버 상태 훅.
@@ -107,7 +109,11 @@ export function useLogout() {
 }
 
 export function useChangePassword() {
-  return useMutation({ mutationFn: api.auth.changePassword });
+  const client = useQueryClient();
+  return useMutation({ mutationFn: api.auth.changePassword, onSuccess: () => {
+    client.clear();
+    client.setQueryData(queryKeys.me, null);
+  } });
 }
 
 /* ---------- 조회 ---------- */
@@ -313,8 +319,18 @@ export function useCloseServiceUser() {
   });
 }
 
+export function useReopenServiceUser() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => api.serviceUsers.reopen(userId),
+    onSuccess: () => invalidateServiceUsers(client),
+    onError: () => refetchAfterFailure(client, [queryKeys.serviceUsers, queryKeys.calendar]),
+  });
+}
+
 /** 달력은 이용자 이름·대상 인원을 서버에서 받으므로 이용자가 바뀌면 같이 다시 불러온다 */
 function invalidateServiceUsers(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: queryKeys.stats });
   void client.invalidateQueries({ queryKey: queryKeys.calendar });
   return client.invalidateQueries({ queryKey: queryKeys.serviceUsers });
 }
@@ -330,6 +346,7 @@ export function useCreateStaff() {
 
 /** 참여 활동이 바뀌면 일지 선택지와 통계(활동 이름)를 다시 불러온다 */
 function invalidateCategories(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: queryKeys.diaries });
   void client.invalidateQueries({ queryKey: queryKeys.stats });
   return client.invalidateQueries({ queryKey: queryKeys.categories });
 }
@@ -348,7 +365,11 @@ export function useUpdateParticipation() {
   return useMutation({
     mutationFn: ({ code, input }: { code: string; input: ParticipationUpdate }) =>
       api.categories.updateParticipation(code, input),
-    onSuccess: () => invalidateCategories(client),
+    onSuccess: (updated) => {
+      const previous = client.getQueryData<Categories>(queryKeys.categories)?.participation.find((item) => item.code === updated.code);
+      if (previous) publishParticipationRename(previous.label, updated.label);
+      return invalidateCategories(client);
+    },
     onError: () => refetchAfterFailure(client, [queryKeys.categories]),
   });
 }

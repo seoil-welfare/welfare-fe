@@ -6,12 +6,11 @@ import { MetricCard } from "@/components/common/MetricCard";
 import { HorizontalBars } from "@/components/stats/charts";
 import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
 import { PillToggle } from "@/components/ui/toggle-group";
-import { PARTICIPATION_OPTIONS } from "@/data/catalog";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
 import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
-import { reactionItemsFor } from "@/services/statsService";
+import { reactionItemsFor, selectFocusActivity } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
 
 /**
@@ -25,7 +24,9 @@ export function StatsActivitiesPage() {
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
-  const [focusActivity, setFocusActivity] = useState<string>(PARTICIPATION_OPTIONS[0]);
+  const scope = JSON.stringify({ userId, period });
+  const [selection, setSelection] = useState<{ scope: string; label: string } | null>(null);
+  const focusActivity = selectFocusActivity(stats, selection?.scope === scope ? selection.label : undefined);
 
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
   const summary = stats.activities;
@@ -52,9 +53,9 @@ export function StatsActivitiesPage() {
       <div className="flex flex-col gap-3">
         <StatsScopeSection userName={serviceUser?.name} />
 
-        <div className="grid grid-cols-3 gap-3">
-          <MetricCard value={summary.totalCount} unit="건" description="전체 참여 활동 기록" />
-          <MetricCard value={summary.kindCount} unit="종" description="기록된 활동 종류" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
+          <MetricCard value={summary.totalCount} unit="건" description="참여 활동 기록" />
+          <MetricCard value={summary.kindCount} unit="종" description="활동 종류" />
           <MetricCard value={summary.otherCount} unit="건" description="‘기타’ 직접 입력" />
         </div>
 
@@ -74,7 +75,7 @@ export function StatsActivitiesPage() {
           <PillToggle
             label="기준 참여 활동"
             value={focusActivity}
-            onValueChange={setFocusActivity}
+            onValueChange={(label) => setSelection({ scope, label })}
             options={activityOptions}
           />
           <HorizontalBars items={reactionItemsFor(stats, focusActivity)} />

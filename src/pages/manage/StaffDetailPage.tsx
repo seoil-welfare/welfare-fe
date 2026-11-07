@@ -111,7 +111,7 @@ function StaffDetail({ member }: { member: Staff }) {
         <Badge variant="soft" tone={active ? "primary" : "neutral"}>
           {active ? "사용 중" : "사용 중지"}
         </Badge>
-        <p className="type-caption text-muted-foreground">
+        <p className="type-caption text-muted-foreground break-all">
           {member.department} · {member.loginId}
         </p>
       </Card>

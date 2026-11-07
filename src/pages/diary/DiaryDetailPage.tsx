@@ -102,7 +102,7 @@ function DiaryDetail({
   const headerAction =
     canPrint || canShare ? (
       <>
-        {canPrint ? <PrintButton diary={diary} serviceUser={serviceUser} /> : null}
+        {canPrint ? <PrintButton diary={diary} serviceUser={serviceUser} staff={staff} /> : null}
         {canShare ? (
           <Button
             variant="ghost"
@@ -238,7 +238,7 @@ function DiaryDetail({
 
         <FormSection title="특이사항">
           {diary.notes.trim() ? (
-            <p className="type-body-long whitespace-pre-wrap">{diary.notes}</p>
+            <p className="type-body-long whitespace-pre-wrap break-keep wrap-anywhere">{diary.notes}</p>
           ) : (
             <p className="type-body text-muted-foreground">
               {isDraft ? "아직 작성 전이에요." : "기록된 특이사항이 없어요."}
@@ -250,17 +250,17 @@ function DiaryDetail({
   );
 }
 
-function PrintButton({ diary, serviceUser }: { diary: Diary; serviceUser: ServiceUser }) {
+function PrintButton({ diary, serviceUser, staff }: { diary: Diary; serviceUser: ServiceUser; staff: Staff[] }) {
   const [running, setRunning] = useState(false);
 
   async function handlePrint() {
     if (running) return; // 중복 클릭 방지 (가이드 7장 파일 출력 피드백)
     setRunning(true);
     try {
-      await downloadDailyRecord(diary, serviceUser);
-      toast.success("일일 기록지를 내려받았어요.");
+      await downloadDailyRecord(diary, serviceUser, staff);
+      toast.success("일별활동일지를 내려받았어요.");
     } catch {
-      toast.error("일일 기록지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+      toast.error("일별활동일지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setRunning(false);
     }
@@ -270,7 +270,7 @@ function PrintButton({ diary, serviceUser }: { diary: Diary; serviceUser: Servic
     <Button
       variant="ghost"
       size="icon"
-      aria-label={running ? "일일 기록지 만드는 중" : "일일 기록지 출력하기"}
+      aria-label={running ? "일별활동일지 만드는 중" : "일별활동일지 출력하기"}
       aria-busy={running}
       onClick={handlePrint}
       disabled={running}

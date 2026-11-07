@@ -11,6 +11,7 @@ import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
 import type { ActivityField } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 
 /**
  * 기타 카테고리 상세 통계 (/stats/:category).
@@ -33,16 +34,15 @@ const CATEGORY_META: Record<
 };
 
 export function StatsCategoryPage() {
-  const usersQuery = useServiceUsers();
   const { category } = useParams();
+  if (!category || !Object.hasOwn(CATEGORY_META, category)) return <NotFoundPage />;
+  return <StatsCategoryContent meta={CATEGORY_META[category]} />;
+}
+
+function StatsCategoryContent({ meta }: { meta: (typeof CATEGORY_META)[string] }) {
+  const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
-
-  const meta = CATEGORY_META[category ?? ""] ?? {
-    title: "통계 상세",
-    field: "reaction" as ActivityField,
-    unitLabel: "활동별 선택 건수",
-  };
 
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
 
@@ -71,10 +71,10 @@ export function StatsCategoryPage() {
       <div className="flex flex-col gap-3">
         <StatsScopeSection userName={serviceUser?.name} />
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
           <MetricCard value={total} unit="건" description={"전체 " + meta.unitLabel} />
-          <MetricCard value={recorded} unit="종" description="기록된 항목 수" />
-          <MetricCard value={stats.completedDiaries} unit="건" description="작성 완료 일지" />
+          <MetricCard value={recorded} unit="종" description="항목 종류" />
+          <MetricCard value={stats.completedDiaries} unit="건" description="완료 일지" />
         </div>
 
         <FormSection title="항목별 기록 건수" description={meta.unitLabel + " 기준"}>

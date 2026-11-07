@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { LOGIN_ID_HINT, loginIdError, normalizeLoginId } from "@/services/accountValidation";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/toggle-group";
 import { AppShell } from "@/components/layout/AppShell";
@@ -137,7 +138,8 @@ function StaffRow({ member }: { member: Staff }) {
           ) : null}
         </span>
       }
-      subtitle={ROLE_POSITION[member.role] + " · " + member.loginId}
+      subtitle={<>{ROLE_POSITION[member.role]}<br />{member.loginId}</>}
+      subtitleClassName="whitespace-normal break-all"
     />
   );
 }
@@ -180,14 +182,17 @@ export function StaffNewPage() {
     if (createStaff.isPending) return;
     const next: typeof errors = {};
     if (!name.trim()) next.name = "이름을 입력해 주세요.";
-    if (!loginId.trim()) next.loginId = "아이디를 입력해 주세요.";
+    const normalized = normalizeLoginId(loginId);
+    const idProblem = loginIdError(normalized);
+    if (idProblem) next.loginId = idProblem;
+    setLoginId(normalized);
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     createStaff.mutate(
       {
         name: name.trim(),
-        loginId: loginId.trim(),
+        loginId: normalized,
         department,
         position: ROLE_POSITION.staff,
         role: "staff", // 계정 추가는 담당자로만. 팀장은 상세 화면의 역할 변경으로
@@ -246,7 +251,10 @@ export function StaffNewPage() {
                 placeholder="예: hong.gildong"
                 aria-invalid={errors.loginId ? true : undefined}
                 onChange={(event) => setLoginId(event.target.value)}
+                onBlur={() => setLoginId(normalizeLoginId(loginId))}
+                aria-describedby="staff-login-hint"
               />
+              <FieldDescription id="staff-login-hint">{LOGIN_ID_HINT}</FieldDescription>
               <FieldError>{errors.loginId}</FieldError>
             </Field>
             <Field>

@@ -16,7 +16,7 @@ const FORM_COLORS = {
   bar: "#1F77B4",
   axis: "#111111",
 };
-const EMPTY_TEXT = "이번 달 발생한 도전적 행동 없음";
+const EMPTY_TEXT = "이번 달 도전적 행동 선택 기록 없음";
 
 function createCanvas(width: number, height: number) {
   const canvas = document.createElement("canvas");
@@ -68,7 +68,7 @@ export async function drawBehaviorTotals(totals: readonly BehaviorTotal[]): Prom
   ctx.textAlign = "left";
   ctx.fillStyle = FORM_COLORS.text;
   ctx.font = "bold 28px " + FONT;
-  ctx.fillText("월간 발생 행동 및 총횟수", 30, header / 2 + 2);
+  ctx.fillText("월간 도전적 행동 선택 건수", 30, header / 2 + 2);
 
   const items = totals.slice(0, MAX_CHART_BEHAVIORS);
   ctx.textAlign = "center";
@@ -89,7 +89,7 @@ export async function drawBehaviorTotals(totals: readonly BehaviorTotal[]): Prom
     ctx.fillRect(x - 100, 141, 200, 3);
     ctx.fillStyle = FORM_COLORS.text;
     ctx.font = "bold 30px " + FONT;
-    ctx.fillText(item.count + "회", x, 182);
+    ctx.fillText(item.count + "건", x, 182);
   });
   return toPng(canvas);
 }
@@ -106,7 +106,7 @@ export async function drawBehaviorChart(totals: readonly BehaviorTotal[]): Promi
 
   ctx.fillStyle = FORM_COLORS.axis;
   ctx.font = "46px " + FONT;
-  ctx.fillText("행동 항목별 월간 누적 횟수", width / 2, 45);
+  ctx.fillText("행동 항목별 월간 선택 건수", width / 2, 45);
 
   ctx.fillRect(left, baseline, right - left, 2);
 
@@ -128,7 +128,7 @@ export async function drawBehaviorChart(totals: readonly BehaviorTotal[]): Promi
     ctx.fillRect(x - barWidth / 2, baseline - barHeight, barWidth, barHeight);
     ctx.fillStyle = FORM_COLORS.axis;
     ctx.font = "36px " + FONT;
-    ctx.fillText(item.count + "회", x, baseline - barHeight - 30);
+    ctx.fillText(item.count + "건", x, baseline - barHeight - 30);
     ctx.fillRect(x - 1, baseline, 2, 12); // 눈금
     ctx.fillText(fitText(ctx, item.label, slot - 30), x, baseline + 42);
   });

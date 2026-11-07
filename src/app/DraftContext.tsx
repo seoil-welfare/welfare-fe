@@ -23,6 +23,7 @@ import {
 } from "@/services/diaryService";
 import type { SaveDiaryInput } from "@/api/types";
 import type { Activity, Diary, DiaryDraft } from "@/types";
+import { renameActivityParticipation, subscribeParticipationRename } from "@/services/participationChanges";
 
 /** 입력이 멈추고 이만큼 지나면 자동으로 임시저장한다 */
 const AUTOSAVE_DELAY_MS = 2000;
@@ -121,6 +122,17 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   const savedVersion = useRef<SavedVersion>({});
   // 완료 일지를 불러온 그대로의 내용. 자동 저장이 없는 완료 일지 수정 중 '바뀐 게 있는지'를 여기에 비교한다 (QA 04-01)
   const originalContentKey = useRef<string | null>(null);
+
+  useEffect(() => subscribeParticipationRename(({ previous, next }) => {
+    const rename = <T extends { activities: Activity[] }>(value: T): T => ({
+      ...value, activities: value.activities.map((activity) => renameActivityParticipation(activity, previous, next)),
+    });
+    setDraft((current) => current ? rename(current) : null);
+    setPendingActivity((current) => current ? renameActivityParticipation(current, previous, next) : null);
+    // 이름 표시만 바뀐 것을 미저장 내용으로 오해하지 않도록 비교 기준도 함께 갱신한다.
+    if (lastSavedKey.current) lastSavedKey.current = JSON.stringify(rename(JSON.parse(lastSavedKey.current) as SaveDiaryInput));
+    if (originalContentKey.current) originalContentKey.current = JSON.stringify(rename(JSON.parse(originalContentKey.current) as SaveDiaryInput));
+  }), []);
 
   const startDraft = useCallback((userId: string, date: string) => {
     savedVersion.current = {};
@@ -278,7 +290,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     if (!current || paused.current) return false;
     if (current.editingCompleted) {
       // 완료 일지 수정 중은 자동 저장이 없다. 불러온 내용과 달라졌는지로 판단한다
-      return contentKey(toSaveInput(current, "draft")) !== (originalContentKey.current ?? "");
+      return contentKey(toSaveInput(withPendingActivity(current, pendingRef.current), "draft")) !== (originalContentKey.current ?? "");
     }
     if (inFlight.current) return true; // 저장이 끝나기 전이다
     const built = autosavePayload(current, pendingRef.current);
@@ -473,7 +485,13 @@ export function forgetRememberedDraftId(): void {
  */
 function autosavePayload(draft: DiaryDraft | null, pending: Activity | null): SaveDiaryInput | null {
   if (!draft || draft.editingCompleted) return null;
-  const withPending =
+  const withPending = withPendingActivity(draft, pending);
+  if (isUntouchedDraft(withPending)) return null;
+  return toSaveInput(withPending, "draft");
+}
+
+function withPendingActivity(draft: DiaryDraft, pending: Activity | null): DiaryDraft {
+  return (
     pending && hasActivityInput(pending)
       ? {
           ...draft,
@@ -481,7 +499,6 @@ function autosavePayload(draft: DiaryDraft | null, pending: Activity | null): Sa
             ? draft.activities.map((a) => (a.id === pending.id ? pending : a))
             : [...draft.activities, pending],
         }
-      : draft;
-  if (isUntouchedDraft(withPending)) return null;
-  return toSaveInput(withPending, "draft");
+      : draft
+  );
 }

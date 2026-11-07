@@ -13,11 +13,14 @@ import { FormSection } from "@/components/common/FormSection";
 import { errorMessage } from "@/api/errors";
 import { useChangePassword } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
+import { PASSWORD_HINT, passwordError } from "@/services/accountValidation";
+import { useDraft } from "@/app/DraftContext";
 
 /** 비밀번호 변경 (FR-83) */
 export function PasswordPage() {
   const navigate = useNavigate();
   const changePassword = useChangePassword();
+  const { discardDraft } = useDraft();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -33,13 +36,19 @@ export function PasswordPage() {
       setError("새 비밀번호가 서로 달라요. 다시 입력해 주세요.");
       return;
     }
+    const problem = passwordError(next);
+    if (problem || next === current) {
+      setError(problem ?? "지금 쓰는 비밀번호와 다르게 정해 주세요.");
+      return;
+    }
     setError(null);
     changePassword.mutate(
       { currentPassword: current, newPassword: next },
       {
         onSuccess: () => {
-          toast.success("비밀번호를 변경했어요.");
-          navigate("/mypage");
+          discardDraft();
+          toast.success("비밀번호를 변경했어요. 새 비밀번호로 다시 로그인해 주세요.");
+          navigate("/login", { replace: true });
         },
         // 현재 비밀번호 불일치·규칙 위반 등 서버 안내를 그대로 보여 준다
         onError: (err) => setError(errorMessage(err, "비밀번호를 변경하지 못했어요.")),
@@ -86,7 +95,7 @@ export function PasswordPage() {
                 onChange={(event) => setNext(event.target.value)}
               />
               <FieldDescription>
-                비밀번호 규칙은 아직 정하지 않았어요. 운영 환경에서 서버 정책을 따릅니다.
+                {PASSWORD_HINT}
               </FieldDescription>
             </Field>
             <Field>

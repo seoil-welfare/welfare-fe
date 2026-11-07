@@ -64,7 +64,7 @@ export interface Activity {
   /** 사전 지원 (복수 선택, '없음' 배타 — U2_REVIEW) */
   preSupport: string[];
   preSupportOther?: string;
-  /** 이용자 반응 — 단일/복수 미확정(FR-22). 시연은 복수 칩 */
+  /** 이용자 반응 — 참여 정도 1개, 기타 별도 허용 */
   reaction: string[];
   reactionOther?: string;
   /** 긍정행동지원 — 단일/복수 미확정(FR-23). 시연은 복수 칩 */

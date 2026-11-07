@@ -14,14 +14,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
-import { MultiChoiceGroup } from "@/components/common/ChoiceGroup";
+import { MultiChoiceGroup, ReactionChoiceGroup } from "@/components/common/ChoiceGroup";
 import { OtherInput } from "@/components/common/OtherInput";
-import { ExpandSelect } from "@/components/common/ExpandSelect";
+import { ActivityTimeSelect } from "@/components/diary/ActivityTimeSelect";
+import { activityTimeError } from "@/services/activityTime";
 import {
-  ACTIVITY_SLOTS,
-  ACTIVITY_SLOT_MINUTES,
   BEHAVIOR_TYPES,
-  addActivityMinutes,
   behaviorDetailLabel,
 } from "@/data/catalog";
 import { useDraft } from "@/app/DraftContext";
@@ -35,14 +33,13 @@ import {
   sortActivities,
 } from "@/services/diaryService";
 import { uid } from "@/lib/utils";
-import type { ActivitySlot } from "@/data/catalog";
 import type { Activity, BehaviorType } from "@/types";
 
 /**
  * 활동 내용 입력/수정 (2.1.5/FR-17 ~ FR-25).
  * - 제목은 신규 '활동 입력', 수정 '활동 수정' (FR-17)
- * - 활동 시간은 30분 칸 하나를 고른다. 같은 일지의 다른 활동이 쓴 칸은 목록에서 뺀다 (FR-18)
- * - 참여활동·사전지원·반응·긍정행동지원은 복수 선택 칩, '기타'는 직접 입력 (FR-19~FR-23).
+ * - 활동 시작·종료를 00:00~24:00 안에서 분 단위로 고르고 겹침을 검사한다. 24:00은 종료만 허용 (FR-18)
+ * - 참여활동·사전지원·긍정행동지원은 복수 선택. 반응의 참여 정도는 1개, 기타는 별도 허용 (FR-19~FR-23).
  *   선택지는 서버 목록(GET /categories)을 쓴다
  * - 도전적 행동은 '있음'을 켜면 타해/자해/파괴행동/기타가 나타나고, 앞 3종은 상세 화면으로 이동 (FR-24)
  * - '저장하고 다음 활동'은 임시 활동 목록만 갱신하고 서버에 저장하지 않는다 (FR-25)
@@ -53,7 +50,7 @@ export function ActivityEditPage() {
   const choices = useCategoryChoices();
   const { draft, pendingActivity, setPendingActivity, upsertActivity } = useDraft();
   // 활동 시간은 필수다. '저장'을 눌렀는데 비어 있으면 표시한다
-  const [timeMissing, setTimeMissing] = useState(false);
+  const [timeError, setTimeError] = useState<string>();
   const timeSectionRef = useRef<HTMLDivElement>(null);
   const behaviorSectionRef = useRef<HTMLDivElement>(null);
   // 입력한 내용을 버릴지 묻는 팝업 (← 와 '취소' 공통)
@@ -104,22 +101,6 @@ export function ActivityEditPage() {
     setPendingActivity({ ...activity!, ...partial });
   }
 
-  // 같은 일지의 다른 활동이 이미 쓴 시간과 겹치는 칸은 고를 수 없다
-  const otherActivities = draft.activities.filter((a) => a.id !== activity.id);
-  const freeSlots = ACTIVITY_SLOTS.filter(
-    (slot) =>
-      !otherActivities.some(
-        (other) => other.startTime && other.endTime && slot.start < other.endTime && slot.end > other.startTime,
-      ),
-  );
-
-  function setSlot(start: string) {
-    // 지금 값을 다시 고르면 그대로 둔다 (예전에 30분이 아닌 길이로 저장된 활동)
-    if (start === activity!.startTime) return;
-    patch({ startTime: start, endTime: addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) });
-    setTimeMissing(false);
-  }
-
   function toggleHasBehavior(value: boolean) {
     // '있음'을 끄면 선택한 상세 내용도 비운다. 0개 허용 여부는 U3 미확정이다.
     patch({ hasBehavior: value, behaviors: value ? activity!.behaviors : [] });
@@ -161,10 +142,15 @@ export function ActivityEditPage() {
   }
 
   function save() {
-    if (!activity!.startTime) {
-      setTimeMissing(true);
+    if (activity!.reaction.filter((value) => value !== "기타").length > 1) {
+      toast.error("이용자 반응의 참여 정도는 하나만 골라 주세요.");
+      return;
+    }
+    const timeProblem = activityTimeError(activity!, draft!.activities);
+    if (timeProblem) {
+      setTimeError(timeProblem);
       timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      toast.error("활동 시간을 골라 주세요.");
+      toast.error(timeProblem);
       return;
     }
     // 체크한 도전적 행동 유형마다 세부 행동을 1개 이상 골라야 한다 (QA 03-06)
@@ -245,18 +231,17 @@ export function ActivityEditPage() {
 
         <div ref={timeSectionRef}>
           <FormSection title="활동 시간">
-            <Field>
-              <ActivitySlotSelect
-                slots={freeSlots}
-                start={activity.startTime}
-                end={activity.endTime}
-                onChange={setSlot}
-                invalid={timeMissing}
-              />
+            <div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <ActivityTimeSelect label="시작 시각" id="activity-start" value={activity.startTime}
+                  invalid={Boolean(timeError)} onChange={(value) => { patch({ startTime: value }); setTimeError(undefined); }} />
+                <ActivityTimeSelect label="종료 시각" id="activity-end" value={activity.endTime} end
+                  invalid={Boolean(timeError)} onChange={(value) => { patch({ endTime: value }); setTimeError(undefined); }} />
+              </div>
               <FieldError id="activity-time-error">
-                {timeMissing ? "활동 시간을 골라 주세요." : null}
+                {timeError}
               </FieldError>
-            </Field>
+            </div>
           </FormSection>
         </div>
 
@@ -299,7 +284,7 @@ export function ActivityEditPage() {
         </FormSection>
 
         <FormSection title="이용자 반응">
-          <MultiChoiceGroup
+          <ReactionChoiceGroup
             label="이용자 반응"
             hideLabel
             options={choiceLabels(choices.reaction, activity.reaction)}
@@ -441,48 +426,4 @@ export function ActivityEditPage() {
 /** 입력 비교용. 빈 문자열은 값이 없는 것과 같게 본다 (입력했다 지운 경우를 '바뀜'으로 보지 않게) */
 function ignoreEmpty(_key: string, value: unknown): unknown {
   return value === "" ? undefined : value;
-}
-
-/**
- * 활동 시간 선택. "10:00 ~ 10:30"처럼 시작과 종료를 함께 보여 주고, 한 번에 약 4칸이 보인다.
- * 지금 값이 목록에 없으면(다른 길이로 저장된 예전 활동) 맨 위에 그대로 보여 준다.
- */
-function ActivitySlotSelect({
-  slots,
-  start,
-  end,
-  onChange,
-  invalid,
-}: {
-  slots: readonly ActivitySlot[];
-  start?: string;
-  end?: string;
-  onChange: (start: string) => void;
-  invalid?: boolean;
-}) {
-  const current = start ? { start, end: end ?? addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) } : null;
-  const shown =
-    current && !slots.some((slot) => slot.start === current.start && slot.end === current.end)
-      ? [current, ...slots.filter((slot) => slot.start !== current.start)]
-      : slots;
-  const label = (slot: ActivitySlot) => timeLabel(slot.start) + " ~ " + timeLabel(slot.end);
-
-  return (
-    <ExpandSelect
-      label="활동 시간"
-      options={shown.map((slot) => ({ value: slot.start, label: label(slot) }))}
-      value={start}
-      onChange={onChange}
-      placeholder={shown.length === 0 ? "고를 수 있는 시간이 없어요" : "시간을 골라 주세요"}
-      disabled={shown.length === 0}
-      invalid={invalid}
-      describedBy={invalid ? "activity-time-error" : undefined}
-    />
-  );
-}
-
-/** 10:30 → 10시 30분 */
-function timeLabel(time: string): string {
-  const [hour, minute] = time.split(":");
-  return hour + "시 " + minute + "분";
 }

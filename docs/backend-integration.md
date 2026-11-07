@@ -13,6 +13,8 @@
 
 ---
 
+> **2026-11-07 변경:** 현재 동작은 [current-contract.md](current-contract.md)를 기준으로 합니다. 아래 가정·협의 표는 이전 설계 이력이며, 회원가입·임시저장·권한·활동 시간·반응·주차·종결 재개의 현재 계약으로 사용하지 마세요.
+
 ## 1. 프론트 구조
 
 ```
@@ -293,11 +295,11 @@ GET /stats/summary?userId&unit=week|month|quarter|year&year&month&quarter&week
 ## 9. 파일 출력 현황
 
 - 구현된 것
-  - 출력 설정 화면 3종(대상 이용자·기간 선택, 진행 표시)
-  - 일지 모아 출력: 출력 API 없이 `GET /diaries?userId&from&to&status=completed`로 받아 일일 기록지 docx 한 파일을 브라우저에서 만듭니다. 이용자 한 명, 날짜순 하루 한 페이지, 일지 없는 날은 건너뜁니다. 양식은 단건 출력과 같은 파일을 반복형으로 바꿔 씁니다.
-  - 한 번에 92일까지: 하루를 꽉 채운 일지(활동 10개) 31건이 PC에서 약 0.6초 걸립니다. 휴대폰은 3~4배 느려서 3개월이면 몇 초 안에 끝나는 범위로 정했습니다.
-  - 월간 기록: 출력 API 없이 이용자마다 `GET /diaries?userId&from&to&status=completed`(그 달 1일~말일)로 받아 월별활동일지 docx를 브라우저에서 만들고, 이용자마다 파일 하나씩 연달아 내려받습니다. 값 규칙은 [`monthlyRecordService.ts`](../src/services/monthlyRecordService.ts) 맨 위 주석에 있습니다. 양식 안 그림 2개(월간 발생 행동, 막대그래프)는 캔버스로 그려 바꿔 끼웁니다.
-  - 템플릿은 원본 양식(`src/assets/forms/monthly-record.docx`)에서 `scripts/build-monthly-template.cjs`로 만듭니다. 양식이 바뀌면 다시 돌립니다.
+  - 출력 설정 화면 2종(대상 이용자·기간 선택, 진행 표시)
+  - 일별활동일지 출력: 출력 API 없이 `GET /diaries?userId&from&to&status=completed`로 받아 한 파일을 브라우저에서 만듭니다. 이용자 한 명, 최대 92일, 날짜순으로 활동 기록과 행동·특이사항 양식을 반복하며 일지 없는 날은 건너뜁니다. 긴 기록은 다음 페이지로 이어집니다.
+  - 월별활동일지 출력: 이용자마다 같은 조회 API로 그 달 작성 완료 일지를 받아 파일 하나씩 만듭니다. 값 규칙은 [`monthlyRecordService.ts`](../src/services/monthlyRecordService.ts)에 있습니다. 그림 2개는 실제 행동 선택 건수를 캔버스로 그려 바꿔 끼웁니다.
+  - 제공된 예시 DOCX의 표·색·페이지 설정을 재사용합니다. 앱에 저장되지 않는 목표·지원 결과·선행사건·인수인계·월간 평가/다음 달 목표는 출력 양식에서 제거했습니다. 특이사항 원문과 실제 작성자 이름을 사용하며, 효과·발생 횟수를 추정하지 않습니다.
+  - 두 템플릿은 `node scripts/build-report-templates.cjs`로 다시 만듭니다. 이전 `build-monthly-template.cjs` 명령도 새 월별 생성기를 호출합니다.
 - 구현되지 않은 것: 엑셀의 파일 생성. 버튼을 누르면 "출력 기능은 준비 중이에요"라고 안내하고, 파일이 만들어진 것처럼 표시하지 않습니다.
 - 형식에 따라 달라지는 설계:
   - 엑셀: 서버가 바로 파일을 만들 수 있음

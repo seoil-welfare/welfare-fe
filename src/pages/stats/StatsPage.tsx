@@ -18,6 +18,7 @@ import { currentPeriod, isPeriodInProgress, nonZero, periodRange, summaryFor } f
 import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
 import { useStatsContext } from "@/app/StatsContext";
 import type { CountItem } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * 통계 메인 (2.1.8/FR-29 ~ FR-43).
@@ -29,9 +30,10 @@ import type { CountItem } from "@/types";
 export function StatsPage() {
   const today = useToday();
   const usersQuery = useServiceUsers();
-  const { userId, setUserId, period, setPeriod, unit, setUnit } = useStatsContext();
+  const { userId, setUserId, period, setPeriod, unit, setUnit, includeClosed, setIncludeClosed } = useStatsContext();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
-  const users = activeServiceUsers(usersQuery.data ?? []);
+  const users = includeClosed ? usersQuery.data ?? [] : activeServiceUsers(usersQuery.data ?? []);
+  const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [statsQuery]);
 
   const range = periodRange(period);
   const summary = summaryFor(stats, "all");
@@ -42,6 +44,9 @@ export function StatsPage() {
     return (
       <AppShell header={<MainHeader />}>
         <EmptyState message="통계를 볼 이용자가 없어요. 먼저 이용자를 등록해 주세요." />
+        {(usersQuery.data ?? []).some((u) => u.status === "closed") ? (
+          <Button variant="outline" onClick={() => setIncludeClosed(true)}>종결 이용자 포함</Button>
+        ) : null}
       </AppShell>
     );
   }
@@ -61,7 +66,7 @@ export function StatsPage() {
                 <SelectContent>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.name} 님
+                      {user.name} 님{user.status === "closed" ? " · 이용 종결" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -69,6 +74,10 @@ export function StatsPage() {
             </div>
             <PeriodPicker period={period} onChange={setPeriod} today={today} />
           </div>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 type-body">
+            <Checkbox checked={includeClosed} onCheckedChange={(value) => setIncludeClosed(value === true)} />
+            종결 이용자 포함
+          </label>
           <UnitToggle
             unit={unit}
             onUnitChange={(next) => {
@@ -76,16 +85,14 @@ export function StatsPage() {
               setPeriod(currentPeriod(next, today));
             }}
           />
-          <p className="tnum type-caption text-muted-foreground">
+          {!loadState.isPending && !loadState.isError ? <p className="tnum type-caption text-muted-foreground">
             {range.label} · 작성 완료 일지 {stats.completedDiaries}건 기준 (임시 저장 제외)
-          </p>
+          </p> : null}
         </div>
 
         {/* 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다 */}
         <QueryGate
-          state={treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
-            statsQuery,
-          ])}
+          state={loadState}
           skeleton={
             <div className="flex flex-col gap-3">
               <ChartSkeleton />

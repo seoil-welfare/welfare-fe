@@ -278,6 +278,10 @@ export function DiaryEditPage() {
       return;
     }
     if (status === "completed") {
+      if (draft.activities.some((a) => a.reaction.filter((v) => v !== "기타").length > 1)) {
+        toast.error("이용자 반응의 참여 정도는 활동마다 하나만 골라 주세요.");
+        return;
+      }
       // 체크한 도전적 행동 유형에 세부 행동이 없는 활동이 있으면 완료하지 않는다 (QA 03-06).
       // 작성 중 저장은 막지 않는다. 이전에 저장된 잘못된 활동도 여기서 걸린다
       const problem = findActivityMissingBehaviorDetail(draft.activities);

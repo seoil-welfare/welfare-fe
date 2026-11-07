@@ -13,27 +13,17 @@ import { FormSection } from "@/components/common/FormSection";
 import { api } from "@/api";
 import { downloadDiaryBundle } from "@/lib/export/downloadDailyRecord";
 import { useToday } from "@/lib/today";
-import { addDays, daysBetween } from "@/lib/utils";
+import { addDays } from "@/lib/utils";
+import { bundleRangeError, reportDiaries } from "@/services/exportService";
 import { SOFT_BORDER, type ExportMeta } from "@/pages/export/shared";
-import type { ServiceUser } from "@/types";
-
-/** 한 번에 출력할 수 있는 최대 기간(일). 하루를 꽉 채운 일지 기준 휴대폰에서 몇 초 안에 끝나는 범위 */
-const MAX_BUNDLE_DAYS = 92;
-
-/** 기간이 잘못됐으면 안내 문구, 괜찮으면 undefined */
-function bundleRangeError(from: string, to: string): string | undefined {
-  if (!from || !to) return "시작일과 종료일을 모두 골라 주세요.";
-  if (from > to) return "시작일이 종료일보다 늦어요.";
-  if (daysBetween(from, to) + 1 > MAX_BUNDLE_DAYS) return "한 번에 3개월(92일)까지 출력할 수 있어요.";
-  return undefined;
-}
+import type { ServiceUser, Staff } from "@/types";
 
 /**
  * 일지 모아 출력. 이용자 한 명의 작성 완료 일지를 기간으로 받아 일일 기록지 docx 한 파일로 내려받는다.
  * 백엔드 출력 API 없이 GET /diaries?userId&from&to&status=completed 로 받아 브라우저에서 만든다.
  * 일지가 있는 날만 담는다 (없는 날은 건너뜀).
  */
-export function DiaryBundleForm({ meta, users }: { meta: ExportMeta; users: ServiceUser[] }) {
+export function DiaryBundleForm({ meta, users, staff }: { meta: ExportMeta; users: ServiceUser[]; staff: Staff[] }) {
   const navigate = useNavigate();
   const today = useToday();
 
@@ -43,7 +33,7 @@ export function DiaryBundleForm({ meta, users }: { meta: ExportMeta; users: Serv
   const [running, setRunning] = useState(false);
   const [emptyRange, setEmptyRange] = useState<string>(); // 일지가 없었던 기간 안내
 
-  const rangeError = bundleRangeError(from, to);
+  const rangeError = bundleRangeError(from, to, today);
   const user = users.find((u) => u.id === userId);
 
   async function run() {
@@ -51,12 +41,12 @@ export function DiaryBundleForm({ meta, users }: { meta: ExportMeta; users: Serv
     setRunning(true);
     setEmptyRange(undefined);
     try {
-      const diaries = await api.diaries.list({ userId: user.id, from, to, status: "completed" });
+      const diaries = reportDiaries(await api.diaries.list({ userId: user.id, from, to, status: "completed" }), user.id, from, to);
       if (diaries.length === 0) {
         setEmptyRange(user.name + " · " + from + " ~ " + to);
         return;
       }
-      await downloadDiaryBundle(diaries, user, { from, to });
+      await downloadDiaryBundle(diaries, user, { from, to }, staff);
       toast.success("일지 " + diaries.length + "건을 한 파일로 내려받았어요.");
     } catch {
       toast.error("일지 모음 파일을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -84,8 +74,8 @@ export function DiaryBundleForm({ meta, users }: { meta: ExportMeta; users: Serv
       <div className="flex flex-col gap-3">
         <FormSection title="출력 안내">
           <p className="type-body-long text-muted-foreground break-keep">
-            고른 기간의 작성 완료된 일지를 일일 기록지 양식으로 모아 한 파일(docx)로 내려받아요. 하루가 한
-            페이지씩 들어가고, 일지가 없는 날은 건너뛰어요.
+            고른 기간에 저장한 작성 완료 일지를 일별활동일지 양식으로 모아 한 파일(docx)로 내려받아요.
+            날짜마다 활동 기록과 행동·특이사항을 담고, 일지가 없는 날은 건너뛰어요.
           </p>
         </FormSection>
 
@@ -119,7 +109,7 @@ export function DiaryBundleForm({ meta, users }: { meta: ExportMeta; users: Serv
                 type="date"
                 className={SOFT_BORDER}
                 value={from}
-                max={to}
+                max={to < today ? to : today}
                 aria-invalid={rangeError ? true : undefined}
                 onChange={(event) => setFrom(event.target.value)}
               />
@@ -132,6 +122,7 @@ export function DiaryBundleForm({ meta, users }: { meta: ExportMeta; users: Serv
                 className={SOFT_BORDER}
                 value={to}
                 min={from}
+                max={today}
                 aria-invalid={rangeError ? true : undefined}
                 onChange={(event) => setTo(event.target.value)}
               />

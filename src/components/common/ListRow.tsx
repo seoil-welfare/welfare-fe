@@ -14,6 +14,7 @@ interface ListRowContentProps {
   leading?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
+  subtitleClassName?: string;
   trailing?: ReactNode;
   showChevron?: boolean;
   tall?: boolean;
@@ -23,6 +24,7 @@ function RowInner({
   leading,
   title,
   subtitle,
+  subtitleClassName,
   trailing,
   showChevron,
   tall,
@@ -33,7 +35,7 @@ function RowInner({
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
         <span className="truncate type-body font-medium text-foreground">{title}</span>
         {subtitle ? (
-          <span className="truncate type-caption text-muted-foreground">{subtitle}</span>
+          <span className={cn("type-caption text-muted-foreground", subtitleClassName ?? "truncate")}>{subtitle}</span>
         ) : null}
       </span>
       {trailing ? <span className="shrink-0">{trailing}</span> : null}

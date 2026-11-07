@@ -8,7 +8,8 @@ import { addDays } from "@/lib/utils";
 import {
   activityFieldCounts,
   behaviorCountsByType,
-  behaviorRecords,
+  recordsFor,
+  statsSummary,
   behaviorSummary,
   behaviorTrend,
   completedDiaries,
@@ -77,7 +78,8 @@ for (const user of SERVICE_USERS.filter((u) => u.status === "active")) {
   const summary = behaviorSummary(diaries, user.id, period);
   const byType = behaviorCountsByType(completed);
   const typeSum = byType.selfHarm + byType.otherHarm + byType.destruction + byType.other;
-  const records = behaviorRecords(completed, "all");
+  const response = statsSummary(diaries, user.id, period);
+  const records = recordsFor(response, "all");
 
   console.log(
     "  " +

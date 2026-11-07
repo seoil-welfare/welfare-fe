@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { useServiceUsers } from "@/api/queries";
-import { activeServiceUsers } from "@/services/diaryService";
+import { useSearchParams } from "react-router-dom";
 import { currentPeriod } from "@/services/statsService";
 import { useToday } from "@/lib/today";
 import type { StatPeriodUnit, StatisticPeriod } from "@/types";
@@ -17,6 +17,8 @@ interface StatsContextValue {
   setPeriod: (period: StatisticPeriod) => void;
   unit: StatPeriodUnit;
   setUnit: (unit: StatPeriodUnit) => void;
+  includeClosed: boolean;
+  setIncludeClosed: (value: boolean) => void;
 }
 
 const StatsContext = createContext<StatsContextValue | null>(null);
@@ -24,23 +26,29 @@ const StatsContext = createContext<StatsContextValue | null>(null);
 export function StatsProvider({ children }: { children: ReactNode }) {
   const today = useToday();
   const usersQuery = useServiceUsers();
-  const firstUserId = activeServiceUsers(usersQuery.data ?? [])[0]?.id ?? "";
+  const [params] = useSearchParams();
+  const [includeClosed, setIncludeClosed] = useState(params.get("includeClosed") === "true");
+  const users = (usersQuery.data ?? []).filter((u) => includeClosed || u.status === "active");
+  const firstUserId = users[0]?.id ?? "";
 
   // 최초 진입 시 기본 선택 이용자는 미확정(FR-29)이라 첫 번째 활성 이용자를 쓴다.
-  const [selectedUserId, setUserId] = useState("");
+  const [selectedUserId, setUserId] = useState(params.get("userId") ?? "");
+  const userId = users.some((u) => u.id === selectedUserId) ? selectedUserId : firstUserId;
   // 최초 진입 기본값은 '월'이며 현재 연월이다 (FR-31)
   const [period, setPeriod] = useState<StatisticPeriod>(() => currentPeriod("month", today));
 
   const value = useMemo<StatsContextValue>(
     () => ({
-      userId: selectedUserId || firstUserId,
+      userId,
       setUserId,
       period,
       setPeriod,
       unit: period.unit,
       setUnit: (unit) => setPeriod(currentPeriod(unit, today)),
+      includeClosed,
+      setIncludeClosed,
     }),
-    [selectedUserId, firstUserId, period, today],
+    [userId, period, today, includeClosed],
   );
 
   return <StatsContext.Provider value={value}>{children}</StatsContext.Provider>;

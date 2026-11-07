@@ -20,6 +20,7 @@ import { errorMessage } from "@/api/errors";
 import {
   combineQueries,
   useCloseServiceUser,
+  useReopenServiceUser,
   useCreateServiceUser,
   useServiceUsers,
   useStaffList,
@@ -27,6 +28,8 @@ import {
 } from "@/api/queries";
 import { activeServiceUsers, findStaff, isStaffActive } from "@/services/diaryService";
 import type { ServiceUser, Staff } from "@/types";
+import { useCurrentStaff } from "@/app/auth";
+import { isStaffManager } from "@/services/staffService";
 
 /**
  * 이용자 목록 / 등록 / 정보 수정 (2.1.14/FR-86 ~ FR-92).
@@ -87,13 +90,15 @@ function UsersList({ serviceUsers, staff }: { serviceUsers: ServiceUser[]; staff
 
       {closed.length > 0 ? (
         <FormSection title="이용 종결" description={closed.length + "명"}>
-          <ul className="flex flex-col gap-2">
+          <ul className="divide-y divide-border rounded-card border border-border">
             {closed.map((user) => (
-              <li key={user.id} className="flex items-center gap-2">
-                <span className="type-body">{user.name}</span>
-                <Badge variant="outline" tone="neutral">
-                  이용 종결
-                </Badge>
+              <li key={user.id}>
+                <ListRowLink
+                  to={"/users/" + user.id}
+                  title={user.name}
+                  subtitle="지난 기록 조회 · 이용 재개"
+                  trailing={<Badge variant="outline" tone="neutral">이용 종결</Badge>}
+                />
               </li>
             ))}
           </ul>
@@ -213,6 +218,9 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
   const navigate = useNavigate();
   const updateUser = useUpdateServiceUser();
   const closeUser = useCloseServiceUser();
+  const reopenUser = useReopenServiceUser();
+  const canManageStatus = isStaffManager(useCurrentStaff());
+  const isClosed = user.status === "closed";
   const [name, setName] = useState(user.name);
   const [birthDate, setBirthDate] = useState(user.birthDate);
   // 사용 중지된 직원은 빼되, 지금 담당자는 그대로 보이게 남긴다
@@ -220,7 +228,7 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
   const [staffId, setStaffId] = useState(user.assignedStaffId || (staffOptions[0]?.id ?? ""));
   const [errors, setErrors] = useState<{ name?: string; birthDate?: string }>({});
   const [closeOpen, setCloseOpen] = useState(false);
-  const busy = updateUser.isPending || closeUser.isPending;
+  const busy = updateUser.isPending || closeUser.isPending || reopenUser.isPending;
 
   function save() {
     if (busy) return;
@@ -262,9 +270,11 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
       width="form"
       bottomBar={
         <BottomActionBar>
-          <Button variant="outline" block disabled={busy} onClick={() => setCloseOpen(true)}>
-            종결
-          </Button>
+          {canManageStatus ? (
+            <Button variant="outline" block disabled={busy} onClick={() => setCloseOpen(true)}>
+              {isClosed ? "이용 재개" : "종결"}
+            </Button>
+          ) : null}
           <Button block disabled={busy} onClick={save}>
             {updateUser.isPending ? "저장 중…" : "저장"}
           </Button>
@@ -272,6 +282,15 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
       }
     >
       <div className="flex flex-col gap-3">
+        {isClosed ? (
+          <Card variant="form" className="flex flex-col gap-3">
+            <Badge variant="outline" tone="neutral">이용 종결</Badge>
+            <p className="type-body break-keep">과거 일지와 통계는 보존되어 있어요.</p>
+            <Button variant="outline" asChild>
+              <Link to={"/stats?userId=" + encodeURIComponent(user.id) + "&includeClosed=true"}>지난 통계 보기</Link>
+            </Button>
+          </Card>
+        ) : null}
         <FormSection title="기본 정보">
           <UserForm
             name={name}
@@ -289,19 +308,21 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
         <ConfirmDialog
           open={closeOpen}
           onOpenChange={setCloseOpen}
-          title={user.name + " 님의 이용을 종결할까요?"}
-          description="현재 이용 중인 이용자 목록에서 빠져요. 기존 일지와 통계 기록은 그대로 남아요."
-          confirmLabel="종결"
+          title={user.name + (isClosed ? " 님의 이용을 재개할까요?" : " 님의 이용을 종결할까요?")}
+          description={isClosed ? "기존 기록을 유지하고 다시 일지를 작성할 수 있어요." : "현재 이용 중인 이용자 목록에서 빠져요. 기존 일지와 통계 기록은 그대로 남아요."}
+          confirmLabel={isClosed ? "재개" : "종결"}
           onConfirm={() => {
-            closeUser.mutate(user.id, {
+            if (busy || !canManageStatus) return;
+            const mutation = isClosed ? reopenUser : closeUser;
+            mutation.mutate(user.id, {
               onSuccess: () => {
-                toast.success(user.name + " 님의 이용을 종결했어요.", {
-                  description: "활성 목록에서 숨겼고 과거 일지는 유지했습니다.",
+                toast.success(user.name + (isClosed ? " 님의 이용을 재개했어요." : " 님의 이용을 종결했어요."), {
+                  description: "기존 일지와 통계 기록은 유지했어요.",
                 });
                 navigate("/users");
               },
               onError: (error) =>
-                toast.error("종결하지 못했어요.", { description: errorMessage(error) }),
+                toast.error(isClosed ? "재개하지 못했어요." : "종결하지 못했어요.", { description: errorMessage(error) }),
             });
           }}
         />

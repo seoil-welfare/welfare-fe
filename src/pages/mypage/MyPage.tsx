@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Separator, Switch } from "@/components/ui/misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { MainHeader } from "@/components/layout/AppHeader";
-import { ListRowButton, ListRowLink, ListRowStatic } from "@/components/common/ListRow";
+import { ListRowButton, ListRowLink } from "@/components/common/ListRow";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import {
@@ -118,13 +118,13 @@ export function MyPage() {
             <ListRowLink
               to="/exports/diaries"
               leading={<FileText className="size-5 text-primary" aria-hidden />}
-              title="일지 모아 출력"
+              title="일별활동일지 출력"
             />
             <Separator />
             <ListRowLink
               to="/exports/monthly"
               leading={<Printer className="size-5 text-primary" aria-hidden />}
-              title="월간 기록 출력"
+              title="월별활동일지 출력"
             />
           </Card>
         </section>
@@ -167,13 +167,11 @@ export function MyPage() {
         <section className="flex flex-col gap-2">
           <h2 className="px-1 type-heading">설정</h2>
           <Card variant="list">
-            <ListRowStatic
-              // 스위치가 작아져 다른 줄과 같은 48px 높이로 맞춘다
-              tall={false}
-              leading={<Bell className="size-5 text-primary" aria-hidden />}
-              title="새 일지 알림 받기"
-              trailing={
+            <label htmlFor="notify-new-log" className="flex min-h-12 cursor-pointer items-center gap-3 px-4 py-3">
+              <Bell className="size-5 shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1 type-body font-medium">새 일지 알림 받기</span>
                 <Switch
+                  id="notify-new-log"
                   checked={notifySettings.data?.notifyNewLog ?? false}
                   disabled={!notifySettings.data || updateNotify.isPending}
                   onCheckedChange={(value) => {
@@ -188,8 +186,7 @@ export function MyPage() {
                   }}
                   aria-label="새 일지 알림 받기"
                 />
-              }
-            />
+            </label>
             {installMode === "prompt" || installMode === "ios" ? (
               <>
                 <Separator />

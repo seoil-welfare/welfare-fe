@@ -24,7 +24,7 @@ export function BehaviorSummaryMetrics({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <MetricCard
           value={summary.count}
           unit="건"

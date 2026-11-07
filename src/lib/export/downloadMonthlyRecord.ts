@@ -1,7 +1,8 @@
 import templateUrl from "@/assets/forms/monthly-record.template.docx?url";
 import { saveBlob } from "@/lib/export/downloadDailyRecord";
-import { behaviorTotals, monthlyRecordData, monthlyRecordFileName } from "@/services/monthlyRecordService";
-import type { Diary, ServiceUser } from "@/types";
+import { behaviorTotals, monthlyRecordData, monthlyRecordFileName, monthRange } from "@/services/monthlyRecordService";
+import { reportDiaries } from "@/services/exportService";
+import type { Diary, ServiceUser, Staff } from "@/types";
 
 /**
  * 한 이용자의 한 달치 일지를 월간 기록(월별활동일지) docx로 만들어 내려받게 한다.
@@ -15,7 +16,11 @@ export async function downloadMonthlyRecord(
   client: ServiceUser,
   year: number,
   month: number,
+  staff: readonly Staff[] = [],
 ): Promise<void> {
+  const { from, to } = monthRange(year, month);
+  diaries = reportDiaries(diaries, client.id, from, to);
+  if (!diaries.length) throw new Error("출력할 작성 완료 일지가 없어요.");
   // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다
   const [response, { renderMonthlyRecordDocx }, charts] = await Promise.all([
     fetch(templateUrl),
@@ -29,7 +34,7 @@ export async function downloadMonthlyRecord(
     charts.drawBehaviorTotals(totals),
     charts.drawBehaviorChart(totals),
   ]);
-  const blob = renderMonthlyRecordDocx(await response.arrayBuffer(), monthlyRecordData(diaries, client, year, month), {
+  const blob = renderMonthlyRecordDocx(await response.arrayBuffer(), monthlyRecordData(diaries, client, year, month, staff), {
     totals: totalsImage,
     chart: chartImage,
   });

@@ -13,8 +13,9 @@ import { api } from "@/api";
 import { downloadMonthlyRecord } from "@/lib/export/downloadMonthlyRecord";
 import { useToday } from "@/lib/today";
 import { monthRange } from "@/services/monthlyRecordService";
+import { reportDiaries } from "@/services/exportService";
 import { SOFT_BORDER, UserChecklist, type ExportMeta } from "@/pages/export/shared";
-import type { ServiceUser } from "@/types";
+import type { ServiceUser, Staff } from "@/types";
 
 /** 월간 기록 출력에서 고를 수 있는 연도 수 (올해부터 거슬러) */
 const MONTHLY_YEAR_COUNT = 5;
@@ -37,7 +38,7 @@ interface MonthlyResult {
  * 백엔드 출력 API 없이 GET /diaries?userId&from&to&status=completed 로 받아 브라우저에서 만든다.
  * 그 달 일지가 없는 이용자는 파일을 만들지 않고 결과에 알린다.
  */
-export function MonthlyRecordForm({ meta, users }: { meta: ExportMeta; users: ServiceUser[] }) {
+export function MonthlyRecordForm({ meta, users, staff }: { meta: ExportMeta; users: ServiceUser[]; staff: Staff[] }) {
   const navigate = useNavigate();
   const today = useToday();
   const thisYear = Number(today.slice(0, 4));
@@ -65,13 +66,13 @@ export function MonthlyRecordForm({ meta, users }: { meta: ExportMeta; users: Se
     const next: MonthlyResult = { label: year + "년 " + month + "월", saved: [], empty: [], failed: [] };
     for (const user of targets) {
       try {
-        const diaries = await api.diaries.list({ userId: user.id, from, to, status: "completed" });
+        const diaries = reportDiaries(await api.diaries.list({ userId: user.id, from, to, status: "completed" }), user.id, from, to);
         if (diaries.length === 0) {
           next.empty.push(user.name);
           continue;
         }
         if (next.saved.length > 0) await wait(DOWNLOAD_GAP_MS);
-        await downloadMonthlyRecord(diaries, user, year, month);
+        await downloadMonthlyRecord(diaries, user, year, month, staff);
         next.saved.push(user.name);
       } catch {
         next.failed.push(user.name);
@@ -79,8 +80,8 @@ export function MonthlyRecordForm({ meta, users }: { meta: ExportMeta; users: Se
     }
     setResult(next);
     setRunning(false);
-    if (next.saved.length > 0) toast.success("월간 기록 " + next.saved.length + "개를 내려받았어요.");
-    else if (next.failed.length > 0) toast.error("월간 기록을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+    if (next.saved.length > 0) toast.success("월별활동일지 " + next.saved.length + "개를 내려받았어요.");
+    else if (next.failed.length > 0) toast.error("월별활동일지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
   }
 
   return (
@@ -155,7 +156,7 @@ function MonthlyResultAlert({ result }: { result: MonthlyResult }) {
   return (
     <Alert
       tone={failed.length > 0 ? "destructive" : "neutral"}
-      title={saved.length > 0 ? label + " 월간 기록 " + saved.length + "개를 내려받았어요" : label + " 월간 기록을 만들지 않았어요"}
+      title={saved.length > 0 ? label + " 월별활동일지 " + saved.length + "개를 내려받았어요" : label + " 월별활동일지를 만들지 않았어요"}
     >
       <ul className="mt-1 flex flex-col gap-1 break-keep">
         {saved.length > 0 ? <li>내려받음: {saved.join(", ")}</li> : null}

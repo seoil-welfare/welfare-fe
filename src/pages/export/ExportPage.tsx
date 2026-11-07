@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { QueryGate } from "@/components/common/QueryGate";
-import { combineQueries, useServiceUsers } from "@/api/queries";
+import { combineQueries, useServiceUsers, useStaffList } from "@/api/queries";
 import { activeServiceUsers } from "@/services/diaryService";
 import { DiaryBundleForm } from "@/pages/export/DiaryBundleForm";
 import { MonthlyRecordForm } from "@/pages/export/MonthlyRecordForm";
@@ -19,30 +19,31 @@ import type { ExportMeta } from "@/pages/export/shared";
 
 const KIND_META: Record<string, ExportMeta> = {
   diaries: {
-    title: "일지 모아 출력",
+    title: "일별활동일지 출력",
     description: "선택한 기간의 일지를 모아 출력해요.",
   },
   monthly: {
-    title: "월간 기록 출력",
+    title: "월별활동일지 출력",
     description: "복지관 양식에 맞춘 월간 기록을 출력해요.",
   },
 };
 
 export function ExportPage() {
   const { kind } = useParams();
-  const meta = KIND_META[kind ?? ""];
+  const meta = Object.hasOwn(KIND_META, kind ?? "") ? KIND_META[kind ?? ""] : undefined;
   const usersQuery = useServiceUsers();
+  const staffQuery = useStaffList();
 
   if (!meta) return <NotFoundPage />;
-  if (usersQuery.data) {
+  if (usersQuery.data && staffQuery.data) {
     // 불러온 이용자 전원을 기본 선택하려고 목록을 받은 뒤 마운트한다
     const users = activeServiceUsers(usersQuery.data);
-    if (kind === "diaries") return <DiaryBundleForm meta={meta} users={users} />;
-    return <MonthlyRecordForm meta={meta} users={users} />;
+    if (kind === "diaries") return <DiaryBundleForm meta={meta} users={users} staff={staffQuery.data} />;
+    return <MonthlyRecordForm meta={meta} users={users} staff={staffQuery.data} />;
   }
   return (
     <AppShell header={<AppHeader title={meta.title} backTo="/mypage" />} width="form">
-      <QueryGate state={combineQueries([usersQuery])}>{() => null}</QueryGate>
+      <QueryGate state={combineQueries([usersQuery, staffQuery])}>{() => null}</QueryGate>
     </AppShell>
   );
 }

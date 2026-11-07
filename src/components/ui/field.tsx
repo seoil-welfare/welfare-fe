@@ -69,21 +69,3 @@ export function FieldError({
     </p>
   );
 }
-
-/** 섹션 제목 + 설명 + 내용 (FormSection은 Card form 안에서 쓴다) */
-export function FieldSetLegend({
-  title,
-  description,
-  className,
-}: {
-  title: string;
-  description?: string;
-  className?: string;
-}) {
-  return (
-    <div className={cn("flex flex-col gap-1", className)}>
-      <span className="type-body font-medium text-foreground">{title}</span>
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
-    </div>
-  );
-}

@@ -29,7 +29,7 @@ export const PRE_SUPPORT_OPTIONS = [
   "강화물",
   "활동준비",
   "활동안내",
-  "선택지제공",
+  "선택지 제공",
   "모델링",
   "안전교육",
   "휴식",
@@ -37,7 +37,7 @@ export const PRE_SUPPORT_OPTIONS = [
   "기타",
 ] as const;
 
-/** FR-22 — 선택 가능 개수 미확정. 시연은 복수 선택 칩 */
+/** FR-22 — 참여 정도 1개, 기타 별도 허용 */
 export const REACTION_OPTIONS = [
   "적극적 참여",
   "안정적 참여",
@@ -146,39 +146,6 @@ export const BEHAVIOR_DETAILS: Record<BehaviorType, readonly BehaviorDetailOptio
 export function behaviorDetailLabel(type: BehaviorType, detailId: string): string {
   return BEHAVIOR_DETAILS[type].find((d) => d.id === detailId)?.label ?? detailId;
 }
-
-/**
- * 활동 시간 (FR-18). 복지관 양식 기준 10:00~17:00, 30분 단위 (기능명세서 8.5).
- * 시작 시간 하나만 고르면 종료는 30분 뒤로 정해진다.
- */
-export const ACTIVITY_FIRST_HOUR = 10;
-export const ACTIVITY_LAST_HOUR = 17;
-export const ACTIVITY_SLOT_MINUTES = 30;
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
-/** HH:mm에 분을 더한다. 마지막 시각(17:00)을 넘지 않는다 */
-export function addActivityMinutes(time: string, minutes: number): string {
-  const [h, m] = time.split(":").map(Number);
-  const total = Math.min(h * 60 + m + minutes, ACTIVITY_LAST_HOUR * 60);
-  return pad2(Math.floor(total / 60)) + ":" + pad2(total % 60);
-}
-
-export interface ActivitySlot {
-  /** HH:mm */
-  start: string;
-  /** HH:mm */
-  end: string;
-}
-
-/** 고를 수 있는 활동 시간 칸: 10:00~10:30 … 16:30~17:00 */
-export const ACTIVITY_SLOTS: readonly ActivitySlot[] = Array.from(
-  { length: ((ACTIVITY_LAST_HOUR - ACTIVITY_FIRST_HOUR) * 60) / ACTIVITY_SLOT_MINUTES },
-  (_, i) => {
-    const start = pad2(ACTIVITY_FIRST_HOUR + Math.floor((i * ACTIVITY_SLOT_MINUTES) / 60)) + ":" + pad2((i * ACTIVITY_SLOT_MINUTES) % 60);
-    return { start, end: addActivityMinutes(start, ACTIVITY_SLOT_MINUTES) };
-  },
-);
 
 /** 동일 건수 항목의 정렬 기준이 되는 사전 정의 순서 (통계 집계 공통 규칙 4) */
 export const CATEGORY_ORDER: Record<string, readonly string[]> = {

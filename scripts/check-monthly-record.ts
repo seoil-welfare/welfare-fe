@@ -5,7 +5,6 @@ import { generateFixtures, SERVICE_USERS } from "./fixtures";
 import { DOCX_MIME } from "@/lib/export/dailyRecordDocx";
 import { MONTHLY_IMAGE_PATHS, renderMonthlyRecordDocx } from "@/lib/export/monthlyRecordDocx";
 import {
-  BEHAVIOR_RESULT,
   behaviorTotals,
   monthlyRecordData,
   monthlyRecordFileName,
@@ -96,7 +95,7 @@ const diaries: Diary[] = [
 console.log("[기간·파일 이름]");
 expect("10월 첫날·말일", JSON.stringify(monthRange(2026, 10)) === '{"from":"2026-10-01","to":"2026-10-31"}', JSON.stringify(monthRange(2026, 10)));
 expect("2월 말일", monthRange(2028, 2).to === "2028-02-29", monthRange(2028, 2).to);
-expect("파일 이름", monthlyRecordFileName(client, 2026, 9) === "가상이용자 A_2026-09_월간기록.docx", monthlyRecordFileName(client, 2026, 9));
+expect("파일 이름", monthlyRecordFileName(client, 2026, 9) === "가상이용자 A_2026-09_월별활동일지.docx", monthlyRecordFileName(client, 2026, 9));
 
 console.log("[일별 표]");
 const data = monthlyRecordData(diaries, client, 2026, 10);
@@ -109,28 +108,28 @@ const d2 = data.firstHalf[1];
 expect("대표 활동 = 가장 많이 고른 것", d2.activity === "예술활동", d2.activity);
 expect("주요 지원 = 가장 많이 고른 것", d2.support === "모델링", d2.support);
 expect("반응이 같으면 선택지 순서", d2.reaction === "적극적 참여", d2.reaction);
-expect("지원 결과는 반응에서", d2.result === "자발적 참여·활동 지속", d2.result);
+expect("지원 결과를 추정하지 않음", !("result" in d2), JSON.stringify(d2));
 expect("행동 없는 날", d2.behaviors === "-" && d2.count === 0, d2.behaviors + " / " + d2.count);
 
 const d5 = data.firstHalf[4];
 expect("기타(내용)", d5.activity === "기타(산책)" && d5.condition === "기타(수면 부족)", d5.activity + " · " + d5.condition);
 expect("주요 지원 '없음'도 그대로", d5.support === "없음", d5.support);
-expect("부분적 참여 → 추가 안내 후 활동 지속", d5.result === "추가 안내 후 활동 지속", d5.result);
+expect("부분적 참여를 그대로 출력", d5.reaction === "부분적 참여", d5.reaction);
 
 const d1 = data.firstHalf[0];
 expect("일지 없는 날은 날짜만", d1.day === 1 && d1.activity === "" && d1.count === "", JSON.stringify(d1));
 
 const d17 = data.secondHalf[0];
-expect("행동 있는 날 지원 결과", d17.result === BEHAVIOR_RESULT, d17.result);
-expect("행동 항목별 횟수", d17.behaviors === "머리 때리기 2회, 자해 꼬집기 1회, 소리 지르기 1회", d17.behaviors);
+expect("행동 선택 기록만 출력", d17.remarks.includes("행동 선택 기록:") && !d17.remarks.includes("재참여"), d17.remarks);
+expect("행동 항목별 건수·영역", d17.behaviors === "자해 머리 때리기 2건, 자해 꼬집기 1건, 기타(소리 지르기) 1건", d17.behaviors);
 expect("당일 총횟수 (빈 상위 기타 제외)", d17.count === 4, String(d17.count));
 
 console.log("[월간 요약]");
-expect("참여활동 요약", data.summaryParticipation === "체육활동·예술활동·기타 참여가 많았음. 가장 많은 반응은 적극적 참여.", data.summaryParticipation);
-expect("지원방법 요약", data.summarySupport === "자주 사용한 사전 지원은 모델링·휴식.", data.summarySupport);
-expect("특이사항 요약", data.summaryNotes === "도전적 행동 1일, 총 4회 (머리 때리기 2회, 자해 꼬집기 1회, 소리 지르기 1회).", data.summaryNotes);
-expect("주의사항·종합평가는 비움", data.summaryCaution === "" && data.summaryOverall === "", "손으로 작성");
-expect("행동 없는 달", nov.summaryNotes === "이번 달 도전적 행동 없음." && nov.summaryParticipation === "", nov.summaryNotes);
+expect("참여활동 요약", data.summaryParticipation === "참여 활동 선택 기록: 체육활동 3건·예술활동 2건·기타 1건. 가장 많이 선택한 반응: 적극적 참여.", data.summaryParticipation);
+expect("지원방법 요약", data.summarySupport === "사전 지원 선택 기록: 모델링 2건·휴식 1건.", data.summarySupport);
+expect("특이사항 요약", data.summaryNotes === "도전적 행동 선택 기록 1일, 총 4건 (자해 머리 때리기 2건, 자해 꼬집기 1건, 기타(소리 지르기) 1건).", data.summaryNotes);
+expect("기록 없는 평가 필드 제거", !("summaryCaution" in data) && !("summaryOverall" in data), "없는 항목 제거");
+expect("일지 없는 달", nov.summaryNotes === "" && nov.summaryParticipation === "", nov.summaryNotes);
 expect("월간 누적 많은 순", JSON.stringify(behaviorTotals(diaries).map((t) => t.count)) === "[2,1,1]", JSON.stringify(behaviorTotals(diaries)));
 
 console.log("[가상 데이터 전체]");
@@ -163,14 +162,10 @@ async function checkRenderedDocx() {
   expect("남은 자리표시자 없음", !/[{}]/.test(text), text.match(/\{[^}]*\}/)?.[0] ?? "없음");
   expect("머리말 (글상자 두 벌)", (text.match(/가상이용자 A/g)?.length ?? 0) === 2 && text.includes("2026년 10월"), "이름·작성월");
   expect("양식 예시 이름이 남지 않음", !text.includes("김OO") && !text.includes("박OO"), "김OO·박OO 없음");
-  // 머리말은 탭 하나가 정해진 위치 하나로 가야 이름 길이가 바뀌어도 칸이 밀리지 않는다 (탭 위치 7개 = 탭 7번)
-  const header = xml.match(/<w:p[ >](?:(?!<w:p[ >])[\s\S])*?이용자  가상이용자 A[\s\S]*?<\/w:p>/)?.[0] ?? "";
-  const stops = header.match(/<w:tab w:val="left"/g)?.length ?? 0;
-  const tabs = header.match(/<w:tab\/>/g)?.length ?? 0;
-  expect("머리말 탭 위치 = 탭 수", stops === 7 && tabs === 7, "위치 " + stops + "개, 탭 " + tabs + "번");
+  expect("중복 글상자 없이 실제 머리말", !xml.includes("<w:txbxContent>") && text.includes("이용자: 가상이용자 A"), "일반 문단 머리말");
   const tableRows = xml.match(/<w:tr[ >]/g)?.length ?? 0;
   expect("표 줄 = 머리글 2 + 31일", tableRows === 33, tableRows + "줄");
-  expect("요약 문장", text.includes("체육활동·예술활동·기타 참여가 많았음"), "참여활동 칸");
+  expect("요약 문장", text.includes(data.summaryParticipation), "실제 선택 건수");
   expect("양식 예시 요약이 남지 않음", !text.includes("전반적으로") && !text.includes("효과적이었고"), "예시 문장 없음");
   const swapped = [MONTHLY_IMAGE_PATHS.totals, MONTHLY_IMAGE_PATHS.chart].every(
     (path) => zip.file(path)?.asUint8Array().length === fakePng.length,

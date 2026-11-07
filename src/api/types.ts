@@ -205,6 +205,8 @@ export interface ServiceUserApi {
   update(userId: string, input: ServiceUserInput): Promise<ServiceUser>;
   /** 종결은 삭제가 아니다 (FR-91) */
   close(userId: string): Promise<ServiceUser>;
+  /** 팀장·국장만 종결을 취소하고 기존 이용자를 다시 활성화한다 */
+  reopen(userId: string): Promise<ServiceUser>;
 }
 
 /** 계정 추가 응답. 임시 비밀번호는 이 응답에서만 받을 수 있다 */

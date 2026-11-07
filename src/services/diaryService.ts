@@ -85,13 +85,22 @@ export function countDiaryBehaviors(diary: Diary): number {
  * 최상위 '기타' 유형은 유효한 기록이 있으면 1건 (통계 집계 공통 규칙 3).
  */
 export function countActivityBehaviors(activity: Activity): number {
-  if (!activity.hasBehavior) return 0;
-  return activity.behaviors.reduce((sum, selection) => {
-    if (selection.type === "other") {
-      return sum + (selection.otherText?.trim() ? 1 : 0);
+  return behaviorEntries(activity).length;
+}
+
+/** 통계·일일/월간 출력의 공통 집계 단위. 같은 유형/세부 행동은 1건, 빈 상위 기타는 제외한다. */
+export function behaviorEntries(activity: Activity): { type: BehaviorType; detailId: string; otherText?: string }[] {
+  if (!activity.hasBehavior) return [];
+  const entries = new Map<string, { type: BehaviorType; detailId: string; otherText?: string }>();
+  for (const selection of activity.behaviors) {
+    const otherText = selection.otherText?.trim();
+    const ids = selection.type === "other" ? (otherText ? ["other"] : []) : selection.detailIds;
+    for (const detailId of ids) {
+      const key = selection.type + ":" + detailId;
+      if (!entries.has(key)) entries.set(key, { type: selection.type, detailId, otherText });
     }
-    return sum + new Set(selection.detailIds).size;
-  }, 0);
+  }
+  return [...entries.values()];
 }
 
 /**

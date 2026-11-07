@@ -24,7 +24,7 @@ import type { CategoryItem } from "@/api/types";
  * 참여 활동 관리 (팀장·국장). 마이페이지 > 일지 항목 관리에서 들어온다.
  * 추가 POST /categories/participation, 이름 변경·숨기기 PUT /categories/participation/:code.
  * 지우지 않고 숨긴다. 숨긴 활동은 새 일지에서만 빠지고 지난 일지·통계에는 남는다.
- * 권한은 서버가 검사한다 (일반 직원이 주소로 들어오면 저장할 때 403).
+ * 화면은 역할 가드, 저장 권한은 서버가 검사한다.
  */
 
 /** 백엔드 activity_type.name 길이와 같다 */

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/misc";
 import { useDiary } from "@/api/queries";
 import { errorMessage } from "@/api/errors";
-import { RequireAuth } from "@/app/auth";
+import { RequireAuth, RequireManager } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
 import { useRememberLastPage } from "@/app/lastPage";
 import { StatsProvider } from "@/app/StatsContext";
@@ -105,12 +105,14 @@ export function AppRoutes() {
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/new" element={<UserNewPage />} />
         <Route path="/users/:userId" element={<UserDetailPage />} />
-        <Route path="/staff" element={<StaffPage />} />
-        <Route path="/staff/new" element={<StaffNewPage />} />
-        <Route path="/staff/:staffId" element={<StaffDetailPage />} />
+        <Route element={<RequireManager />}>
+          <Route path="/staff" element={<StaffPage />} />
+          <Route path="/staff/new" element={<StaffNewPage />} />
+          <Route path="/staff/:staffId" element={<StaffDetailPage />} />
+          <Route path="/settings/participation" element={<ParticipationPage />} />
+        </Route>
         <Route path="/exports/:kind" element={<ExportPage />} />
         <Route path="/settings/password" element={<PasswordPage />} />
-        <Route path="/settings/participation" element={<ParticipationPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

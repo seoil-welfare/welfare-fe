@@ -51,25 +51,3 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ),
 );
 Card.displayName = "Card";
-
-export function CardTitle({
-  className,
-  children,
-  ...props
-}: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h3 className={cn("type-body font-bold", className)} {...props}>
-      {children}
-    </h3>
-  );
-}
-
-export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex items-center justify-between gap-2", className)} {...props} />;
-}
-
-export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("type-caption text-muted-foreground", className)} {...props} />;
-}
-
-export { cardVariants };

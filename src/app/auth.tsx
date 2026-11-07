@@ -3,6 +3,7 @@ import { Spinner } from "@/components/ui/misc";
 import { LoadFailureState } from "@/components/common/states";
 import { useMe } from "@/api/queries";
 import type { Staff } from "@/types";
+import { isStaffManager } from "@/services/staffService";
 
 /** 로그인한 직원. 로그인 확인 전이거나 로그아웃 상태면 null */
 export function useCurrentStaff(): Staff | null {
@@ -36,4 +37,10 @@ export function RequireAuth() {
   }
   if (!me.data) return <Navigate to="/login" replace />;
   return <Outlet />;
+}
+
+/** RequireAuth 내부에서 사용한다. 관리 API의 서버 권한 검사와 화면 접근을 맞춘다. */
+export function RequireManager() {
+  const staff = useCurrentStaff();
+  return isStaffManager(staff) ? <Outlet /> : <Navigate to="/mypage" replace />;
 }

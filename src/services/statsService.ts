@@ -7,7 +7,7 @@ import {
   behaviorDetailLabel,
 } from "@/data/catalog";
 import { addDays, parseISODate, quarterOf, toISODate } from "@/lib/utils";
-import { countActivityBehaviors } from "@/services/diaryService";
+import { behaviorEntries, countActivityBehaviors } from "@/services/diaryService";
 import type {
   BehaviorType,
   CountItem,
@@ -34,23 +34,20 @@ export interface PeriodRange {
   label: string;
 }
 
-/** 해당 월의 1일이 포함된 주를 1주차로 센다 (주차 계산 방식은 미확정 — 시연 기준) */
+/** 해당 월과 만나는 일요일~토요일 7일 주간. 월 경계에서도 날짜를 자르지 않는다. */
 function weeksInMonth(year: number, month: number): PeriodRange[] {
-  const lastDay = new Date(year, month, 0).getDate();
+  const first = new Date(year, month - 1, 1);
+  const last = toISODate(new Date(year, month, 0));
   const ranges: PeriodRange[] = [];
-  let cursor = 1;
+  let cursor = addDays(toISODate(first), -first.getDay());
   let week = 1;
-  while (cursor <= lastDay) {
-    const date = new Date(year, month - 1, cursor);
-    // 주의 끝(토요일) 또는 월말까지
-    const daysToSaturday = 6 - date.getDay();
-    const endDay = Math.min(cursor + daysToSaturday, lastDay);
+  while (cursor <= last) {
     ranges.push({
-      start: toISODate(new Date(year, month - 1, cursor)),
-      end: toISODate(new Date(year, month - 1, endDay)),
+      start: cursor,
+      end: addDays(cursor, 6),
       label: year + "년 " + month + "월 " + week + "주차",
     });
-    cursor = endDay + 1;
+    cursor = addDays(cursor, 7);
     week += 1;
   }
   return ranges;
@@ -125,31 +122,8 @@ export function previousPeriod(period: StatisticPeriod): StatisticPeriod {
     const m = period.month ?? 1;
     return m === 1 ? { unit, year: year - 1, month: 12 } : { unit, year, month: m - 1 };
   }
-  const m = period.month ?? 1;
-  const w = period.week ?? 1;
-  if (w > 1) return { unit, year, month: m, week: w - 1 };
-  const prevMonth = m === 1 ? 12 : m - 1;
-  const prevYear = m === 1 ? year - 1 : year;
-  return { unit, year: prevYear, month: prevMonth, week: weekCountOfMonth(prevYear, prevMonth) };
-}
-
-export function nextPeriod(period: StatisticPeriod): StatisticPeriod {
-  const { unit, year } = period;
-  if (unit === "year") return { unit, year: year + 1 };
-  if (unit === "quarter") {
-    const q = period.quarter ?? 1;
-    return q === 4 ? { unit, year: year + 1, quarter: 1 } : { unit, year, quarter: q + 1 };
-  }
-  if (unit === "month") {
-    const m = period.month ?? 1;
-    return m === 12 ? { unit, year: year + 1, month: 1 } : { unit, year, month: m + 1 };
-  }
-  const m = period.month ?? 1;
-  const w = period.week ?? 1;
-  if (w < weekCountOfMonth(year, m)) return { unit, year, month: m, week: w + 1 };
-  const nm = m === 12 ? 1 : m + 1;
-  const ny = m === 12 ? year + 1 : year;
-  return { unit, year: ny, month: nm, week: 1 };
+  // 월별 주차 번호로 이동하면 월 경계의 같은 주를 두 번 비교하게 된다. 실제 시작일에서 7일을 뺀다.
+  return currentPeriod("week", addDays(periodRange(period).start, -7));
 }
 
 /**
@@ -235,15 +209,7 @@ export function countBehaviorsIn(
         total += countActivityBehaviors(activity);
         continue;
       }
-      for (const selection of activity.behaviors) {
-        if (selection.type !== typeFilter) continue;
-        total +=
-          selection.type === "other"
-            ? selection.otherText?.trim()
-              ? 1
-              : 0
-            : new Set(selection.detailIds).size;
-      }
+      total += behaviorEntries(activity).filter((entry) => entry.type === typeFilter).length;
     }
   }
   return total;
@@ -403,47 +369,6 @@ export interface BehaviorRecord {
   activityId: string;
 }
 
-export function behaviorRecords(
-  diaries: readonly Diary[],
-  typeFilter: BehaviorType | "all",
-): BehaviorRecord[] {
-  const records: BehaviorRecord[] = [];
-  for (const diary of diaries) {
-    for (const activity of diary.activities) {
-      if (!activity.hasBehavior) continue;
-      const selections = activity.behaviors.filter(
-        (b) => typeFilter === "all" || b.type === typeFilter,
-      );
-      if (selections.length === 0) continue;
-      const labels: string[] = [];
-      for (const sel of selections) {
-        if (sel.type === "other") {
-          if (sel.otherText?.trim()) labels.push("기타 · " + sel.otherText.trim());
-          continue;
-        }
-        for (const detailId of new Set(sel.detailIds)) {
-          labels.push(labelWithType(sel.type, behaviorDetailLabel(sel.type, detailId)));
-        }
-      }
-      if (labels.length === 0) continue;
-      records.push({
-        diaryId: diary.id,
-        date: diary.date,
-        startTime: activity.startTime,
-        endTime: activity.endTime,
-        labels,
-        activityId: activity.id,
-      });
-    }
-  }
-  // 날짜 및 활동 시작 시각 기준 최신순 (발생 기록 규칙 1)
-  return records.sort(
-    (a, b) =>
-      b.date.localeCompare(a.date) ||
-      (b.startTime ?? "").localeCompare(a.startTime ?? ""),
-  );
-}
-
 /** 추이 그래프 데이터 (FR-35) */
 export interface TrendPoint {
   label: string;
@@ -570,14 +495,8 @@ function behaviorDetailIdCounts(diaries: readonly Diary[]): StatsSummary["behavi
   for (const diary of diaries) {
     for (const activity of diary.activities) {
       if (!activity.hasBehavior) continue;
-      for (const sel of activity.behaviors) {
-        if (sel.type === "other") {
-          if (sel.otherText?.trim()) counts.set(key("other", "other"), (counts.get(key("other", "other")) ?? 0) + 1);
-          continue;
-        }
-        for (const detailId of new Set(sel.detailIds)) {
-          counts.set(key(sel.type, detailId), (counts.get(key(sel.type, detailId)) ?? 0) + 1);
-        }
+      for (const entry of behaviorEntries(activity)) {
+        counts.set(key(entry.type, entry.detailId), (counts.get(key(entry.type, entry.detailId)) ?? 0) + 1);
       }
     }
   }
@@ -600,17 +519,9 @@ function behaviorRecordRows(diaries: readonly Diary[]): StatsBehaviorRecord[] {
       if (!activity.hasBehavior) continue;
       const behaviors: StatsBehaviorRecord["behaviors"] = [];
       for (const meta of BEHAVIOR_TYPES) {
-        for (const sel of activity.behaviors.filter((b) => b.type === meta.type)) {
-          if (sel.type === "other") {
-            const text = sel.otherText?.trim();
-            if (text) behaviors.push({ type: "other", detailId: "other", otherText: text });
-            continue;
-          }
-          const order = BEHAVIOR_DETAILS[sel.type].map((d) => d.id);
-          [...new Set(sel.detailIds)]
-            .sort((a, b) => order.indexOf(a) - order.indexOf(b))
-            .forEach((detailId) => behaviors.push({ type: sel.type, detailId }));
-        }
+        const order = BEHAVIOR_DETAILS[meta.type].map((d) => d.id);
+        behaviors.push(...behaviorEntries(activity).filter((entry) => entry.type === meta.type)
+          .sort((a, b) => order.indexOf(a.detailId) - order.indexOf(b.detailId)));
       }
       if (behaviors.length === 0) continue;
       records.push({
@@ -692,6 +603,14 @@ export function reactionItemsFor(summary: StatsSummary, participationLabel: stri
   return (
     summary.activities.reactionByParticipation.find((p) => p.label === participationLabel)?.reaction ?? []
   );
+}
+
+/** 현재 응답에 유효한 선택을 유지하고, 최초/기간 변경 시 기록이 가장 많은 활동을 고른다. */
+export function selectFocusActivity(summary: StatsSummary, preferred?: string): string {
+  const options = summary.activities.reactionByParticipation;
+  if (preferred && options.some((o) => o.label === preferred)) return preferred;
+  const counts = new Map(summary.participation.map((item) => [item.label, item.count]));
+  return [...options].sort((a, b) => (counts.get(b.label) ?? 0) - (counts.get(a.label) ?? 0))[0]?.label ?? "";
 }
 
 /** 통계 메인 카드는 0건 항목을 빼고 보여 준다 */
