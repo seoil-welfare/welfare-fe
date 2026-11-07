@@ -6,12 +6,11 @@ import { MetricCard } from "@/components/common/MetricCard";
 import { HorizontalBars } from "@/components/stats/charts";
 import { StatsScopeSection } from "@/components/stats/StatsScopeSection";
 import { PillToggle } from "@/components/ui/toggle-group";
-import { PARTICIPATION_OPTIONS } from "@/data/catalog";
 import { QueryGate } from "@/components/common/QueryGate";
 import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/api/queries";
 import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
-import { reactionItemsFor } from "@/services/statsService";
+import { busiestReactionActivity, reactionItemsFor } from "@/services/statsService";
 import { useStatsContext } from "@/app/StatsContext";
 
 /**
@@ -25,12 +24,16 @@ export function StatsActivitiesPage() {
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
-  const [focusActivity, setFocusActivity] = useState<string>(PARTICIPATION_OPTIONS[0]);
+  const [pickedActivity, setPickedActivity] = useState<string>(); // 사용자가 직접 고른 활동. 없으면 기록이 가장 많은 활동
 
   const serviceUser = findServiceUser(usersQuery.data ?? [], userId);
   const summary = stats.activities;
   // 서버 통계가 주는 참여 활동 목록(숨긴 항목 포함)을 쓴다. 새로 추가된 활동도 고를 수 있다
   const activityOptions = summary.reactionByParticipation.map(({ label }) => ({ value: label, label }));
+  const focusActivity =
+    pickedActivity && activityOptions.some((o) => o.value === pickedActivity)
+      ? pickedActivity
+      : (busiestReactionActivity(stats) ?? "");
 
   // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
   const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
@@ -53,9 +56,9 @@ export function StatsActivitiesPage() {
         <StatsScopeSection userName={serviceUser?.name} />
 
         <div className="grid grid-cols-3 gap-3">
-          <MetricCard value={summary.totalCount} unit="건" description="전체 참여 활동 기록" />
-          <MetricCard value={summary.kindCount} unit="종" description="기록된 활동 종류" />
-          <MetricCard value={summary.otherCount} unit="건" description="‘기타’ 직접 입력" />
+          <MetricCard value={summary.totalCount} unit="건" description="전체 활동" />
+          <MetricCard value={summary.kindCount} unit="종" description="활동 종류" />
+          <MetricCard value={summary.otherCount} unit="건" description="‘기타’ 입력" />
         </div>
 
         <FormSection title="활동별 참여 건수" description="모든 활동 카테고리를 표시합니다.">
@@ -74,7 +77,7 @@ export function StatsActivitiesPage() {
           <PillToggle
             label="기준 참여 활동"
             value={focusActivity}
-            onValueChange={setFocusActivity}
+            onValueChange={setPickedActivity}
             options={activityOptions}
           />
           <HorizontalBars items={reactionItemsFor(stats, focusActivity)} />

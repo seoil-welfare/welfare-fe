@@ -72,9 +72,9 @@ export function StatsCategoryPage() {
         <StatsScopeSection userName={serviceUser?.name} />
 
         <div className="grid grid-cols-3 gap-3">
-          <MetricCard value={total} unit="건" description={"전체 " + meta.unitLabel} />
-          <MetricCard value={recorded} unit="종" description="기록된 항목 수" />
-          <MetricCard value={stats.completedDiaries} unit="건" description="작성 완료 일지" />
+          <MetricCard value={total} unit="건" description="전체 선택" />
+          <MetricCard value={recorded} unit="종" description="항목 종류" />
+          <MetricCard value={stats.completedDiaries} unit="건" description="완료 일지" />
         </div>
 
         <FormSection title="항목별 기록 건수" description={meta.unitLabel + " 기준"}>

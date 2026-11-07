@@ -694,6 +694,16 @@ export function reactionItemsFor(summary: StatsSummary, participationLabel: stri
   );
 }
 
+/** 반응 기록이 가장 많은 참여 활동. 같으면 목록 앞쪽, 모두 0건이면 첫 활동 */
+export function busiestReactionActivity(summary: StatsSummary): string | undefined {
+  let best: { label: string; total: number } | undefined;
+  for (const { label, reaction } of summary.activities.reactionByParticipation) {
+    const total = reaction.reduce((sum, item) => sum + item.count, 0);
+    if (!best || total > best.total) best = { label, total };
+  }
+  return best?.label;
+}
+
 /** 통계 메인 카드는 0건 항목을 빼고 보여 준다 */
 export function nonZero(items: readonly CountItem[]): CountItem[] {
   return items.filter((item) => item.count > 0);
