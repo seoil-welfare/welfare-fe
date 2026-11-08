@@ -6,6 +6,9 @@
    ========================================================================= */
 
 :root {
+  /* 하단 메뉴 아래 여백. 아이폰 홈 막대 영역(34px)을 다 비우면 너무 넓어 보여 20px 줄인다.
+     홈 막대는 화면 맨 아래 약 13px 안에 있어 메뉴 글자와 겹치지 않는다. 홈 막대가 없는 기기는 0 */
+  --nav-safe-bottom: max(calc(env(safe-area-inset-bottom, 0px) - 20px), 0px);
   --radius: 0.75rem;
 
   --background: #f0f3fa;
@@ -223,6 +226,10 @@
 
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pb-nav-safe {
+    padding-bottom: var(--nav-safe-bottom);
   }
 
   /* 하단 고정 바: 위와 같은 12px에 아이폰 홈 막대 영역을 더한다 (pb-safe만 쓰면 홈 막대가 없는 기기에서 0이 된다) */

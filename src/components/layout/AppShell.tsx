@@ -36,7 +36,7 @@ export function AppShell({
 }) {
   const padBottom =
     bottom === "nav"
-      ? "pb-[calc(64px+env(safe-area-inset-bottom,0px)+16px)] xl:pb-6"
+      ? "pb-[calc(64px+var(--nav-safe-bottom)+16px)] xl:pb-6"
       : bottom === "action"
         ? "pb-[calc(76px+env(safe-area-inset-bottom,0px)+16px)]"
         : "pb-6";

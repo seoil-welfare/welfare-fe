@@ -11,12 +11,12 @@ export const NAV_ITEMS = [
   { to: "/mypage", label: "마이페이지", Icon: User },
 ] as const;
 
-/** 모바일~태블릿. 콘텐츠 높이 64px + safe-area. 현재 메뉴는 네이비 글자 + 금색 밑줄 */
+/** 모바일~태블릿. 콘텐츠 높이 64px + 줄인 safe-area(--nav-safe-bottom). 현재 메뉴는 네이비 글자 + 금색 밑줄 */
 export function BottomNav() {
   return (
     <nav
       aria-label="주요 메뉴"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card pb-safe xl:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card pb-nav-safe xl:hidden"
     >
       <ul className="flex h-16 items-stretch">
         {NAV_ITEMS.map(({ to, label, Icon }) => (
