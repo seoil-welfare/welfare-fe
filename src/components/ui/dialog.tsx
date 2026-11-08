@@ -15,8 +15,13 @@ const overlayClass =
 
 export const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { title: string; description?: string }
->(({ className, children, title, description, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    title: string;
+    description?: string;
+    /** false면 오른쪽 위 닫기 버튼을 숨긴다 (꼭 끝내야 하는 창) */
+    closable?: boolean;
+  }
+>(({ className, children, title, description, closable = true, ...props }, ref) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className={overlayClass} />
     <DialogPrimitive.Content
@@ -31,11 +36,13 @@ export const DialogContent = React.forwardRef<
     >
       <div className="flex items-start justify-between gap-4">
         <DialogPrimitive.Title className="type-title">{title}</DialogPrimitive.Title>
-        <DialogPrimitive.Close asChild>
-          <Button variant="ghost" size="icon" aria-label="닫기" className="-mr-2 -mt-2 shrink-0">
-            <X aria-hidden />
-          </Button>
-        </DialogPrimitive.Close>
+        {closable ? (
+          <DialogPrimitive.Close asChild>
+            <Button variant="ghost" size="icon" aria-label="닫기" className="-mr-2 -mt-2 shrink-0">
+              <X aria-hidden />
+            </Button>
+          </DialogPrimitive.Close>
+        ) : null}
       </div>
       {description ? (
         <DialogPrimitive.Description className="mt-2 type-body-long text-muted-foreground">

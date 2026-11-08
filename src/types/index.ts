@@ -27,6 +27,8 @@ export interface Staff {
   active?: boolean;
   /** U4 미확정 예시 직위임을 화면에서 표시하기 위한 플래그 */
   unconfirmedPosition?: boolean;
+  /** 임시 비밀번호로 로그인한 상태. true면 비밀번호를 바꾸기 전까지 앱을 쓸 수 없다 */
+  mustChangePassword?: boolean;
 }
 
 export interface ServiceUser {
