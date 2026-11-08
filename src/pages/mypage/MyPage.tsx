@@ -193,6 +193,17 @@ export function MyPage() {
                 <ListRowButton
                   leading={<Smartphone className="size-5 text-primary" aria-hidden />}
                   title="홈 화면에 추가"
+                  // 아이폰은 바로 추가할 수 없어 누르면 안내가 뜬다는 걸 미리 알려 준다
+                  subtitle={
+                    installMode === "ios"
+                      ? "Safari 공유 메뉴에서 직접 추가해요"
+                      : "앱처럼 전체 화면으로 쓸 수 있어요"
+                  }
+                  trailing={
+                    <span className="type-body text-muted-foreground">
+                      {installMode === "ios" ? "방법 보기" : "추가"}
+                    </span>
+                  }
                   onClick={() => void handleInstall()}
                 />
               </>
