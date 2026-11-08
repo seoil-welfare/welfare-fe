@@ -4,6 +4,7 @@ import { LoadFailureState } from "@/components/common/states";
 import { useMe } from "@/api/queries";
 import type { Staff } from "@/types";
 import { isStaffManager } from "@/services/staffService";
+import { ForcePasswordChangeDialog } from "@/components/auth/ForcePasswordChangeDialog";
 
 /** 로그인한 직원. 로그인 확인 전이거나 로그아웃 상태면 null */
 export function useCurrentStaff(): Staff | null {
@@ -36,7 +37,13 @@ export function RequireAuth() {
     );
   }
   if (!me.data) return <Navigate to="/login" replace />;
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      {/* 임시 비밀번호로 들어왔으면 바꾸기 전까지 닫을 수 없는 창을 띄운다 (서버도 플래그를 관리) */}
+      {me.data.mustChangePassword ? <ForcePasswordChangeDialog /> : null}
+    </>
+  );
 }
 
 /** RequireAuth 내부에서 사용한다. 관리 API의 서버 권한 검사와 화면 접근을 맞춘다. */
