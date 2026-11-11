@@ -117,7 +117,8 @@ export function DiaryEditPage() {
 
   // 새로고침으로 draft가 사라진 뒤, 서버에 저장되어 있던 작성 중 일지를 기억한 id로 되살린다 (QA 03-01).
   // 끝나기 전에는 아래 '새 일지 만들기' effect가 먼저 실행되면 안 되므로 restoring으로 기다리게 한다
-  const [restoring, setRestoring] = useState(() => Boolean(readRememberedDraftId()));
+  // 메모리에 쓰던 draft가 있으면(활동 화면에서 돌아온 경우) 되살리지 않는다. 서버본이 더 오래돼 방금 추가한 활동을 덮어쓴다
+  const [restoring, setRestoring] = useState(() => !draft && Boolean(readRememberedDraftId()));
   useEffect(() => {
     if (!restoring) return;
     const diaryId = readRememberedDraftId();
