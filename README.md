@@ -24,17 +24,17 @@
 
 ### 1. 실제 작동
 
-담당자 `가 담당`이 이용자 `김가상`의 오늘 일지를 쓰고 완료하는 흐름입니다.
+담당자 `가 담당`이 이용자 `김가상`의 오늘 일지를 쓰고 완료하는 흐름입니다. 🔍 표시가 있는 화면은 한 화면 높이까지만 보여 줍니다. 누르면 전체 화면이 열려요.
 
 | ① 로그인 | ② 홈 | ③ 활동 입력 | ④ 일지 작성 |
 |:-:|:-:|:-:|:-:|
-| <img src="docs/readme/01-login.png" width="200"> | <img src="docs/readme/02-home.png" width="200"> | <img src="docs/readme/03-activity-form.png" width="200"> | <img src="docs/readme/04-diary-form.png" width="200"> |
-| 자동 로그인을 고를 수 있어요 | 오늘 쓸 일지와 소식 | 시간·참여 활동·지원·반응을 골라요 | 활동 2건을 넣고 특이사항을 적어요 |
+| <img src="docs/readme/01-login.png" width="200"> | <img src="docs/readme/02-home.png" width="200"> | <a href="docs/readme/03-activity-form-full.png"><img src="docs/readme/03-activity-form.png" width="200"></a> | <a href="docs/readme/04-diary-form-full.png"><img src="docs/readme/04-diary-form.png" width="200"></a> |
+| 자동 로그인을 고를 수 있어요 | 오늘 쓸 일지와 소식 | 시간·참여 활동·지원·반응을 골라요 · 🔍 | 활동 2건을 넣고 특이사항을 적어요 · 🔍 |
 
 | ⑤ 작성 완료 | ⑥ 일지 상세 | ⑦ 달력 | ⑧ 통계 (연간) |
 |:-:|:-:|:-:|:-:|
-| <img src="docs/readme/05-after-complete.png" width="200"> | <img src="docs/readme/06-diary-detail.png" width="200"> | <img src="docs/readme/07-calendar.png" width="200"> | <img src="docs/readme/08-stats.png" width="200"> |
-| 서버에 저장되고 상세로 이동 | 작성자·수정 시각·활동별 기록 | 날짜별 완료 수와 도전적 행동 표시 | 4~11월 가상 일지로 계산한 통계 |
+| <img src="docs/readme/05-after-complete.png" width="200"> | <a href="docs/readme/06-diary-detail-full.png"><img src="docs/readme/06-diary-detail.png" width="200"></a> | <img src="docs/readme/07-calendar.png" width="200"> | <a href="docs/readme/08-stats-full.png"><img src="docs/readme/08-stats.png" width="200"></a> |
+| 서버에 저장되고 상세로 이동 | 작성자·수정 시각·활동별 기록 · 🔍 | 날짜별 완료 수와 도전적 행동 표시 | 4~11월 가상 일지로 계산한 통계 · 🔍 |
 
 PC에서는 하단 메뉴가 왼쪽 메뉴로 바뀝니다.
 
@@ -58,8 +58,8 @@ PC에서는 하단 메뉴가 왼쪽 메뉴로 바뀝니다.
 
 | 동시 수정 충돌 | 첫 로그인 비밀번호 변경 | 일반 직원 메뉴 | 팀장 메뉴 |
 |:-:|:-:|:-:|:-:|
-| <img src="docs/readme/e11-conflict.png" width="200"> | <img src="docs/readme/e10-force-password.png" width="200"> | <img src="docs/readme/e08-mypage-staff.png" width="200"> | <img src="docs/readme/e09-mypage-lead.png" width="200"> |
-| 다른 사람이 먼저 저장했으면 덮어쓰지 않아요 | 임시 비밀번호로는 앱을 쓸 수 없어요. 닫기·바깥 클릭이 막혀 있어요 | 담당자·항목 관리 메뉴가 없어요 | 담당자 관리와 일지 항목 관리가 보여요 |
+| <img src="docs/readme/e11-conflict.png" width="200"> | <img src="docs/readme/e10-force-password.png" width="200"> | <img src="docs/readme/e08-mypage-staff.png" width="200"> | <a href="docs/readme/e09-mypage-lead-full.png"><img src="docs/readme/e09-mypage-lead.png" width="200"></a> |
+| 다른 사람이 먼저 저장했으면 덮어쓰지 않아요 | 임시 비밀번호로는 앱을 쓸 수 없어요. 닫기·바깥 클릭이 막혀 있어요 | 담당자·항목 관리 메뉴가 없어요 | 담당자 관리와 일지 항목 관리가 보여요 · 🔍 |
 
 조회 실패·저장 실패는 브라우저에서 해당 요청만 끊어 재현했습니다.
 
