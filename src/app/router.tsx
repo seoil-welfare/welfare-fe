@@ -28,6 +28,10 @@ import { ExportPage } from "@/pages/export/ExportPage";
 import { ParticipationPage } from "@/pages/manage/ParticipationPage";
 import { PasswordPage, ProfilePage } from "@/pages/mypage/SettingsPages";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { GuardianCardPage } from "@/pages/card/GuardianCardPage";
+import { TodayCardReviewPage } from "@/pages/diary/TodayCardReviewPage";
+import { TodayCardPreviewPage } from "@/pages/diary/TodayCardPreviewPage";
+import { TODAY_CARD_ENABLED } from "@/app/features";
 
 /**
  * 완료된 일지의 개별 활동 수정 진입점 (FR-63).
@@ -67,6 +71,8 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      {/* 보호자가 링크로 여는 화면이라 로그인 없이 연다 */}
+      {TODAY_CARD_ENABLED ? <Route path="/card/:token" element={<GuardianCardPage />} /> : null}
 
       <Route element={<RequireAuth />}>
         <Route path="/home" element={<HomePage />} />
@@ -79,6 +85,10 @@ export function AppRoutes() {
           element={<BehaviorDetailPage />}
         />
         <Route path="/diaries/:diaryId" element={<DiaryDetailPage />} />
+        {TODAY_CARD_ENABLED ? <Route path="/diaries/:diaryId/card" element={<TodayCardReviewPage />} /> : null}
+        {TODAY_CARD_ENABLED ? (
+          <Route path="/diaries/:diaryId/card/preview" element={<TodayCardPreviewPage />} />
+        ) : null}
         <Route
           path="/diaries/:diaryId/activities/:activityId"
           element={<DiaryActivityEditEntry />}

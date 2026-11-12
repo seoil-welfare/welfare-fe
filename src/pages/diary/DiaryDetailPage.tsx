@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { LoaderCircle, Printer, Share2 } from "lucide-react";
+import { LoaderCircle, Printer, Share2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { isApiError } from "@/api/errors";
 import { combineQueries, useDiary, useServiceUsers, useStaffList } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
 import { useDraft } from "@/app/DraftContext";
+import { TODAY_CARD_ENABLED } from "@/app/features";
 import {
   countDiaryBehaviors,
   findServiceUser,
@@ -139,7 +140,14 @@ function DiaryDetail({
         ) : (
           // 스크롤 위치와 상관없이 화면 하단에 고정된다
           <BottomActionBar>
-            <Button block onClick={handleContinue}>
+            {/* 작성 완료하면 AI가 오늘 카드 초안을 만든다. 담당자가 확인하고 보호자에게 보낸다 */}
+            {TODAY_CARD_ENABLED ? (
+              <Button variant="outline" className="flex-1" onClick={() => navigate("/diaries/" + diary.id + "/card")}>
+                <Sparkles aria-hidden />
+                오늘 카드
+              </Button>
+            ) : null}
+            <Button block className="flex-1" onClick={handleContinue}>
               수정하기
             </Button>
           </BottomActionBar>
