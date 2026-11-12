@@ -10,6 +10,7 @@ import type {
   StatisticPeriod,
   UserRole,
 } from "@/types";
+import type { CardPick, GuardianCard, PickHow, TodayCard, TodayCardItem } from "@/types/todayCard";
 
 /**
  * 프론트가 기대하는 API 계약.
@@ -298,6 +299,45 @@ export interface NotificationApi {
   updateSettings(input: NotificationSettings): Promise<NotificationSettings>;
 }
 
+/** 오늘 카드 수정. 바꿀 수 있는 것은 문장과 '따로 연락' 표시뿐이다. 그림·표정·시간은 일지에서 온다 */
+export interface TodayCardUpdate {
+  /** 마지막으로 읽은 카드의 updatedAt. 그사이 다른 사람이 고쳤으면 409 CARD_UPDATED_BY_OTHER */
+  updatedAt: string;
+  items: Pick<TodayCardItem, "id" | "easyText" | "guardianText" | "homeTip">[];
+  needsCall: boolean;
+}
+
+/** 오늘 카드 (담당자, 로그인 필요). 일지 작성 완료 시 서버가 AI로 만든다 */
+export interface TodayCardApi {
+  /** 아직 완료되지 않은 일지면 404 CARD_NOT_FOUND */
+  get(diaryId: string): Promise<TodayCard>;
+  /** 보낸 카드는 고칠 수 없다(400 CARD_ALREADY_SENT) */
+  update(diaryId: string, input: TodayCardUpdate): Promise<TodayCard>;
+  /** 실패했거나(failed) 일지가 바뀐(outdated) 카드를 다시 만든다. status=generating으로 돌려준다 */
+  regenerate(diaryId: string): Promise<TodayCard>;
+  /** 보호자에게 링크를 보낸다. 7일 뒤 만료. 보호자 연락처나 동의가 없으면 400 GUARDIAN_NOT_READY */
+  send(diaryId: string): Promise<TodayCard>;
+}
+
+/** 보호자가 고른 결과. 고르지 않았으면 skipped=true만 보낸다 */
+export interface CardPickInput {
+  itemId?: string;
+  how?: PickHow;
+  skipped: boolean;
+}
+
+/** 오늘 카드 (보호자, 로그인 없이 링크 토큰으로) */
+export interface GuardianCardApi {
+  /**
+   * 보호자 확인 전이면 403 CARD_VERIFY_REQUIRED, 만료면 410 CARD_EXPIRED, 없는 링크면 404.
+   * 401은 쓰지 않는다. 401은 앱이 '직원 로그인 만료'로 보고 로그인 화면으로 보낸다
+   */
+  get(token: string): Promise<GuardianCard>;
+  /** 이용자 생년월일 4자리(MMDD)로 보호자 확인. 맞으면 이 링크용 쿠키를 준다. 틀리면 400 CARD_VERIFY_FAILED */
+  verify(token: string, birthMmdd: string): Promise<void>;
+  pick(token: string, input: CardPickInput): Promise<CardPick>;
+}
+
 export interface Api {
   auth: AuthApi;
   diaries: DiaryApi;
@@ -308,4 +348,6 @@ export interface Api {
   staff: StaffApi;
   notifications: NotificationApi;
   categories: CategoryApi;
+  todayCards: TodayCardApi;
+  guardianCards: GuardianCardApi;
 }

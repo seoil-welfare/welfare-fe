@@ -79,6 +79,20 @@ export const httpApi: Api = {
     updateParticipation: (code, input) =>
       request("/categories/participation/" + encodeURIComponent(code), { method: "PUT", body: input }),
   },
+  todayCards: {
+    get: (diaryId) => request("/diaries/" + encodeURIComponent(diaryId) + "/card"),
+    update: (diaryId, input) =>
+      request("/diaries/" + encodeURIComponent(diaryId) + "/card", { method: "PUT", body: input }),
+    regenerate: (diaryId) =>
+      request("/diaries/" + encodeURIComponent(diaryId) + "/card/regenerate", { method: "POST" }),
+    send: (diaryId) => request("/diaries/" + encodeURIComponent(diaryId) + "/card/send", { method: "POST" }),
+  },
+  guardianCards: {
+    get: (token) => request("/cards/" + encodeURIComponent(token)),
+    verify: (token, birthMmdd) =>
+      request("/cards/" + encodeURIComponent(token) + "/verify", { method: "POST", body: { birthMmdd } }),
+    pick: (token, input) => request("/cards/" + encodeURIComponent(token) + "/pick", { method: "POST", body: input }),
+  },
 };
 
 /**

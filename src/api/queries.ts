@@ -20,6 +20,8 @@ import type {
   StaffInput,
   ChangeableRole,
   PreviousDirectorRole,
+  CardPickInput,
+  TodayCardUpdate,
 } from "@/api/types";
 import { addDays, dateOf } from "@/lib/utils";
 import { latestNewsDateBefore } from "@/services/diaryService";
@@ -77,6 +79,8 @@ export const queryKeys = {
   notificationSummary: ["notifications", "summary"] as const,
   notificationSettings: ["notifications", "settings"] as const,
   categories: ["categories"] as const,
+  todayCard: (diaryId: string) => ["todayCard", diaryId] as const,
+  guardianCard: (token: string) => ["guardianCard", token] as const,
 };
 
 /* ---------- 인증 ---------- */
@@ -453,4 +457,64 @@ export function combineQueries(queries: readonly UseQueryResult<unknown>[]): Com
     error: failed?.error,
     refetch: () => queries.filter((q) => q.isError).forEach((q) => void q.refetch()),
   };
+}
+
+/* ---------- 오늘 카드 (AI) ---------- */
+
+/** 담당자 화면. AI가 만드는 중이면 3초마다 다시 불러온다 */
+export function useTodayCard(diaryId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.todayCard(diaryId ?? ""),
+    queryFn: () => api.todayCards.get(diaryId!),
+    enabled: Boolean(diaryId),
+    refetchInterval: (query) => (query.state.data?.status === "generating" ? 3000 : false),
+  });
+}
+
+export function useUpdateTodayCard(diaryId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TodayCardUpdate) => api.todayCards.update(diaryId, input),
+    onSuccess: (card) => client.setQueryData(queryKeys.todayCard(diaryId), card),
+    onError: () => refetchAfterFailure(client, [queryKeys.todayCard(diaryId)]),
+  });
+}
+
+export function useRegenerateTodayCard(diaryId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.todayCards.regenerate(diaryId),
+    onSuccess: (card) => client.setQueryData(queryKeys.todayCard(diaryId), card),
+    onError: () => refetchAfterFailure(client, [queryKeys.todayCard(diaryId)]),
+  });
+}
+
+export function useSendTodayCard(diaryId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.todayCards.send(diaryId),
+    onSuccess: (card) => client.setQueryData(queryKeys.todayCard(diaryId), card),
+    onError: () => refetchAfterFailure(client, [queryKeys.todayCard(diaryId)]),
+  });
+}
+
+/** 보호자 화면 (링크 토큰, 로그인 없음) */
+export function useGuardianCard(token: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.guardianCard(token ?? ""),
+    queryFn: () => api.guardianCards.get(token!),
+    enabled: Boolean(token),
+  });
+}
+
+export function useVerifyGuardian(token: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (birthMmdd: string) => api.guardianCards.verify(token, birthMmdd),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.guardianCard(token) }),
+  });
+}
+
+export function usePickTodayCard(token: string) {
+  return useMutation({ mutationFn: (input: CardPickInput) => api.guardianCards.pick(token, input) });
 }
