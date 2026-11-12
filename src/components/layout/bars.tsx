@@ -7,12 +7,14 @@ import { cn } from "@/lib/utils";
  * BottomNav와 같은 화면 하단에서 함께 쓰지 않는다.
  * CTA가 하나면 전체 폭, 보조 동작이 있으면 왼쪽 outline·오른쪽 primary.
  * 같은 바 안의 solid와 outline 버튼은 높이가 같다.
+ * 데스크톱(1280+)은 왼쪽에 Sidebar(w-62)가 있어, 바가 그 위를 덮지 않게 그만큼 띄운다.
+ * Sidebar가 없는 화면은 className으로 xl:left-0을 준다.
  */
 export function BottomActionBar({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-4 pt-3 pb-bar",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-4 pt-3 pb-bar xl:left-62",
         className,
       )}
     >
@@ -35,7 +37,7 @@ export function BottomNoticeBar({
     <div
       role="status"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-warning-soft px-4 pt-3 pb-bar",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-warning-soft px-4 pt-3 pb-bar xl:left-62",
         className,
       )}
     >
