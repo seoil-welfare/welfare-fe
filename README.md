@@ -2,7 +2,7 @@
 
 원광장애인종합복지관 돌봄 일지 작성 앱입니다.
 
-화면은 실제 백엔드 `welfare-be` <https://github.com/seoil-welfare/welfare-be>를 호출합니다. 브라우저 mock 서버는 없으며 백엔드와 PostgreSQL이 실행되어 있어야 합니다.
+화면은 실제 백엔드 `welfare-be` (<https://github.com/seoil-welfare/welfare-be>)를 호출합니다. 브라우저 mock 서버는 없으며 백엔드와 PostgreSQL이 실행되어 있어야 합니다.
 
 - [실제 화면이 포함된 사용자 매뉴얼 PDF](docs/케어로그_사용자매뉴얼.pdf)
 - [수정 전후와 기능·코드 개선점](docs/초기-main-수정전후와-개선점.md)
