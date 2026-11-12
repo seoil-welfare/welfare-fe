@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/misc";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +31,7 @@ import { activeServiceUsers, findStaff, isStaffActive } from "@/services/diarySe
 import type { ServiceUser, Staff } from "@/types";
 import { useCurrentStaff } from "@/app/auth";
 import { isStaffManager } from "@/services/staffService";
+import { TODAY_CARD_ENABLED } from "@/app/features";
 
 /**
  * 이용자 목록 / 등록 / 정보 수정 (2.1.14/FR-86 ~ FR-92).
@@ -127,6 +129,8 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
   const staffOptions = staff.filter(isStaffActive); // 사용 중지된 직원에게는 새로 맡기지 않는다
   const [staffId, setStaffId] = useState(staffOptions[0]?.id ?? "");
   const [errors, setErrors] = useState<{ name?: string; birthDate?: string }>({});
+  const [cardNickname, setCardNickname] = useState("");
+  const [cardConsent, setCardConsent] = useState(false);
 
   function submit() {
     if (createUser.isPending) return;
@@ -139,7 +143,7 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
     if (Object.keys(next).length > 0) return;
 
     createUser.mutate(
-      { name: name.trim(), birthDate: birth, assignedStaffId: staffId },
+      { name: name.trim(), birthDate: birth, assignedStaffId: staffId, ...cardInput(cardNickname, cardConsent) },
       {
         onSuccess: (created) => {
           toast.success(created.name + " 님을 등록했어요.");
@@ -178,6 +182,16 @@ function UserNewForm({ staff }: { staff: Staff[] }) {
           staffOptions={staffOptions}
         />
       </FormSection>
+      {TODAY_CARD_ENABLED ? (
+        <FormSection title="오늘 카드">
+          <CardFields
+            nickname={cardNickname}
+            onNicknameChange={setCardNickname}
+            consent={cardConsent}
+            onConsentChange={setCardConsent}
+          />
+        </FormSection>
+      ) : null}
     </AppShell>
   );
 }
@@ -228,6 +242,8 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
   const [staffId, setStaffId] = useState(user.assignedStaffId || (staffOptions[0]?.id ?? ""));
   const [errors, setErrors] = useState<{ name?: string; birthDate?: string }>({});
   const [closeOpen, setCloseOpen] = useState(false);
+  const [cardNickname, setCardNickname] = useState(user.cardNickname ?? "");
+  const [cardConsent, setCardConsent] = useState(user.cardConsent ?? false);
   const busy = updateUser.isPending || closeUser.isPending || reopenUser.isPending;
 
   function save() {
@@ -242,7 +258,10 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
 
     // 저장을 누른 경우에만 반영한다 (이용자 공통 규칙 1)
     updateUser.mutate(
-      { userId: user.id, input: { name: name.trim(), birthDate: birth, assignedStaffId: staffId } },
+      {
+        userId: user.id,
+        input: { name: name.trim(), birthDate: birth, assignedStaffId: staffId, ...cardInput(cardNickname, cardConsent) },
+      },
       {
         onSuccess: () => {
           toast.success("이용자 정보를 저장했어요.");
@@ -303,6 +322,16 @@ function UserDetailForm({ user, staff }: { user: ServiceUser; staff: Staff[] }) 
             staffOptions={staffOptions}
           />
         </FormSection>
+        {TODAY_CARD_ENABLED ? (
+          <FormSection title="오늘 카드">
+            <CardFields
+              nickname={cardNickname}
+              onNicknameChange={setCardNickname}
+              consent={cardConsent}
+              onConsentChange={setCardConsent}
+            />
+          </FormSection>
+        ) : null}
 
 
         <ConfirmDialog
@@ -402,6 +431,56 @@ function UserForm({
           </SelectContent>
         </Select>
       </Field>
+    </FieldGroup>
+  );
+}
+
+/** 오늘 카드 칸. 기능을 끈 배포본에서는 보내지 않는다 (서버는 보내지 않은 칸을 그대로 둔다) */
+function cardInput(nickname: string, consent: boolean) {
+  return TODAY_CARD_ENABLED ? { cardNickname: nickname.trim(), cardConsent: consent } : {};
+}
+
+/** 백엔드 client.card_nickname 길이와 같다 */
+const NICKNAME_MAX = 20;
+
+function CardFields({
+  nickname,
+  onNicknameChange,
+  consent,
+  onConsentChange,
+}: {
+  nickname: string;
+  onNicknameChange: (value: string) => void;
+  consent: boolean;
+  onConsentChange: (value: boolean) => void;
+}) {
+  return (
+    <FieldGroup>
+      <Field>
+        <FieldLabel htmlFor="user-card-nickname">카드 별칭</FieldLabel>
+        <Input
+          id="user-card-nickname"
+          value={nickname}
+          maxLength={NICKNAME_MAX}
+          placeholder="예: 하늘"
+          onChange={(event) => onNicknameChange(event.target.value)}
+        />
+        <FieldDescription>오늘 카드에는 실명 대신 이 별칭이 보여요. 비워 두면 ‘이용자’로 보여요.</FieldDescription>
+      </Field>
+      <label htmlFor="user-card-consent" className="flex cursor-pointer items-start gap-3 py-1">
+        <Checkbox
+          id="user-card-consent"
+          className="mt-0.5"
+          checked={consent}
+          onCheckedChange={(value) => onConsentChange(value === true)}
+        />
+        <span>
+          <span className="block type-body font-medium">보호자가 오늘 카드 받기에 동의했어요</span>
+          <span className="mt-0.5 block type-caption text-muted-foreground">
+            동의해야 오늘 카드 공유 링크를 만들 수 있어요
+          </span>
+        </span>
+      </label>
     </FieldGroup>
   );
 }

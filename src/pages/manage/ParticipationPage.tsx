@@ -10,6 +10,10 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FormSection } from "@/components/common/FormSection";
 import { ListRowButton } from "@/components/common/ListRow";
+import { PICTOGRAM_LABELS, PictogramIcon } from "@/components/todayCard/cardParts";
+import { TODAY_CARD_ENABLED } from "@/app/features";
+import { cn } from "@/lib/utils";
+import type { Pictogram } from "@/types/todayCard";
 import { QueryGate } from "@/components/common/QueryGate";
 import { errorMessage, isApiError } from "@/api/errors";
 import {
@@ -155,7 +159,7 @@ function EditParticipationDialog({ item, onDone }: { item: CategoryItem; onDone:
   const [label, setLabel] = useState(item.label);
   const [error, setError] = useState<string>();
 
-  function save(input: { label?: string; active?: boolean }, doneMessage: string) {
+  function save(input: { label?: string; active?: boolean; pictogram?: Pictogram }, doneMessage: string) {
     if (update.isPending) return;
     update.mutate(
       { code: item.code, input },
@@ -205,6 +209,38 @@ function EditParticipationDialog({ item, onDone }: { item: CategoryItem; onDone:
           />
           <FieldError>{error}</FieldError>
         </Field>
+
+        {/* 오늘 카드: AI가 고른 그림이 목록 밖이면 이 그림을 쓴다. 누르면 바로 저장한다 */}
+        {TODAY_CARD_ENABLED ? (
+          <Field>
+            <FieldLabel>오늘 카드 기본 그림</FieldLabel>
+            <div className="grid grid-cols-5 gap-2" role="group" aria-label="오늘 카드 기본 그림">
+              {(Object.keys(PICTOGRAM_LABELS) as Pictogram[]).map((p) => {
+                const selected = (item.pictogram ?? "favorite") === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={selected}
+                    disabled={update.isPending}
+                    onClick={() =>
+                      selected
+                        ? onDone()
+                        : save({ pictogram: p }, "'" + item.label + "' 카드 그림을 '" + PICTOGRAM_LABELS[p] + "'(으)로 바꿨어요.")
+                    }
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-control border px-1 py-2 type-caption",
+                      selected ? "border-primary bg-accent text-primary" : "border-border text-muted-foreground",
+                    )}
+                  >
+                    <PictogramIcon name={p} className="size-5" />
+                    {PICTOGRAM_LABELS[p]}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        ) : null}
 
         <div className="flex gap-3">
           {/* '기타'는 목록에 없는 활동을 적는 칸이라 숨길 수 없다 */}

@@ -39,6 +39,12 @@ export interface ServiceUser {
   assignedStaffId: string;
   /** 이용 종결은 삭제가 아니다. 과거 일지는 유지한다 */
   status: "active" | "closed";
+  /** 오늘 카드에 보이는 별칭. 없으면 카드에 '이용자'로 보인다 (실명은 카드에 쓰지 않음) */
+  cardNickname?: string;
+  /** 보호자 오늘 카드 수신 동의. 없으면 공유 링크를 만들 수 없다 */
+  cardConsent?: boolean;
+  /** 동의를 등록한 시각 */
+  cardConsentAt?: string;
 }
 
 export type Weather = "맑음" | "구름조금" | "흐림" | "비" | "눈";
