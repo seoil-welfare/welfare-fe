@@ -80,6 +80,8 @@ export interface TodayCard extends CardContent {
   sentAt?: string;
   /** 링크가 열리는 마지막 날 YYYY-MM-DD (sent일 때) */
   expiresOn?: string;
+  /** 보호자에게 보낼 링크 (sent일 때). 서버는 문자를 보내지 않으므로 담당자가 복사해 직접 보낸다. 다시 불러와도 같은 값 */
+  shareUrl?: string;
   /** 보호자 쪽에서 고른 결과 (있을 때) */
   pick?: CardPick;
 }

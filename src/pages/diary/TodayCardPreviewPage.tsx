@@ -6,11 +6,12 @@ import { Spinner } from "@/components/ui/misc";
 import { LoadFailureState } from "@/components/common/states";
 import { TodayCardView } from "@/components/todayCard/TodayCardView";
 import { cardEditRequest } from "@/components/todayCard/editRequest";
+import { shareCardLink } from "@/components/todayCard/shareLink";
 import { errorMessage } from "@/api/errors";
 import { useSendTodayCard, useTodayCard } from "@/api/queries";
 
 /**
- * 오늘 카드 미리보기 (담당자). 보호자에게 보이는 그대로 보여 주고, 여기서 바로 보낼 수 있다.
+ * 오늘 카드 미리보기 (담당자). 보호자에게 보이는 그대로 보여 주고, 여기서 바로 공유 링크를 만들 수 있다.
  * 보호자가 고르는 마지막 장은 눌러 봐도 저장하지 않는다.
  */
 export function TodayCardPreviewPage() {
@@ -60,8 +61,12 @@ export function TodayCardPreviewPage() {
             back();
           },
           onSend: () => {
+            if (card.status === "sent") {
+              void shareCardLink(card);                         // 이미 만든 링크를 다시 공유
+              return;
+            }
             if (!sendable) {
-              toast.info(card.status === "sent" ? "이미 보낸 카드예요." : "카드를 확인할 수 있을 때 보내 주세요.");
+              toast.info("카드를 확인할 수 있을 때 링크를 만들어 주세요.");
               return;
             }
             setConfirmOpen(true);
@@ -72,17 +77,17 @@ export function TodayCardPreviewPage() {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="보호자에게 보낼까요?"
-        description="보낸 뒤에는 고칠 수 없어요. 링크는 보낸 날부터 7일 동안 열려요."
-        confirmLabel="보내기"
+        title="공유 링크를 만들까요?"
+        description="링크를 만든 뒤에는 카드를 고칠 수 없어요. 링크는 오늘부터 7일 동안 열려요."
+        confirmLabel="링크 만들기"
         tone="default"
         onConfirm={() =>
           send.mutate(undefined, {
-            onSuccess: () => {
-              toast.success("보호자에게 보냈어요.");
+            onSuccess: (sent) => {
+              void shareCardLink(sent);
               back();
             },
-            onError: (error) => toast.error(errorMessage(error, "보내지 못했어요. 다시 시도해 주세요.")),
+            onError: (error) => toast.error(errorMessage(error, "링크를 만들지 못했어요. 다시 시도해 주세요.")),
           })
         }
       />

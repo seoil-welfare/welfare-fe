@@ -30,6 +30,20 @@ const PICTOGRAMS: Record<Pictogram, LucideIcon> = {
   rest: Sofa,
 };
 
+/** 그림 이름 (참여 활동 관리에서 기본 그림을 고를 때 보인다) */
+export const PICTOGRAM_LABELS: Record<Pictogram, string> = {
+  music: "음악",
+  meal: "식사",
+  art: "미술",
+  sports: "운동",
+  cooking: "요리",
+  walk: "산책",
+  outing: "나들이",
+  daily: "일상",
+  favorite: "좋아하는 것",
+  rest: "휴식",
+};
+
 /** 정해진 그림 카드. 글자는 옆에 따로 보이므로 그림은 화면 낭독기에서 숨긴다 */
 export function PictogramIcon({ name, className }: { name: Pictogram; className?: string }) {
   const Icon = PICTOGRAMS[name];

@@ -228,9 +228,9 @@ export function TodayCardView({
         {/* 담당자 미리보기: 보내기 전에 알아 둘 것 */}
         {preview ? (
           <div className="mx-5 rounded-card bg-card px-4 py-3 text-center type-body-long text-muted-foreground">
-            카드 공유는 7일 뒤 만료돼요.
+            공유 링크는 7일 뒤 만료돼요.
             <br />
-            검토하고 보내 주세요.
+            검토한 뒤 링크를 만들어 보호자에게 보내 주세요.
           </div>
         ) : null}
         {/* 미리보기일 때는 하단 버튼에 가리지 않게 띄운다 */}
@@ -256,7 +256,7 @@ export function TodayCardView({
             고치기
           </Button>
           <Button className="flex-[2]" disabled={preview.sending} onClick={preview.onSend}>
-            {preview.sending ? "보내는 중…" : "보호자에게 보내기"}
+            {preview.sending ? "링크 만드는 중…" : "공유 링크 만들기"}
           </Button>
         </BottomActionBar>
       ) : null}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { Link2, RefreshCw, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
@@ -16,14 +16,15 @@ import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { MoodFace, cardDate, cardTime } from "@/components/todayCard/cardParts";
 import { cardEditRequest } from "@/components/todayCard/editRequest";
+import { shareCardLink } from "@/components/todayCard/shareLink";
 import { errorMessage, isApiError } from "@/api/errors";
 import { useRegenerateTodayCard, useSendTodayCard, useTodayCard, useUpdateTodayCard } from "@/api/queries";
 import type { TodayCard, TodayCardItem } from "@/types/todayCard";
 
 /**
  * 오늘 카드 확인 (담당자 화면).
- * 일지를 작성 완료하면 서버가 AI로 초안을 만든다. 담당자가 확인·수정한 뒤 보호자에게 보낸다.
- * 담당자가 보내기 전에는 보호자에게 아무것도 가지 않는다.
+ * 일지를 작성 완료하면 서버가 AI로 초안을 만든다. 담당자가 확인·수정한 뒤 공유 링크를 만들어 보호자에게 직접 보낸다.
+ * 서버는 문자를 보내지 않는다. 링크를 만든 뒤에는 '링크 다시 복사'로 같은 링크를 몇 번이고 다시 보낼 수 있다.
  */
 export function TodayCardReviewPage() {
   const { diaryId = "" } = useParams();
@@ -99,8 +100,12 @@ export function TodayCardReviewPage() {
       bottomBar={
         card?.status === "sent" ? (
           <BottomActionBar>
-            <Button block onClick={() => navigate(backTo)}>
-              일지로 돌아가기
+            <Button variant="outline" className="flex-1" onClick={() => navigate(backTo)}>
+              일지로
+            </Button>
+            <Button className="flex-[2]" onClick={() => void shareCardLink(card)}>
+              <Link2 aria-hidden />
+              링크 다시 복사
             </Button>
           </BottomActionBar>
         ) : (
@@ -113,7 +118,7 @@ export function TodayCardReviewPage() {
               disabled={card?.status !== "ready" || editingId !== null || update.isPending || send.isPending}
               onClick={() => setConfirmOpen(true)}
             >
-              {send.isPending ? "보내는 중…" : "보호자에게 보내기"}
+              {send.isPending ? "링크 만드는 중…" : "공유 링크 만들기"}
             </Button>
           </BottomActionBar>
         )
@@ -154,7 +159,7 @@ export function TodayCardReviewPage() {
                 {current.status === "sent" ? (
                   <div className="rounded-control bg-accent px-3 py-2.5 type-body text-accent-foreground">
                     <p>
-                      {cardDate((current.sentAt ?? "").slice(0, 10), false)}에 보냈어요 ·{" "}
+                      {cardDate((current.sentAt ?? "").slice(0, 10), false)}에 링크를 만들었어요 ·{" "}
                       {cardDate(current.expiresOn ?? "", false)}까지 열려요
                     </p>
                     {current.pick ? (
@@ -239,14 +244,14 @@ export function TodayCardReviewPage() {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="보호자에게 보낼까요?"
-        description="보낸 뒤에는 고칠 수 없어요. 링크는 보낸 날부터 7일 동안 열려요."
-        confirmLabel="보내기"
+        title="공유 링크를 만들까요?"
+        description="링크를 만든 뒤에는 카드를 고칠 수 없어요. 링크는 오늘부터 7일 동안 열려요. 보호자에게는 직접 보내 주세요."
+        confirmLabel="링크 만들기"
         tone="default"
         onConfirm={() =>
           send.mutate(undefined, {
-            onSuccess: () => toast.success("보호자에게 보냈어요."),
-            onError: (error) => toast.error(errorMessage(error, "보내지 못했어요. 다시 시도해 주세요.")),
+            onSuccess: (sent) => void shareCardLink(sent),
+            onError: (error) => toast.error(errorMessage(error, "링크를 만들지 못했어요. 다시 시도해 주세요.")),
           })
         }
       />

@@ -10,7 +10,7 @@ import type {
   StatisticPeriod,
   UserRole,
 } from "@/types";
-import type { CardPick, GuardianCard, PickHow, TodayCard, TodayCardItem } from "@/types/todayCard";
+import type { CardPick, GuardianCard, PickHow, Pictogram, TodayCard, TodayCardItem } from "@/types/todayCard";
 
 /**
  * 프론트가 기대하는 API 계약.
@@ -95,6 +95,10 @@ export interface ServiceUserInput {
   name: string;
   birthDate: string;
   assignedStaffId: string;
+  /** 오늘 카드 별칭 (20자까지). 보내지 않으면 서버가 그대로 둔다. 빈 문자열이면 지운다 */
+  cardNickname?: string;
+  /** 보호자 오늘 카드 수신 동의. 보내지 않으면 서버가 그대로 둔다 */
+  cardConsent?: boolean;
 }
 
 /** 계정 추가. 역할은 항상 담당자(staff)다. 팀장은 역할 변경으로 바꾼다 */
@@ -250,6 +254,8 @@ export interface CategoryItem {
   active: boolean;
   /** '기타'면 true (직접 입력칸) */
   etc: boolean;
+  /** 참여 활동만: 오늘 카드 기본 그림 (AI가 고른 그림이 목록 밖이면 이 값을 쓴다) */
+  pictogram?: Pictogram;
 }
 
 /** GET /categories. 숨긴 항목도 함께 온다 */
@@ -269,6 +275,8 @@ export interface Categories {
 export interface ParticipationUpdate {
   label?: string;
   active?: boolean;
+  /** 오늘 카드 기본 그림 */
+  pictogram?: Pictogram;
 }
 
 export interface CategoryApi {
@@ -315,7 +323,7 @@ export interface TodayCardApi {
   update(diaryId: string, input: TodayCardUpdate): Promise<TodayCard>;
   /** 실패했거나(failed) 일지가 바뀐(outdated) 카드를 다시 만든다. status=generating으로 돌려준다 */
   regenerate(diaryId: string): Promise<TodayCard>;
-  /** 보호자에게 링크를 보낸다. 7일 뒤 만료. 보호자 연락처나 동의가 없으면 400 GUARDIAN_NOT_READY */
+  /** 공유 링크를 만든다(문자는 보내지 않음). 응답의 shareUrl을 담당자가 보호자에게 보낸다. 7일 뒤 만료. 이용자 카드 수신 동의가 없으면 400 GUARDIAN_NOT_READY */
   send(diaryId: string): Promise<TodayCard>;
 }
 
