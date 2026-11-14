@@ -461,6 +461,7 @@ function PickCard({
                 key={item.id}
                 type="button"
                 aria-pressed={selected}
+                aria-label={cardTime(item.time) + " " + item.activity}
                 onClick={() => {
                   setSkipped(false);
                   if (selected) {
@@ -471,7 +472,7 @@ function PickCard({
                   }
                 }}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-card border-2 px-1 py-2.5 transition-colors",
+                  "flex min-h-[6.5rem] flex-col items-center justify-center gap-1 rounded-card border-2 px-1 py-2.5 transition-colors",
                   selected
                     ? "border-primary bg-accent"
                     : "border-border bg-card hover:bg-muted",
@@ -481,7 +482,10 @@ function PickCard({
                   name={item.pictogram}
                   className="size-10 text-primary"
                 />
-                <span className="type-heading">{item.word}</span>
+                <span className="line-clamp-1 type-heading">{item.word}</span>
+                <span className="type-caption text-muted-foreground">
+                  {cardTime(item.time)}
+                </span>
               </button>
             );
           })}
