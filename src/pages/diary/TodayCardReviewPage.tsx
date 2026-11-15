@@ -58,8 +58,11 @@ export function TodayCardReviewPage() {
     target?.focus({ preventScroll: true });
   }, [editingId, card]);
 
-  /** 문장·'따로 연락' 표시를 저장한다. 그사이 다른 사람이 고쳤으면 서버가 409로 거절한다 */
-  function save(next: TodayCard, onDone?: () => void) {
+  /**
+   * 문장·'따로 연락' 표시를 저장한다. 그사이 다른 사람이 고쳤으면 서버가 409로 거절한다.
+   * 실패 이유는 토스트로 알리고, onFail을 주면 그쪽에도 넘긴다 (고치던 카드의 입력칸 아래에 남기려고)
+   */
+  function save(next: TodayCard, onDone?: () => void, onFail?: (message: string) => void) {
     update.mutate(
       {
         updatedAt: next.updatedAt,
@@ -68,12 +71,14 @@ export function TodayCardReviewPage() {
       },
       {
         onSuccess: () => onDone?.(),
-        onError: (error) =>
-          toast.error(
+        onError: (error) => {
+          const message =
             isApiError(error) && error.status === 409
               ? "다른 분이 먼저 이 카드를 고쳤어요. 최신 내용을 불러왔어요."
-              : errorMessage(error, "저장하지 못했어요. 다시 시도해 주세요."),
-          ),
+              : errorMessage(error, "저장하지 못했어요. 다시 시도해 주세요.");
+          toast.error(message);
+          onFail?.(message);
+        },
       },
     );
   }
@@ -202,9 +207,11 @@ export function TodayCardReviewPage() {
                     editing={editingId === item.id}
                     locked={(editingId !== null && editingId !== item.id) || update.isPending}
                     onEdit={() => setEditingId(item.id)}
-                    onDone={(next) =>
-                      save({ ...current, items: current.items.map((it) => (it.id === next.id ? next : it)) }, () =>
-                        setEditingId(null),
+                    onDone={(next, onFail) =>
+                      save(
+                        { ...current, items: current.items.map((it) => (it.id === next.id ? next : it)) },
+                        () => setEditingId(null),
+                        onFail,
                       )
                     }
                   />
@@ -279,7 +286,8 @@ function ItemCard({
   editing: boolean;
   locked: boolean;
   onEdit: () => void;
-  onDone: (next: TodayCardItem) => void;
+  /** 저장을 맡긴다. 실패하면 onFail로 받은 이유를 입력칸 아래에 보여 준다 */
+  onDone: (next: TodayCardItem, onFail: (message: string) => void) => void;
 }) {
   const [draft, setDraft] = useState(item);
   const [error, setError] = useState<string | null>(null);
@@ -291,12 +299,15 @@ function ItemCard({
       return;
     }
     setError(null);
-    onDone({
-      ...draft,
-      easyText: draft.easyText.trim(),
-      guardianText: draft.guardianText.trim(),
-      homeTip: draft.homeTip?.trim() || undefined,
-    });
+    onDone(
+      {
+        ...draft,
+        easyText: draft.easyText.trim(),
+        guardianText: draft.guardianText.trim(),
+        homeTip: draft.homeTip?.trim() || undefined,
+      },
+      setError,
+    );
   }
 
   return (
