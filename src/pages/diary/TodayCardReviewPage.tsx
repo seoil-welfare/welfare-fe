@@ -88,9 +88,17 @@ export function TodayCardReviewPage() {
           backTo={backTo}
           action={
             card && card.status !== "generating" && card.status !== "failed" ? (
-              <Button variant="ghost" size="dense" asChild>
-                <Link to={"/diaries/" + diaryId + "/card/preview"}>미리보기</Link>
-              </Button>
+              // 고치던 문장은 이 화면 안에만 있어서, 미리보기로 넘어가면 사라진다.
+              // 공유 링크 버튼처럼 고치는 동안에는 막아 두고, '완료'로 저장한 뒤에 열게 한다
+              editingId !== null ? (
+                <Button variant="ghost" size="dense" disabled>
+                  미리보기
+                </Button>
+              ) : (
+                <Button variant="ghost" size="dense" asChild>
+                  <Link to={"/diaries/" + diaryId + "/card/preview"}>미리보기</Link>
+                </Button>
+              )
             ) : undefined
           }
         />
