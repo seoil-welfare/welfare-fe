@@ -17,9 +17,15 @@ import { QueryGate } from "@/components/common/QueryGate";
 import { MoodFace, cardDate, cardTime } from "@/components/todayCard/cardParts";
 import { cardEditRequest } from "@/components/todayCard/editRequest";
 import { shareCardLink } from "@/components/todayCard/shareLink";
+import { cn } from "@/lib/utils";
 import { errorMessage, isApiError } from "@/api/errors";
 import { useRegenerateTodayCard, useSendTodayCard, useTodayCard, useUpdateTodayCard } from "@/api/queries";
 import type { TodayCard, TodayCardItem } from "@/types/todayCard";
+
+/** 카드 문장 글자 수 제한. 서버(CardRules.EASY_MAX·GUARDIAN_MAX·TIP_MAX)와 같아야 한다 */
+const EASY_MAX = 100;
+const GUARDIAN_MAX = 500;
+const TIP_MAX = 200;
 
 /**
  * 오늘 카드 확인 (담당자 화면).
@@ -52,8 +58,11 @@ export function TodayCardReviewPage() {
     target?.focus({ preventScroll: true });
   }, [editingId, card]);
 
-  /** 문장·'따로 연락' 표시를 저장한다. 그사이 다른 사람이 고쳤으면 서버가 409로 거절한다 */
-  function save(next: TodayCard, onDone?: () => void) {
+  /**
+   * 문장·'따로 연락' 표시를 저장한다. 그사이 다른 사람이 고쳤으면 서버가 409로 거절한다.
+   * 실패 이유는 토스트로 알리고, onFail을 주면 그쪽에도 넘긴다 (고치던 카드의 입력칸 아래에 남기려고)
+   */
+  function save(next: TodayCard, onDone?: () => void, onFail?: (message: string) => void) {
     update.mutate(
       {
         updatedAt: next.updatedAt,
@@ -62,12 +71,14 @@ export function TodayCardReviewPage() {
       },
       {
         onSuccess: () => onDone?.(),
-        onError: (error) =>
-          toast.error(
+        onError: (error) => {
+          const message =
             isApiError(error) && error.status === 409
               ? "다른 분이 먼저 이 카드를 고쳤어요. 최신 내용을 불러왔어요."
-              : errorMessage(error, "저장하지 못했어요. 다시 시도해 주세요."),
-          ),
+              : errorMessage(error, "저장하지 못했어요. 다시 시도해 주세요.");
+          toast.error(message);
+          onFail?.(message);
+        },
       },
     );
   }
@@ -204,9 +215,11 @@ export function TodayCardReviewPage() {
                     editing={editingId === item.id}
                     locked={(editingId !== null && editingId !== item.id) || update.isPending}
                     onEdit={() => setEditingId(item.id)}
-                    onDone={(next) =>
-                      save({ ...current, items: current.items.map((it) => (it.id === next.id ? next : it)) }, () =>
-                        setEditingId(null),
+                    onDone={(next, onFail) =>
+                      save(
+                        { ...current, items: current.items.map((it) => (it.id === next.id ? next : it)) },
+                        () => setEditingId(null),
+                        onFail,
                       )
                     }
                   />
@@ -281,7 +294,8 @@ function ItemCard({
   editing: boolean;
   locked: boolean;
   onEdit: () => void;
-  onDone: (next: TodayCardItem) => void;
+  /** 저장을 맡긴다. 실패하면 onFail로 받은 이유를 입력칸 아래에 보여 준다 */
+  onDone: (next: TodayCardItem, onFail: (message: string) => void) => void;
 }) {
   const [draft, setDraft] = useState(item);
   const [error, setError] = useState<string | null>(null);
@@ -293,12 +307,15 @@ function ItemCard({
       return;
     }
     setError(null);
-    onDone({
-      ...draft,
-      easyText: draft.easyText.trim(),
-      guardianText: draft.guardianText.trim(),
-      homeTip: draft.homeTip?.trim() || undefined,
-    });
+    onDone(
+      {
+        ...draft,
+        easyText: draft.easyText.trim(),
+        guardianText: draft.guardianText.trim(),
+        homeTip: draft.homeTip?.trim() || undefined,
+      },
+      setError,
+    );
   }
 
   return (
@@ -333,24 +350,33 @@ function ItemCard({
             <Textarea
               id={prefix + "-front"}
               value={draft.easyText}
+              maxLength={EASY_MAX}
+              aria-describedby={prefix + "-front-count"}
               onChange={(event) => setDraft({ ...draft, easyText: event.target.value })}
             />
+            <CharCount id={prefix + "-front-count"} length={draft.easyText.length} max={EASY_MAX} />
           </Field>
           <Field>
             <FieldLabel htmlFor={prefix + "-back"}>뒷면 · 보호자 메모</FieldLabel>
             <Textarea
               id={prefix + "-back"}
               value={draft.guardianText}
+              maxLength={GUARDIAN_MAX}
+              aria-describedby={prefix + "-back-count"}
               onChange={(event) => setDraft({ ...draft, guardianText: event.target.value })}
             />
+            <CharCount id={prefix + "-back-count"} length={draft.guardianText.length} max={GUARDIAN_MAX} />
           </Field>
           <Field>
             <FieldLabel htmlFor={prefix + "-tip"}>집에서 해 보세요 (선택)</FieldLabel>
             <Textarea
               id={prefix + "-tip"}
               value={draft.homeTip ?? ""}
+              maxLength={TIP_MAX}
+              aria-describedby={prefix + "-tip-count"}
               onChange={(event) => setDraft({ ...draft, homeTip: event.target.value })}
             />
+            <CharCount id={prefix + "-tip-count"} length={(draft.homeTip ?? "").length} max={TIP_MAX} />
             <FieldError>{error}</FieldError>
           </Field>
         </FieldGroup>
@@ -372,5 +398,23 @@ function ItemCard({
         </dl>
       )}
     </Card>
+  );
+}
+
+/**
+ * 입력칸 아래 오른쪽의 '지금 글자 수/최대'. maxLength로 더 쓸 수 없게 막으므로, 왜 안 써지는지 보이게 한다.
+ * 서버(Java String.length)와 같은 방식(UTF-16 글자 단위)으로 센다.
+ */
+function CharCount({ id, length, max }: { id: string; length: number; max: number }) {
+  return (
+    <p
+      id={id}
+      className={cn(
+        "mt-1 text-right type-caption tabular-nums",
+        length >= max ? "text-destructive" : "text-muted-foreground",
+      )}
+    >
+      {length}/{max}
+    </p>
   );
 }
