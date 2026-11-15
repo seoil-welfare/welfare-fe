@@ -185,11 +185,13 @@ export function TodayCardView({
           )}
         </div>
 
-        {/* 카드 넘기기: 가운데 한 장이 크게, 양옆 장이 조금 보인다 */}
+        {/* 카드 넘기기: 가운데 한 장이 크게, 양옆 장이 조금 보인다.
+            relative가 있어야 각 장의 offsetLeft가 이 영역 기준이 된다 (go·onScroll이 그 값으로 위치를 계산한다).
+            없으면 페이지 왼쪽 끝 기준이 되어, 넓은 화면에서 가운데 정렬 여백만큼 위치가 어긋난다 */}
         <div
           ref={trackRef}
           onScroll={onScroll}
-          className="scrollbar-none mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-[15%] pt-2 pb-10"
+          className="scrollbar-none relative mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-[15%] pt-2 pb-10"
         >
           {card.items.map((it, i) => (
             <Slide
