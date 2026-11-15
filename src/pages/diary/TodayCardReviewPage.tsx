@@ -43,6 +43,8 @@ export function TodayCardReviewPage() {
   const [editingId, setEditingId] = useState<string | null>(() => cardEditRequest.take());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
+  // 고치는 중에 나가려 하면 버릴지 묻는 팝업 (← 와 '나중에' 공통)
+  const [askLeave, setAskLeave] = useState(false);
   const backTo = "/diaries/" + diaryId;
   const card = cardQuery.data;
   const editable = card?.status === "ready" || card?.status === "outdated";
@@ -89,6 +91,16 @@ export function TodayCardReviewPage() {
     });
   }
 
+  /**
+   * ← 와 '나중에'는 같게 동작한다. 고치던 문장은 이 화면 안에만 있어서 나가면 사라지므로,
+   * 고치기 칸이 열려 있으면 버릴지 먼저 묻고, 아니면 바로 일지로 돌아간다.
+   * 브라우저 뒤로가기·뒤로 제스처는 지금 라우터(BrowserRouter)로는 가로챌 수 없어 막지 않는다
+   */
+  function requestLeave() {
+    if (editingId !== null) setAskLeave(true);
+    else navigate(backTo);
+  }
+
   const pickedItem = card?.pick?.itemId ? card.items.find((item) => item.id === card.pick?.itemId) : undefined;
 
   return (
@@ -97,6 +109,7 @@ export function TodayCardReviewPage() {
         <AppHeader
           title="오늘 카드 확인"
           backTo={backTo}
+          onBack={requestLeave}
           action={
             card && card.status !== "generating" && card.status !== "failed" ? (
               // 고치던 문장은 이 화면 안에만 있어서, 미리보기로 넘어가면 사라진다.
@@ -129,7 +142,7 @@ export function TodayCardReviewPage() {
           </BottomActionBar>
         ) : (
           <BottomActionBar>
-            <Button variant="outline" className="flex-1" onClick={() => navigate(backTo)}>
+            <Button variant="outline" className="flex-1" onClick={requestLeave}>
               나중에
             </Button>
             <Button
@@ -250,6 +263,16 @@ export function TodayCardReviewPage() {
           }}
         </QueryGate>
       )}
+
+      <ConfirmDialog
+        open={askLeave}
+        onOpenChange={setAskLeave}
+        title="고치던 문장을 버릴까요?"
+        description="‘완료’를 누르지 않은 내용은 저장되지 않아요."
+        confirmLabel="버리기"
+        cancelLabel="화면에 남기"
+        onConfirm={() => navigate(backTo)}
+      />
 
       {/* 다시 만들면 담당자가 고친 문장이 새 초안으로 바뀌므로 한 번 묻는다 */}
       <ConfirmDialog
