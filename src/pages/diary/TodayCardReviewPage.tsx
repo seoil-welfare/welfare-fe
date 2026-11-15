@@ -17,9 +17,15 @@ import { QueryGate } from "@/components/common/QueryGate";
 import { MoodFace, cardDate, cardTime } from "@/components/todayCard/cardParts";
 import { cardEditRequest } from "@/components/todayCard/editRequest";
 import { shareCardLink } from "@/components/todayCard/shareLink";
+import { cn } from "@/lib/utils";
 import { errorMessage, isApiError } from "@/api/errors";
 import { useRegenerateTodayCard, useSendTodayCard, useTodayCard, useUpdateTodayCard } from "@/api/queries";
 import type { TodayCard, TodayCardItem } from "@/types/todayCard";
+
+/** 카드 문장 글자 수 제한. 서버(CardRules.EASY_MAX·GUARDIAN_MAX·TIP_MAX)와 같아야 한다 */
+const EASY_MAX = 100;
+const GUARDIAN_MAX = 500;
+const TIP_MAX = 200;
 
 /**
  * 오늘 카드 확인 (담당자 화면).
@@ -325,24 +331,33 @@ function ItemCard({
             <Textarea
               id={prefix + "-front"}
               value={draft.easyText}
+              maxLength={EASY_MAX}
+              aria-describedby={prefix + "-front-count"}
               onChange={(event) => setDraft({ ...draft, easyText: event.target.value })}
             />
+            <CharCount id={prefix + "-front-count"} length={draft.easyText.length} max={EASY_MAX} />
           </Field>
           <Field>
             <FieldLabel htmlFor={prefix + "-back"}>뒷면 · 보호자 메모</FieldLabel>
             <Textarea
               id={prefix + "-back"}
               value={draft.guardianText}
+              maxLength={GUARDIAN_MAX}
+              aria-describedby={prefix + "-back-count"}
               onChange={(event) => setDraft({ ...draft, guardianText: event.target.value })}
             />
+            <CharCount id={prefix + "-back-count"} length={draft.guardianText.length} max={GUARDIAN_MAX} />
           </Field>
           <Field>
             <FieldLabel htmlFor={prefix + "-tip"}>집에서 해 보세요 (선택)</FieldLabel>
             <Textarea
               id={prefix + "-tip"}
               value={draft.homeTip ?? ""}
+              maxLength={TIP_MAX}
+              aria-describedby={prefix + "-tip-count"}
               onChange={(event) => setDraft({ ...draft, homeTip: event.target.value })}
             />
+            <CharCount id={prefix + "-tip-count"} length={(draft.homeTip ?? "").length} max={TIP_MAX} />
             <FieldError>{error}</FieldError>
           </Field>
         </FieldGroup>
@@ -364,5 +379,23 @@ function ItemCard({
         </dl>
       )}
     </Card>
+  );
+}
+
+/**
+ * 입력칸 아래 오른쪽의 '지금 글자 수/최대'. maxLength로 더 쓸 수 없게 막으므로, 왜 안 써지는지 보이게 한다.
+ * 서버(Java String.length)와 같은 방식(UTF-16 글자 단위)으로 센다.
+ */
+function CharCount({ id, length, max }: { id: string; length: number; max: number }) {
+  return (
+    <p
+      id={id}
+      className={cn(
+        "mt-1 text-right type-caption tabular-nums",
+        length >= max ? "text-destructive" : "text-muted-foreground",
+      )}
+    >
+      {length}/{max}
+    </p>
   );
 }
