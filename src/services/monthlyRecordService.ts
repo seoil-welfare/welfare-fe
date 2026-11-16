@@ -41,6 +41,8 @@ export interface MonthlyRecordData {
   authorNames: string;
   year: number;
   month: number;
+  /** 1일~말일 (기관 양식이 한 표로 쓰는 경우) */
+  days: MonthlyDayRow[];
   firstHalf: MonthlyDayRow[];
   secondHalf: MonthlyDayRow[];
   summaryParticipation: string;
@@ -173,6 +175,7 @@ export function monthlyRecordData(
     authorNames: [...new Set(diaries.map((d) => staff.find((person) => person.id === d.authorId)?.name).filter(Boolean))].join(", "),
     year,
     month,
+    days: rows,
     firstHalf: rows.slice(0, 16),
     secondHalf: rows.slice(16),
     summaryParticipation: summaryParticipation(diaries),

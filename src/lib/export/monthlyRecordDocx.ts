@@ -2,6 +2,7 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { DOCX_MIME } from "@/lib/export/dailyRecordDocx";
 import type { MonthlyRecordData } from "@/services/monthlyRecordService";
+import { withKoreanLabels } from "@/services/reportFormFields";
 
 /**
  * 월간 기록 템플릿에 값을 채워 docx 파일(Blob)을 만든다.
@@ -33,6 +34,6 @@ export function renderMonthlyRecordDocx(
     linebreaks: true,
     nullGetter: () => "",
   });
-  doc.render(data);
+  doc.render(withKoreanLabels("monthly", data)); // 기관 양식의 한글 표시({이용자이름} 등)도 채운다
   return doc.getZip().generate({ type: "blob", mimeType: DOCX_MIME, compression: "DEFLATE" });
 }

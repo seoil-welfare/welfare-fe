@@ -1,6 +1,7 @@
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import type { DailyRecordData } from "@/services/dailyRecordService";
+import { withKoreanLabels } from "@/services/reportFormFields";
 
 export const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -12,9 +13,10 @@ export const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordproc
  * - paragraphLoop: {#activities}…{/activities}가 표 한 줄 안에 있으면 그 줄을 활동 수만큼 복사한다
  * - linebreaks: 값 안의 \n을 Word 줄바꿈으로 바꾼다 (한 칸에 값이 여러 개일 때)
  * - nullGetter: 값이 없는 자리표시자는 'undefined' 대신 빈칸으로 둔다
+ * - 기관 양식의 한글 표시({이용자이름} 등)도 같은 값으로 채운다 (reportFormFields.ts)
  */
 export function renderDailyRecordDocx(template: ArrayBuffer, data: DailyRecordData): Blob {
-  return render(new PizZip(template), data);
+  return render(new PizZip(template), withKoreanLabels("daily", data));
 }
 
 /**
@@ -23,7 +25,7 @@ export function renderDailyRecordDocx(template: ArrayBuffer, data: DailyRecordDa
  */
 export function renderDailyRecordBundleDocx(template: ArrayBuffer, records: DailyRecordData[]): Blob {
   return render(toBundleTemplate(new PizZip(template)), {
-    records: records.map((record, index) => ({ ...record, pageBreak: index > 0 })),
+    records: records.map((record, index) => ({ ...withKoreanLabels("daily", record), pageBreak: index > 0 })),
   });
 }
 
