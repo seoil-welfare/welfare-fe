@@ -31,7 +31,8 @@ import { NotFoundPage } from "@/pages/NotFoundPage";
 import { GuardianCardPage } from "@/pages/card/GuardianCardPage";
 import { TodayCardReviewPage } from "@/pages/diary/TodayCardReviewPage";
 import { TodayCardPreviewPage } from "@/pages/diary/TodayCardPreviewPage";
-import { TODAY_CARD_ENABLED } from "@/app/features";
+import { REPORT_FORMS_ENABLED, TODAY_CARD_ENABLED } from "@/app/features";
+import { ReportFormsPage } from "@/pages/manage/ReportFormsPage";
 
 /**
  * 완료된 일지의 개별 활동 수정 진입점 (FR-63).
@@ -120,6 +121,7 @@ export function AppRoutes() {
           <Route path="/staff/new" element={<StaffNewPage />} />
           <Route path="/staff/:staffId" element={<StaffDetailPage />} />
           <Route path="/settings/participation" element={<ParticipationPage />} />
+          {REPORT_FORMS_ENABLED ? <Route path="/settings/forms" element={<ReportFormsPage />} /> : null}
         </Route>
         <Route path="/exports/:kind" element={<ExportPage />} />
         <Route path="/settings/password" element={<PasswordPage />} />

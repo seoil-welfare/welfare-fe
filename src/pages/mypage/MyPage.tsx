@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Bell,
+  FileCog,
   FileText,
   KeyRound,
   ListChecks,
@@ -29,6 +30,7 @@ import {
   useUpdateNotificationSettings,
 } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
+import { REPORT_FORMS_ENABLED } from "@/app/features";
 import { useDraft } from "@/app/DraftContext";
 import { promptInstall, useInstallMode } from "@/app/installApp";
 import { activeServiceUsers } from "@/services/diaryService";
@@ -160,6 +162,16 @@ export function MyPage() {
                 leading={<ListChecks className="size-5 text-primary" aria-hidden />}
                 title="참여 활동 관리"
               />
+              {REPORT_FORMS_ENABLED ? (
+                <>
+                  <Separator />
+                  <ListRowLink
+                    to="/settings/forms"
+                    leading={<FileCog className="size-5 text-primary" aria-hidden />}
+                    title="출력 양식 관리"
+                  />
+                </>
+              ) : null}
             </Card>
           </section>
         ) : null}
