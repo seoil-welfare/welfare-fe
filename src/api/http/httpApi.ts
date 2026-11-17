@@ -87,6 +87,18 @@ export const httpApi: Api = {
       request("/diaries/" + encodeURIComponent(diaryId) + "/card/regenerate", { method: "POST" }),
     send: (diaryId) => request("/diaries/" + encodeURIComponent(diaryId) + "/card/send", { method: "POST" }),
   },
+  reportForms: {
+    list: () => request("/report-forms"),
+    upload: ({ kind, name, file }) => {
+      const form = new FormData();
+      form.append("kind", kind);
+      form.append("name", name);
+      form.append("file", file);
+      return request("/report-forms", { method: "POST", body: form });
+    },
+    setActive: (id, active) => request("/report-forms/" + encodeURIComponent(id), { method: "PUT", body: { active } }),
+    file: (id) => request("/report-forms/" + encodeURIComponent(id) + "/file", { responseType: "arrayBuffer" }),
+  },
   guardianCards: {
     get: (token) => request("/cards/" + encodeURIComponent(token)),
     verify: (token, birthMmdd) =>
