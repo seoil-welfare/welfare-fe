@@ -10,6 +10,7 @@ import type {
   StatisticPeriod,
   UserRole,
 } from "@/types";
+import type { ReportFormKind } from "@/services/reportFormFields";
 import type { CardPick, GuardianCard, PickHow, Pictogram, TodayCard, TodayCardItem } from "@/types/todayCard";
 
 /**
@@ -346,6 +347,39 @@ export interface GuardianCardApi {
   pick(token: string, input: CardPickInput): Promise<CardPick>;
 }
 
+/** 기관이 올린 출력 양식 (docx). 기본 양식은 앱에 들어 있어 이 목록에 없다 */
+export interface ReportForm {
+  id: string;
+  kind: ReportFormKind;
+  /** 담당자가 정한 이름 (예: 우리 기관 일지 2026) */
+  name: string;
+  /** 올린 파일 이름 */
+  fileName: string;
+  /** false면 숨김. 출력할 때 고르는 목록에서 빠진다 */
+  active: boolean;
+  uploadedAt: string;
+  /** 올린 사람 이름 */
+  uploadedBy: string;
+}
+
+export interface ReportFormUpload {
+  kind: ReportFormKind;
+  name: string;
+  file: File;
+}
+
+/** 출력 양식. 목록·파일 받기는 직원 모두, 올리기·숨기기는 팀장·국장만 (403) */
+export interface ReportFormApi {
+  /** 숨긴 양식까지 두 종류 모두 */
+  list(): Promise<ReportForm[]>;
+  /** docx만, 5MB 이하. 아니면 400 INVALID_FORM_FILE */
+  upload(input: ReportFormUpload): Promise<ReportForm>;
+  /** 숨기기(false)·다시 사용(true). 지우는 기능은 없다 */
+  setActive(id: string, active: boolean): Promise<ReportForm>;
+  /** 양식 파일 내용 (출력할 때 채운다) */
+  file(id: string): Promise<ArrayBuffer>;
+}
+
 export interface Api {
   auth: AuthApi;
   diaries: DiaryApi;
@@ -358,4 +392,5 @@ export interface Api {
   categories: CategoryApi;
   todayCards: TodayCardApi;
   guardianCards: GuardianCardApi;
+  reportForms: ReportFormApi;
 }

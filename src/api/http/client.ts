@@ -12,8 +12,11 @@ type Query = Record<string, string | number | boolean | undefined>;
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   query?: Query;
+  /** FormData면 파일 업로드(multipart)로 보낸다 */
   body?: unknown;
   signal?: AbortSignal;
+  /** 응답을 JSON 대신 파일 내용(ArrayBuffer)으로 받는다 (양식 파일 내려받기) */
+  responseType?: "json" | "arrayBuffer";
   /** 탭을 닫거나 새로고침하는 중에도(pagehide) 요청이 끊기지 않게 한다 */
   keepalive?: boolean;
 }
@@ -44,8 +47,10 @@ function buildUrl(path: string, query?: Query): string {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers: Record<string, string> = { Accept: options.responseType === "arrayBuffer" ? "*/*" : "application/json" };
+  // FormData는 브라우저가 경계 문자열까지 붙여 Content-Type을 정한다
+  if (options.body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   const token = hooks.getToken?.();
   if (token) headers.Authorization = "Bearer " + token;
 
@@ -54,7 +59,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     response = await fetch(buildUrl(path, options.query), {
       method: options.method ?? "GET",
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: isForm ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
       credentials: "include",
       signal: options.signal,
       keepalive: options.keepalive,
@@ -77,6 +82,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (response.status === 204) return undefined as T;
+  if (options.responseType === "arrayBuffer") return (await response.arrayBuffer()) as T;
   return (await readJson<T>(response)) as T;
 }
 

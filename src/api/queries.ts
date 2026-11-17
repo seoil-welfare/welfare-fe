@@ -21,6 +21,7 @@ import type {
   ChangeableRole,
   PreviousDirectorRole,
   CardPickInput,
+  ReportFormUpload,
   TodayCardUpdate,
 } from "@/api/types";
 import { addDays, dateOf } from "@/lib/utils";
@@ -79,6 +80,7 @@ export const queryKeys = {
   notificationSummary: ["notifications", "summary"] as const,
   notificationSettings: ["notifications", "settings"] as const,
   categories: ["categories"] as const,
+  reportForms: ["reportForms"] as const,
   todayCard: (diaryId: string) => ["todayCard", diaryId] as const,
   guardianCard: (token: string) => ["guardianCard", token] as const,
 };
@@ -517,4 +519,28 @@ export function useVerifyGuardian(token: string) {
 
 export function usePickTodayCard(token: string) {
   return useMutation({ mutationFn: (input: CardPickInput) => api.guardianCards.pick(token, input) });
+}
+
+/* ---------- 출력 양식 ---------- */
+
+export function useReportForms() {
+  return useQuery({ queryKey: queryKeys.reportForms, queryFn: () => api.reportForms.list() });
+}
+
+export function useUploadReportForm() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReportFormUpload) => api.reportForms.upload(input),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.reportForms }),
+    onError: () => refetchAfterFailure(client, [queryKeys.reportForms]),
+  });
+}
+
+export function useSetReportFormActive() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => api.reportForms.setActive(id, active),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.reportForms }),
+    onError: () => refetchAfterFailure(client, [queryKeys.reportForms]),
+  });
 }
