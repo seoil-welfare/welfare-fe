@@ -1,5 +1,5 @@
 import { DEFAULT_FORM, loadReportTemplate, type ReportFormChoice } from "@/lib/export/reportTemplate";
-import { saveBlob } from "@/lib/export/downloadDailyRecord";
+import { saveBlob } from "@/lib/export/saveBlob";
 import { behaviorTotals, monthlyRecordData, monthlyRecordFileName, monthRange } from "@/services/monthlyRecordService";
 import { reportDiaries } from "@/services/exportService";
 import type { Diary, ServiceUser, Staff } from "@/types";

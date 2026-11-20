@@ -1,4 +1,5 @@
 import { DEFAULT_FORM, loadReportTemplate, type ReportFormChoice } from "@/lib/export/reportTemplate";
+import { saveBlob } from "@/lib/export/saveBlob";
 import { dailyRecordData, dailyRecordFileName, diaryBundleFileName } from "@/services/dailyRecordService";
 import { reportDiaries } from "@/services/exportService";
 import type { Diary, ServiceUser, Staff } from "@/types";
@@ -43,17 +44,4 @@ export async function downloadDiaryBundle(
 async function loadTemplate(form: ReportFormChoice) {
   // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다. 처음 화면을 여는 데 드는 용량이 늘지 않는다
   return Promise.all([loadReportTemplate("daily", form), import("@/lib/export/dailyRecordDocx")]);
-}
-
-/** Blob을 파일로 내려받게 한다. 보이지 않는 링크를 만들어 누른 뒤 바로 치운다 (월간 기록 출력도 쓴다) */
-export function saveBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  // 바로 지우면 일부 브라우저에서 다운로드가 취소된다. 넉넉히 기다린 뒤 메모리를 돌려준다
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
