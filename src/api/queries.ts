@@ -523,8 +523,9 @@ export function usePickTodayCard(token: string) {
 
 /* ---------- 출력 양식 ---------- */
 
-export function useReportForms() {
-  return useQuery({ queryKey: queryKeys.reportForms, queryFn: () => api.reportForms.list() });
+/** enabled=false면 부르지 않는다 (출력 양식 기능이 꺼진 배포본에서 출력 화면이 서버를 부르지 않게) */
+export function useReportForms(enabled = true) {
+  return useQuery({ queryKey: queryKeys.reportForms, queryFn: () => api.reportForms.list(), enabled });
 }
 
 export function useUploadReportForm() {

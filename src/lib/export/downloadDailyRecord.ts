@@ -1,4 +1,4 @@
-import templateUrl from "@/assets/forms/daily-record.template.docx?url";
+import { DEFAULT_FORM, loadReportTemplate, type ReportFormChoice } from "@/lib/export/reportTemplate";
 import { dailyRecordData, dailyRecordFileName, diaryBundleFileName } from "@/services/dailyRecordService";
 import { reportDiaries } from "@/services/exportService";
 import type { Diary, ServiceUser, Staff } from "@/types";
@@ -10,8 +10,13 @@ import type { Diary, ServiceUser, Staff } from "@/types";
  * 순서: 템플릿 파일 받기 → 값 만들기(dailyRecordData) → 채우기(renderDailyRecordDocx) → 파일 저장
  * 실패하면 예외를 그대로 던진다. 안내 문구는 부르는 화면이 정한다.
  */
-export async function downloadDailyRecord(diary: Diary, client: ServiceUser, staff: readonly Staff[] = []): Promise<void> {
-  const [template, { renderDailyRecordDocx }] = await loadTemplate();
+export async function downloadDailyRecord(
+  diary: Diary,
+  client: ServiceUser,
+  staff: readonly Staff[] = [],
+  form: ReportFormChoice = DEFAULT_FORM,
+): Promise<void> {
+  const [template, { renderDailyRecordDocx }] = await loadTemplate(form);
   const blob = renderDailyRecordDocx(template, dailyRecordData(diary, client, staff));
   saveBlob(blob, dailyRecordFileName(diary, client));
 }
@@ -25,20 +30,19 @@ export async function downloadDiaryBundle(
   client: ServiceUser,
   range: { from: string; to: string },
   staff: readonly Staff[] = [],
+  form: ReportFormChoice = DEFAULT_FORM,
 ): Promise<void> {
-  const [template, { renderDailyRecordBundleDocx }] = await loadTemplate();
+  const [template, { renderDailyRecordBundleDocx }] = await loadTemplate(form);
   const sorted = reportDiaries(diaries, client.id, range.from, range.to);
   if (!sorted.length) throw new Error("출력할 작성 완료 일지가 없어요.");
   const blob = renderDailyRecordBundleDocx(template, sorted.map((diary) => dailyRecordData(diary, client, staff)));
   saveBlob(blob, diaryBundleFileName(client, range.from, range.to));
 }
 
-/** 양식 파일과 docx 라이브러리를 함께 불러온다 */
-async function loadTemplate() {
+/** 고른 양식 파일과 docx 라이브러리를 함께 불러온다 */
+async function loadTemplate(form: ReportFormChoice) {
   // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다. 처음 화면을 여는 데 드는 용량이 늘지 않는다
-  const [response, docx] = await Promise.all([fetch(templateUrl), import("@/lib/export/dailyRecordDocx")]);
-  if (!response.ok) throw new Error("일별활동일지 양식을 불러오지 못했어요.");
-  return [await response.arrayBuffer(), docx] as const;
+  return Promise.all([loadReportTemplate("daily", form), import("@/lib/export/dailyRecordDocx")]);
 }
 
 /** Blob을 파일로 내려받게 한다. 보이지 않는 링크를 만들어 누른 뒤 바로 치운다 (월간 기록 출력도 쓴다) */

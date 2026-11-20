@@ -1,4 +1,4 @@
-import templateUrl from "@/assets/forms/monthly-record.template.docx?url";
+import { DEFAULT_FORM, loadReportTemplate, type ReportFormChoice } from "@/lib/export/reportTemplate";
 import { saveBlob } from "@/lib/export/downloadDailyRecord";
 import { behaviorTotals, monthlyRecordData, monthlyRecordFileName, monthRange } from "@/services/monthlyRecordService";
 import { reportDiaries } from "@/services/exportService";
@@ -17,26 +17,25 @@ export async function downloadMonthlyRecord(
   year: number,
   month: number,
   staff: readonly Staff[] = [],
+  form: ReportFormChoice = DEFAULT_FORM,
 ): Promise<void> {
   const { from, to } = monthRange(year, month);
   diaries = reportDiaries(diaries, client.id, from, to);
   if (!diaries.length) throw new Error("출력할 작성 완료 일지가 없어요.");
   // docx 라이브러리는 출력할 때만 필요해서 이때 불러온다
-  const [response, { renderMonthlyRecordDocx }, charts] = await Promise.all([
-    fetch(templateUrl),
+  const [template, { renderMonthlyRecordDocx }, charts] = await Promise.all([
+    loadReportTemplate("monthly", form),
     import("@/lib/export/monthlyRecordDocx"),
     import("@/lib/export/monthlyRecordCharts"),
   ]);
-  if (!response.ok) throw new Error("월간 기록 양식을 불러오지 못했어요.");
 
   const totals = behaviorTotals(diaries);
   const [totalsImage, chartImage] = await Promise.all([
     charts.drawBehaviorTotals(totals),
     charts.drawBehaviorChart(totals),
   ]);
-  const blob = renderMonthlyRecordDocx(await response.arrayBuffer(), monthlyRecordData(diaries, client, year, month, staff), {
-    totals: totalsImage,
-    chart: chartImage,
-  });
+  // 그래프 그림은 기본 양식의 정해진 그림 자리에만 넣는다. 기관 양식은 그 자리가 없거나 다른 그림(로고 등)일 수 있어 넣지 않는다
+  const images = form.type === "default" ? { totals: totalsImage, chart: chartImage } : undefined;
+  const blob = renderMonthlyRecordDocx(template, monthlyRecordData(diaries, client, year, month, staff), images);
   saveBlob(blob, monthlyRecordFileName(client, year, month));
 }

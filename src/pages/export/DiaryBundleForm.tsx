@@ -10,6 +10,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
+import { ReportFormField, toReportFormChoice, useActiveReportForms } from "@/components/export/ReportFormField";
 import { api } from "@/api";
 import { downloadDiaryBundle } from "@/lib/export/downloadDailyRecord";
 import { useToday } from "@/lib/today";
@@ -30,6 +31,8 @@ export function DiaryBundleForm({ meta, users, staff }: { meta: ExportMeta; user
   const [userId, setUserId] = useState(users[0]?.id ?? ""); // 출력할 이용자 한 명
   const [from, setFrom] = useState(addDays(today, -30));
   const [to, setTo] = useState(today);
+  const [formValue, setFormValue] = useState("default"); // 출력 양식 (기본 또는 기관 양식 id)
+  const { forms } = useActiveReportForms("daily");
   const [running, setRunning] = useState(false);
   const [emptyRange, setEmptyRange] = useState<string>(); // 일지가 없었던 기간 안내
 
@@ -46,7 +49,7 @@ export function DiaryBundleForm({ meta, users, staff }: { meta: ExportMeta; user
         setEmptyRange(user.name + " · " + from + " ~ " + to);
         return;
       }
-      await downloadDiaryBundle(diaries, user, { from, to }, staff);
+      await downloadDiaryBundle(diaries, user, { from, to }, staff, toReportFormChoice(formValue, forms));
       toast.success("일지 " + diaries.length + "건을 한 파일로 내려받았어요.");
     } catch {
       toast.error("일지 모음 파일을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -134,6 +137,8 @@ export function DiaryBundleForm({ meta, users, staff }: { meta: ExportMeta; user
             <FieldDescription className="mt-2">한 번에 3개월(92일)까지 출력할 수 있어요.</FieldDescription>
           )}
         </FormSection>
+
+        <ReportFormField kind="daily" id="bundle-form" value={formValue} onChange={setFormValue} triggerClassName={SOFT_BORDER} />
 
         {emptyRange ? (
           <Alert tone="neutral" title="이 기간에는 작성 완료된 일지가 없어요">

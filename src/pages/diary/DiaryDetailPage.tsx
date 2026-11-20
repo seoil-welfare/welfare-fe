@@ -24,6 +24,10 @@ import {
   findStaff,
 } from "@/services/diaryService";
 import { downloadDailyRecord } from "@/lib/export/downloadDailyRecord";
+import { DEFAULT_FORM, type ReportFormChoice } from "@/lib/export/reportTemplate";
+import { useActiveReportForms } from "@/components/export/ReportFormField";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ListRowButton } from "@/components/common/ListRow";
 import { formatDateTime, formatLongDate } from "@/lib/utils";
 import type { Diary, ServiceUser, Staff } from "@/types";
 
@@ -260,12 +264,16 @@ function DiaryDetail({
 
 function PrintButton({ diary, serviceUser, staff }: { diary: Diary; serviceUser: ServiceUser; staff: Staff[] }) {
   const [running, setRunning] = useState(false);
+  // 기관 양식을 올려 두었으면 어떤 양식으로 출력할지 먼저 묻는다. 없으면 기본 양식으로 바로 출력
+  const { forms } = useActiveReportForms("daily");
+  const [choosing, setChoosing] = useState(false);
 
-  async function handlePrint() {
+  async function handlePrint(form: ReportFormChoice = DEFAULT_FORM) {
     if (running) return; // 중복 클릭 방지 (가이드 7장 파일 출력 피드백)
+    setChoosing(false);
     setRunning(true);
     try {
-      await downloadDailyRecord(diary, serviceUser, staff);
+      await downloadDailyRecord(diary, serviceUser, staff, form);
       toast.success("일별활동일지를 내려받았어요.");
     } catch {
       toast.error("일별활동일지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -275,15 +283,31 @@ function PrintButton({ diary, serviceUser, staff }: { diary: Diary; serviceUser:
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={running ? "일별활동일지 만드는 중" : "일별활동일지 출력하기"}
-      aria-busy={running}
-      onClick={handlePrint}
-      disabled={running}
-    >
-      {running ? <LoaderCircle className="animate-spin" aria-hidden /> : <Printer aria-hidden />}
-    </Button>
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={running ? "일별활동일지 만드는 중" : "일별활동일지 출력하기"}
+        aria-busy={running}
+        onClick={() => (forms.length > 0 ? setChoosing(true) : void handlePrint())}
+        disabled={running}
+      >
+        {running ? <LoaderCircle className="animate-spin" aria-hidden /> : <Printer aria-hidden />}
+      </Button>
+      <Dialog open={choosing} onOpenChange={setChoosing}>
+        <DialogContent title="어떤 양식으로 출력할까요?" description="고른 양식으로 일별활동일지를 내려받아요.">
+          <ul className="-mx-1 divide-y divide-border">
+            <li>
+              <ListRowButton title="기본 양식" onClick={() => void handlePrint(DEFAULT_FORM)} />
+            </li>
+            {forms.map((form) => (
+              <li key={form.id}>
+                <ListRowButton title={form.name} onClick={() => void handlePrint({ type: "uploaded", id: form.id })} />
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
