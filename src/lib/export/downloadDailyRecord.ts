@@ -17,9 +17,18 @@ export async function downloadDailyRecord(
   staff: readonly Staff[] = [],
   form: ReportFormChoice = DEFAULT_FORM,
 ): Promise<void> {
+  saveBlob(await buildDailyRecordDocx(diary, client, staff, form), dailyRecordFileName(diary, client));
+}
+
+/** 일지 1건으로 일일 기록지 docx를 만든다. 실제 출력과 양식 샘플 받기가 함께 쓴다 */
+export async function buildDailyRecordDocx(
+  diary: Diary,
+  client: ServiceUser,
+  staff: readonly Staff[],
+  form: ReportFormChoice,
+): Promise<Blob> {
   const [template, { renderDailyRecordDocx }] = await loadTemplate(form);
-  const blob = renderDailyRecordDocx(template, dailyRecordData(diary, client, staff));
-  saveBlob(blob, dailyRecordFileName(diary, client));
+  return renderDailyRecordDocx(template, dailyRecordData(diary, client, staff));
 }
 
 /**
