@@ -28,12 +28,9 @@ export async function downloadReportSample(kind: ReportFormKind, form: ReportFor
     import("@/lib/export/monthlyRecordCharts"),
   ]);
   const data = monthlyRecordData(diaries, SAMPLE_CLIENT, SAMPLE_MONTH.year, SAMPLE_MONTH.month, SAMPLE_STAFF);
-  // 그래프는 실제 출력과 같은 규칙으로 기본 양식에만 넣는다
-  let images;
-  if (form.type === "default") {
-    const totals = behaviorTotals(diaries);
-    const [totalsImage, chartImage] = await Promise.all([charts.drawBehaviorTotals(totals), charts.drawBehaviorChart(totals)]);
-    images = { totals: totalsImage, chart: chartImage };
-  }
-  saveBlob(renderMonthlyRecordDocx(template, data, images), fileName);
+  // 그래프는 실제 출력과 같은 규칙으로 넣는다 (기관 양식은 그래프 자리에만)
+  const totals = behaviorTotals(diaries);
+  const [totalsImage, chartImage] = await Promise.all([charts.drawBehaviorTotals(totals), charts.drawBehaviorChart(totals)]);
+  const images = { totals: totalsImage, chart: chartImage };
+  saveBlob(renderMonthlyRecordDocx(template, data, images, form.type === "default" ? "fixed" : "slots"), fileName);
 }

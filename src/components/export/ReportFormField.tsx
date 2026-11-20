@@ -66,7 +66,7 @@ export function ReportFormField({
           {isError
             ? "올린 양식을 불러오지 못해 기본 양식으로 출력해요."
             : kind === "monthly" && current !== DEFAULT_VALUE
-              ? "기관 양식에는 그래프가 들어가지 않아요."
+              ? "그래프는 양식에 그래프 자리를 표시한 경우에만 들어가요."
               : "출력 양식 관리에서 올린 양식으로도 출력할 수 있어요."}
         </FieldDescription>
       </Field>
