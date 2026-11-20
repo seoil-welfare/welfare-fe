@@ -34,8 +34,9 @@ export async function downloadMonthlyRecord(
     charts.drawBehaviorTotals(totals),
     charts.drawBehaviorChart(totals),
   ]);
-  // 그래프 그림은 기본 양식의 정해진 그림 자리에만 넣는다. 기관 양식은 그 자리가 없거나 다른 그림(로고 등)일 수 있어 넣지 않는다
-  const images = form.type === "default" ? { totals: totalsImage, chart: chartImage } : undefined;
-  const blob = renderMonthlyRecordDocx(template, monthlyRecordData(diaries, client, year, month, staff), images);
+  // 기본 양식은 정해진 그림 자리에, 기관 양식은 대체 텍스트로 표시한 그래프 자리에만 넣는다 (로고 등은 그대로)
+  const images = { totals: totalsImage, chart: chartImage };
+  const placement = form.type === "default" ? "fixed" : "slots";
+  const blob = renderMonthlyRecordDocx(template, monthlyRecordData(diaries, client, year, month, staff), images, placement);
   saveBlob(blob, monthlyRecordFileName(client, year, month));
 }
