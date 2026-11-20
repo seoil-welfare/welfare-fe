@@ -1,8 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CircleAlert, CircleCheck, FileSearch, FileText, TriangleAlert, Upload } from "lucide-react";
-import dailyTemplateUrl from "@/assets/forms/daily-record.template.docx?url";
-import monthlyTemplateUrl from "@/assets/forms/monthly-record.template.docx?url";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ListRowButton } from "@/components/common/ListRow";
@@ -14,12 +12,11 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Spinner } from "@/components/ui/misc";
 import { SegmentedToggle } from "@/components/ui/toggle-group";
-import { api } from "@/api";
 import { errorMessage } from "@/api/errors";
 import { useReportForms, useSetReportFormActive, useUploadReportForm } from "@/api/queries";
 import type { ReportForm } from "@/api/types";
 import { CHART_SLOT_DESCRIPTION, CHART_SLOT_LABEL, type ChartSlot } from "@/lib/export/chartSlots";
-import { DEFAULT_FORM } from "@/lib/export/reportTemplate";
+import { DEFAULT_FORM, loadReportTemplate, type ReportFormChoice } from "@/lib/export/reportTemplate";
 import { saveBlob } from "@/lib/export/saveBlob";
 import type { ReportFormCheck } from "@/lib/export/reportFormCheck";
 import { formatDateTime } from "@/lib/utils";
@@ -37,7 +34,6 @@ const KIND_OPTIONS = [
 ] as const;
 
 const KIND_LABEL: Record<ReportFormKind, string> = { daily: "일별활동일지", monthly: "월별활동일지" };
-const DEFAULT_TEMPLATE_URL: Record<ReportFormKind, string> = { daily: dailyTemplateUrl, monthly: monthlyTemplateUrl };
 
 /** 목록에서 고른 양식. 기본 양식은 서버 목록에 없어 따로 표시한다 */
 type Selected = { type: "default" } | { type: "uploaded"; form: ReportForm };
@@ -136,13 +132,14 @@ function FormDetailDialog({ kind, selected, onDone }: { kind: ReportFormKind; se
   const [downloading, setDownloading] = useState(false);
   const [sampling, setSampling] = useState(false);
   const form = selected.type === "uploaded" ? selected.form : null;
+  const choice: ReportFormChoice = form ? { type: "uploaded", id: form.id } : DEFAULT_FORM;
 
   /** 가상 일지로 채운 샘플을 내려받는다. Word로 열어 실제 출력 모양을 확인한다 */
   async function downloadSample() {
     setSampling(true);
     try {
       const { downloadReportSample } = await import("@/lib/export/downloadReportSample");
-      await downloadReportSample(kind, form ? { type: "uploaded", id: form.id } : DEFAULT_FORM, form ? form.name : KIND_LABEL[kind] + " 기본 양식");
+      await downloadReportSample(kind, choice, form ? form.name : KIND_LABEL[kind] + " 기본 양식");
       toast.success("샘플을 내려받았어요. Word로 열어 확인해 보세요.");
     } catch (error) {
       toast.error(errorMessage(error, "샘플을 만들지 못했어요. 양식을 다시 확인해 주세요."));
@@ -154,13 +151,8 @@ function FormDetailDialog({ kind, selected, onDone }: { kind: ReportFormKind; se
   async function download() {
     setDownloading(true);
     try {
-      if (form) {
-        saveBlob(new Blob([await api.reportForms.file(form.id)]), form.fileName);
-      } else {
-        const response = await fetch(DEFAULT_TEMPLATE_URL[kind]);
-        if (!response.ok) throw new Error();
-        saveBlob(await response.blob(), KIND_LABEL[kind] + "_기본양식.docx");
-      }
+      const content = await loadReportTemplate(kind, choice);
+      saveBlob(new Blob([content]), form ? form.fileName : KIND_LABEL[kind] + "_기본양식.docx");
     } catch (error) {
       toast.error(errorMessage(error, "양식 파일을 받지 못했어요."));
     } finally {
