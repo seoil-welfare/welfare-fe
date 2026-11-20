@@ -24,11 +24,14 @@ export interface MonthlyRecordImages {
 export function renderMonthlyRecordDocx(
   template: ArrayBuffer,
   data: MonthlyRecordData,
-  images: MonthlyRecordImages,
+  /** 기본 양식일 때만 준다. 없으면 그림을 바꾸지 않는다 (기관 양식의 로고 등을 덮어쓰지 않게) */
+  images?: MonthlyRecordImages,
 ): Blob {
   const zip = new PizZip(template);
-  zip.file(MONTHLY_IMAGE_PATHS.totals, images.totals);
-  zip.file(MONTHLY_IMAGE_PATHS.chart, images.chart);
+  if (images) {
+    zip.file(MONTHLY_IMAGE_PATHS.totals, images.totals);
+    zip.file(MONTHLY_IMAGE_PATHS.chart, images.chart);
+  }
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true, // {#firstHalf}…{/firstHalf}가 표 한 줄에 걸쳐 있으면 그 줄을 날짜 수만큼 복사한다
     linebreaks: true,

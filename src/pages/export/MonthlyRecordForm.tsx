@@ -11,6 +11,7 @@ import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
 import { api } from "@/api";
 import { downloadMonthlyRecord } from "@/lib/export/downloadMonthlyRecord";
+import { ReportFormField, toReportFormChoice, useActiveReportForms } from "@/components/export/ReportFormField";
 import { useToday } from "@/lib/today";
 import { monthRange } from "@/services/monthlyRecordService";
 import { reportDiaries } from "@/services/exportService";
@@ -48,6 +49,8 @@ export function MonthlyRecordForm({ meta, users, staff }: { meta: ExportMeta; us
   // 작성월. 지난 달을 마감해 쓰는 일이 많아 지난 달로 시작한다 (1월이면 작년 12월)
   const [year, setYear] = useState(thisMonth === 1 ? thisYear - 1 : thisYear);
   const [month, setMonth] = useState(thisMonth === 1 ? 12 : thisMonth - 1);
+  const [formValue, setFormValue] = useState("default"); // 출력 양식 (기본 또는 기관 양식 id)
+  const { forms } = useActiveReportForms("monthly");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<MonthlyResult>();
 
@@ -63,6 +66,7 @@ export function MonthlyRecordForm({ meta, users, staff }: { meta: ExportMeta; us
     setResult(undefined);
     const targets = users.filter((u) => selectedUsers.includes(u.id)); // 목록 순서대로 내려받는다
     const { from, to } = monthRange(year, month);
+    const form = toReportFormChoice(formValue, forms);
     const next: MonthlyResult = { label: year + "년 " + month + "월", saved: [], empty: [], failed: [] };
     for (const user of targets) {
       try {
@@ -72,7 +76,7 @@ export function MonthlyRecordForm({ meta, users, staff }: { meta: ExportMeta; us
           continue;
         }
         if (next.saved.length > 0) await wait(DOWNLOAD_GAP_MS);
-        await downloadMonthlyRecord(diaries, user, year, month, staff);
+        await downloadMonthlyRecord(diaries, user, year, month, staff, form);
         next.saved.push(user.name);
       } catch {
         next.failed.push(user.name);
@@ -144,6 +148,8 @@ export function MonthlyRecordForm({ meta, users, staff }: { meta: ExportMeta; us
             </Field>
           </div>
         </FormSection>
+
+        <ReportFormField kind="monthly" id="monthly-form" value={formValue} onChange={setFormValue} triggerClassName={SOFT_BORDER} />
 
         {result ? <MonthlyResultAlert result={result} /> : null}
       </div>
