@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, FileText, TriangleAlert, Upload } from "lucide-react";
+import { CircleAlert, CircleCheck, FileSearch, FileText, TriangleAlert, Upload } from "lucide-react";
 import dailyTemplateUrl from "@/assets/forms/daily-record.template.docx?url";
 import monthlyTemplateUrl from "@/assets/forms/monthly-record.template.docx?url";
 import { AppShell } from "@/components/layout/AppShell";
@@ -19,6 +19,7 @@ import { errorMessage } from "@/api/errors";
 import { useReportForms, useSetReportFormActive, useUploadReportForm } from "@/api/queries";
 import type { ReportForm } from "@/api/types";
 import { saveBlob } from "@/lib/export/downloadDailyRecord";
+import { DEFAULT_FORM } from "@/lib/export/reportTemplate";
 import type { ReportFormCheck } from "@/lib/export/reportFormCheck";
 import { formatDateTime } from "@/lib/utils";
 import { REPORT_FIELDS, type ReportFormKind } from "@/services/reportFormFields";
@@ -132,7 +133,22 @@ export function ReportFormsPage() {
 function FormDetailDialog({ kind, selected, onDone }: { kind: ReportFormKind; selected: Selected; onDone: () => void }) {
   const setActive = useSetReportFormActive();
   const [downloading, setDownloading] = useState(false);
+  const [sampling, setSampling] = useState(false);
   const form = selected.type === "uploaded" ? selected.form : null;
+
+  /** 가상 일지로 채운 샘플을 내려받는다. Word로 열어 실제 출력 모양을 확인한다 */
+  async function downloadSample() {
+    setSampling(true);
+    try {
+      const { downloadReportSample } = await import("@/lib/export/downloadReportSample");
+      await downloadReportSample(kind, form ? { type: "uploaded", id: form.id } : DEFAULT_FORM, form ? form.name : KIND_LABEL[kind] + " 기본 양식");
+      toast.success("샘플을 내려받았어요. Word로 열어 확인해 보세요.");
+    } catch (error) {
+      toast.error(errorMessage(error, "샘플을 만들지 못했어요. 양식을 다시 확인해 주세요."));
+    } finally {
+      setSampling(false);
+    }
+  }
 
   async function download() {
     setDownloading(true);
@@ -185,7 +201,16 @@ function FormDetailDialog({ kind, selected, onDone }: { kind: ReportFormKind; se
           </span>
         </p>
       ) : null}
-      <div className="mt-5 flex gap-2">
+      <div className="mt-4 rounded-control bg-muted px-3 py-3">
+        <Button variant="secondary" block disabled={sampling} onClick={() => void downloadSample()}>
+          <FileSearch aria-hidden />
+          {sampling ? "샘플 만드는 중…" : "샘플 받기"}
+        </Button>
+        <p className="mt-2 type-caption break-keep text-muted-foreground">
+          가상 일지로 채운 파일을 받아요. Word로 열면 실제 출력 모양 그대로 확인할 수 있어요.
+        </p>
+      </div>
+      <div className="mt-4 flex gap-2">
         <Button variant="outline" block disabled={downloading} onClick={() => void download()}>
           {downloading ? "받는 중…" : "파일 받기"}
         </Button>
@@ -245,7 +270,9 @@ function UploadDialog({ kind, onDone }: { kind: ReportFormKind; onDone: () => vo
       { kind, name: name.trim(), file },
       {
         onSuccess: (created) => {
-          toast.success("'" + created.name + "' 양식을 올렸어요.");
+          toast.success("'" + created.name + "' 양식을 올렸어요.", {
+            description: "목록에서 양식을 눌러 샘플 받기로 출력 모양을 확인해 보세요.",
+          });
           onDone();
         },
         // 이름 칸 문제가 아니라 서버 쪽 실패라 버튼 위에 따로 보여 준다
