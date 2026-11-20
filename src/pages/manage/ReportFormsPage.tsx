@@ -19,6 +19,7 @@ import { errorMessage } from "@/api/errors";
 import { useReportForms, useSetReportFormActive, useUploadReportForm } from "@/api/queries";
 import type { ReportForm } from "@/api/types";
 import { saveBlob } from "@/lib/export/downloadDailyRecord";
+import { CHART_SLOT_DESCRIPTION, CHART_SLOT_LABEL, type ChartSlot } from "@/lib/export/chartSlots";
 import { DEFAULT_FORM } from "@/lib/export/reportTemplate";
 import type { ReportFormCheck } from "@/lib/export/reportFormCheck";
 import { formatDateTime } from "@/lib/utils";
@@ -252,7 +253,7 @@ function UploadDialog({ kind, onDone }: { kind: ReportFormKind; onDone: () => vo
       const { checkReportForm } = await import("@/lib/export/reportFormCheck");
       setCheck(checkReportForm(next.name, await next.arrayBuffer(), kind));
     } catch {
-      setCheck({ ok: false, errors: ["파일을 읽지 못했어요. 다시 골라 주세요."], filled: [], unknownTags: [] });
+      setCheck({ ok: false, errors: ["파일을 읽지 못했어요. 다시 골라 주세요."], filled: [], unknownTags: [], chartSlots: [] });
     } finally {
       setChecking(false);
     }
@@ -301,7 +302,7 @@ function UploadDialog({ kind, onDone }: { kind: ReportFormKind; onDone: () => vo
         </Field>
 
         {checking ? <Spinner label="양식을 검사하는 중…" /> : null}
-        {check ? <CheckResult check={check} /> : null}
+        {check ? <CheckResult kind={kind} check={check} /> : null}
 
         <Field>
           <FieldLabel htmlFor="report-form-name">양식 이름</FieldLabel>
@@ -339,8 +340,8 @@ function UploadDialog({ kind, onDone }: { kind: ReportFormKind; onDone: () => vo
   );
 }
 
-/** 검사 결과: 막는 이유, 채워지는 칸 수, 앱이 모르는 칸 */
-function CheckResult({ check }: { check: ReportFormCheck }) {
+/** 검사 결과: 막는 이유, 채워지는 칸 수, 앱이 모르는 칸, (월별) 그래프 자리 */
+function CheckResult({ kind, check }: { kind: ReportFormKind; check: ReportFormCheck }) {
   if (!check.ok) {
     return (
       <div role="alert" className="flex gap-2 rounded-control bg-destructive-soft px-3 py-3 type-body text-destructive">
@@ -368,6 +369,13 @@ function CheckResult({ check }: { check: ReportFormCheck }) {
           </p>
         </div>
       ) : null}
+      {kind === "monthly" ? (
+        <p className="break-keep px-1 type-body text-muted-foreground">
+          {check.chartSlots.length > 0
+            ? "그래프가 들어가는 자리: " + check.chartSlots.map((slot) => CHART_SLOT_LABEL[slot]).join(", ")
+            : "그래프 자리가 없어서 그래프 없이 출력돼요. 넣으려면 아래 '양식 만드는 법'을 보세요."}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -390,6 +398,12 @@ function FormGuide({ kind }: { kind: ReportFormKind }) {
                 {kind === "daily" ? "활동" : "날짜"}마다 줄이 늘어나야 하는 표는, 그 줄 첫 칸 맨 앞에 {"{#" + loop.label + "}"}, 마지막
                 칸 맨 뒤에 {"{/" + loop.label + "}"}를 적어요.
               </li>
+              {kind === "monthly" ? (
+                <li>
+                  그래프를 넣을 자리에 아무 그림이나 넣고, 그림을 오른쪽 클릭 → '대체 텍스트 편집'에 아래 그래프 이름을 적어요. 출력할 때 그
+                  그림이 그래프로 바뀌어요. 그림의 가로 크기는 그대로, 세로는 그래프 비율에 맞춰져요.
+                </li>
+              ) : null}
               <li>docx로 저장해 올려요. 한글(hwp)은 '다른 이름으로 저장'에서 'Word 문서(*.docx)'로 바꿔요.</li>
               <li>올리면 앱이 바로 검사해서, 앱에 없는 칸이나 잘못 적은 표시를 알려 줘요.</li>
             </ol>
@@ -405,6 +419,12 @@ function FormGuide({ kind }: { kind: ReportFormKind }) {
                 <FieldTable rows={l.fields.map((f) => ["{" + f.label + "}", f.description])} />
               </div>
             ))}
+            {kind === "monthly" ? (
+              <div className="mt-3">
+                <h3 className="type-body font-bold">그래프 (그림의 대체 텍스트에 적기)</h3>
+                <FieldTable rows={(Object.keys(CHART_SLOT_LABEL) as ChartSlot[]).map((slot) => [CHART_SLOT_LABEL[slot], CHART_SLOT_DESCRIPTION[slot]])} />
+              </div>
+            ) : null}
           </AccordionContent>
         </AccordionItem>
       </Accordion>

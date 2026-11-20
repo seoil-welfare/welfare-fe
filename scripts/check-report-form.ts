@@ -1,6 +1,7 @@
 /** 기관 양식 파일 검사 검증 (개발 검증용). 기본 양식을 고쳐 여러 경우를 만든다 */
 import { readFileSync } from "node:fs";
 import PizZip from "pizzip";
+import { fillChartSlots } from "@/lib/export/chartSlots";
 import { checkReportForm } from "@/lib/export/reportFormCheck";
 
 const problems: string[] = [];
@@ -77,6 +78,46 @@ console.log("[막는 경우]");
 
   const r6 = checkReportForm("큰파일.docx", new ArrayBuffer(6 * 1024 * 1024), "daily");
   expect("5MB 초과", !r6.ok && r6.errors[0].includes("5MB"), show(r6));
+}
+
+console.log("[그래프 자리]");
+{
+  // 기본 월별 양식의 그림 2개 중 하나만 그래프 자리로 표시하고, 다른 하나는 기관 로고처럼 그대로 둔다
+  const marked = variant(MONTHLY, (x) => x.replace('name="실제 기록 집계 1"', 'name="실제 기록 집계 1" descr="그래프 : 요약"'));
+  const r = checkReportForm("그래프.docx", marked, "monthly");
+  expect("대체 텍스트로 그래프 자리 찾기 (띄어쓰기 무시)", r.ok && r.chartSlots.join() === "totals", show(r) + " · 자리 " + r.chartSlots.join());
+
+  const none = checkReportForm("월별.docx", MONTHLY, "monthly");
+  expect("표시가 없으면 그래프 자리 없음", none.chartSlots.length === 0, "자리 " + none.chartSlots.length + "개");
+
+  // 2000×500 PNG 머리만 있는 가짜 그림
+  const png = (w: number, h: number) => {
+    const b = new Uint8Array(24);
+    b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const v = new DataView(b.buffer);
+    v.setUint32(16, w);
+    v.setUint32(20, h);
+    return b;
+  };
+  const zip = new PizZip(marked);
+  const logoBefore = zip.file("word/media/image2.png")!.asText();
+  fillChartSlots(zip, { totals: png(2000, 500), chart: png(2000, 800) });
+  const xml = zip.file("word/document.xml")!.asText();
+  const [slot, logo] = xml.match(/<w:drawing>[\s\S]*?<\/w:drawing>/g)!;
+  const rels = zip.file("word/_rels/document.xml.rels")!.asText();
+  expect("그래프 자리 그림을 새 그림으로 연결", slot.includes('r:embed="rIdCareLogtotals"') && rels.includes('Target="media/carelog-totals.png"') && !!zip.file("word/media/carelog-totals.png"), "연결 " + /r:embed="([^"]*)"/.exec(slot)?.[1]);
+  expect("가로는 그대로, 세로는 그래프 비율", slot.includes('<wp:extent cx="9509760" cy="2377440"/>') && slot.includes('<a:ext cx="9509760" cy="2377440"/>'), /<wp:extent[^>]*>/.exec(slot)?.[0] ?? "");
+  expect("표시 없는 그림(로고 등)은 그대로", logo.includes('r:embed="rId13"') && zip.file("word/media/image2.png")!.asText() === logoBefore && !rels.includes("carelog-chart"), /r:embed="([^"]*)"/.exec(logo)?.[1] ?? "");
+
+  // png를 처음 쓰는 양식이면 파일 형식을 추가한다
+  const noPng = new PizZip(marked);
+  noPng.file("[Content_Types].xml", noPng.file("[Content_Types].xml")!.asText().replace(/<Default Extension="png"[^>]*\/>/, ""));
+  fillChartSlots(noPng, { totals: png(2000, 500), chart: png(2000, 800) });
+  expect("png 파일 형식 추가", /<Default Extension="png"/.test(noPng.file("[Content_Types].xml")!.asText()), "");
+
+  // 일별 양식에서는 그래프 자리를 찾지 않는다
+  const daily = checkReportForm("일별.docx", DAILY, "daily");
+  expect("일별 양식은 그래프 자리 없음", daily.chartSlots.length === 0, "");
 }
 
 console.log("");

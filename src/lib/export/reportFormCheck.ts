@@ -1,6 +1,7 @@
 import Docxtemplater from "docxtemplater";
 import InspectModule from "docxtemplater/js/inspect-module.js";
 import PizZip from "pizzip";
+import { findChartSlots, type ChartSlot } from "@/lib/export/chartSlots";
 import { knownTags, type ReportFormKind } from "@/services/reportFormFields";
 
 /**
@@ -21,6 +22,8 @@ export interface ReportFormCheck {
   filled: string[];
   /** 앱이 모르는 칸. 출력하면 빈칸이 된다 */
   unknownTags: string[];
+  /** 월별 양식에서 대체 텍스트로 표시한 그래프 자리. 없으면 그래프 없이 출력된다 */
+  chartSlots: ChartSlot[];
 }
 
 const OTHER_FORMATS: Record<string, string> = {
@@ -33,7 +36,7 @@ const OTHER_FORMATS: Record<string, string> = {
 const NOT_DOCX = "Word(docx) 파일이 아니에요. docx 파일만 올릴 수 있어요.";
 
 export function checkReportForm(fileName: string, content: ArrayBuffer, kind: ReportFormKind): ReportFormCheck {
-  const fail = (message: string): ReportFormCheck => ({ ok: false, errors: [message], filled: [], unknownTags: [] });
+  const fail = (message: string): ReportFormCheck => ({ ok: false, errors: [message], filled: [], unknownTags: [], chartSlots: [] });
 
   // 1. 확장자
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
@@ -56,7 +59,7 @@ export function checkReportForm(fileName: string, content: ArrayBuffer, kind: Re
   try {
     new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, modules: [inspect], errorLogging: false }); // 오류는 아래에서 문장으로 바꿔 보여 준다
   } catch (error) {
-    return { ok: false, errors: templateErrors(error), filled: [], unknownTags: [] };
+    return { ok: false, errors: templateErrors(error), filled: [], unknownTags: [], chartSlots: [] };
   }
 
   // 5. 칸 이름 비교
@@ -79,15 +82,17 @@ export function checkReportForm(fileName: string, content: ArrayBuffer, kind: Re
     }
   }
 
+  const chartSlots = kind === "monthly" ? findChartSlots(zip) : [];
   if (filled.length === 0) {
     return {
       ok: false,
       errors: ["앱이 채울 칸이 하나도 없어요. 값이 들어갈 자리에 {이용자이름}처럼 표시를 적어 주세요."],
       filled,
       unknownTags: unknown,
+      chartSlots,
     };
   }
-  return { ok: true, errors: [], filled, unknownTags: unknown };
+  return { ok: true, errors: [], filled, unknownTags: unknown, chartSlots };
 }
 
 interface TagTree {
