@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Upload } from "lucide-react";
+import { ChevronDown, FileText, Upload } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ListRowButton } from "@/components/common/ListRow";
@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/misc";
 import { SegmentedToggle } from "@/components/ui/toggle-group";
 import { useReportForms } from "@/api/queries";
 import type { ReportForm } from "@/api/types";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { REPORT_FORM_KIND_LABEL, type ReportFormKind } from "@/services/reportFormFields";
 import { FormDetailDialog, type SelectedForm } from "@/pages/manage/reportForms/FormDetailDialog";
 import { FormGuide } from "@/pages/manage/reportForms/FormGuide";
@@ -21,6 +21,7 @@ import { UploadDialog } from "@/pages/manage/reportForms/UploadDialog";
  * 출력 양식 관리 (팀장·국장).
  * 기관 양식 파일(docx)을 올리고, 숨기거나 다시 사용한다. 지우는 기능은 없다 (숨긴 양식으로 지난 기록을 다시 출력할 수 있게).
  * 기본 양식은 앱에 들어 있어 항상 쓸 수 있고 숨길 수 없다.
+ * 숨긴 양식은 목록 맨 아래에 접어 둔다 (양식이 쌓여도 사용 중인 양식이 먼저 보이게).
  *
  * 양식 상세·올리기·만드는 법은 reportForms/ 아래 파일에 있다.
  */
@@ -32,13 +33,20 @@ export function ReportFormsPage() {
   const formsQuery = useReportForms();
   const [selected, setSelected] = useState<SelectedForm | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const forms = (formsQuery.data ?? []).filter((form) => form.kind === kind);
-  const hiddenCount = forms.filter((form) => !form.active).length;
+  const activeForms = forms.filter((form) => form.active);
+  const hiddenForms = forms.filter((form) => !form.active);
+
+  function changeKind(next: ReportFormKind) {
+    setKind(next);
+    setShowHidden(false);
+  }
 
   const formRow = (form: ReportForm) => (
     <li key={form.id}>
       <ListRowButton
-        leading={<FileText className="size-5 text-primary" aria-hidden />}
+        leading={<FileText className={cn("size-5", form.active ? "text-primary" : "text-muted-foreground")} aria-hidden />}
         title={form.name}
         subtitle={formatDateTime(form.uploadedAt) + " · " + form.uploadedBy}
         trailing={
@@ -56,11 +64,12 @@ export function ReportFormsPage() {
   return (
     <AppShell header={<AppHeader title="출력 양식 관리" backTo="/mypage" />} width="form">
       <div className="flex flex-col gap-3">
-        <SegmentedToggle label="양식 종류" value={kind} onValueChange={setKind} options={KIND_OPTIONS} />
+        <SegmentedToggle label="양식 종류" value={kind} onValueChange={changeKind} options={KIND_OPTIONS} />
 
         <section className="flex flex-col gap-2">
           <p className="px-1 tnum type-caption text-muted-foreground">
-            {REPORT_FORM_KIND_LABEL[kind]} 양식 {forms.length + 1}개{hiddenCount > 0 ? " · 숨김 " + hiddenCount + "개" : ""}
+            {REPORT_FORM_KIND_LABEL[kind]} 양식 {forms.length + 1}개
+            {hiddenForms.length > 0 ? " · 숨김 " + hiddenForms.length + "개" : ""}
           </p>
           <Card variant="list">
             <ul className="divide-y divide-border">
@@ -77,7 +86,21 @@ export function ReportFormsPage() {
                   onClick={() => setSelected({ type: "default" })}
                 />
               </li>
-              {forms.map(formRow)}
+              {activeForms.map(formRow)}
+              {hiddenForms.length > 0 ? (
+                <li>
+                  <button
+                    type="button"
+                    aria-expanded={showHidden}
+                    onClick={() => setShowHidden((open) => !open)}
+                    className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left type-body text-muted-foreground transition-colors duration-150 hover:bg-accent"
+                  >
+                    <span className="tnum">숨긴 양식 {hiddenForms.length}개</span>
+                    <ChevronDown className={cn("size-5 shrink-0 transition-transform duration-150", showHidden && "rotate-180")} aria-hidden />
+                  </button>
+                </li>
+              ) : null}
+              {showHidden ? hiddenForms.map(formRow) : null}
               {formsQuery.isPending ? (
                 <li className="flex justify-center px-4 py-3 type-body text-muted-foreground">
                   <Spinner label="올린 양식을 불러오는 중…" />
