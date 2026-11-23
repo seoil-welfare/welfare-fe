@@ -1,7 +1,7 @@
 import dailyTemplateUrl from "@/assets/forms/daily-record.template.docx?url";
 import monthlyTemplateUrl from "@/assets/forms/monthly-record.template.docx?url";
 import { api } from "@/api";
-import type { ReportFormKind } from "@/services/reportFormFields";
+import { REPORT_FORM_KIND_LABEL, type ReportFormKind } from "@/services/reportFormFields";
 
 /**
  * 출력할 때 쓸 양식. 기본 양식은 앱 안에 있고, 기관이 올린 양식은 서버에서 받는다.
@@ -17,6 +17,6 @@ const DEFAULT_URL: Record<ReportFormKind, string> = { daily: dailyTemplateUrl, m
 export async function loadReportTemplate(kind: ReportFormKind, choice: ReportFormChoice): Promise<ArrayBuffer> {
   if (choice.type === "uploaded") return api.reportForms.file(choice.id);
   const response = await fetch(DEFAULT_URL[kind]);
-  if (!response.ok) throw new Error((kind === "daily" ? "일별" : "월별") + "활동일지 양식을 불러오지 못했어요.");
+  if (!response.ok) throw new Error(REPORT_FORM_KIND_LABEL[kind] + " 양식을 불러오지 못했어요.");
   return response.arrayBuffer();
 }

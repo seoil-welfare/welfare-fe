@@ -8,6 +8,9 @@
 
 export type ReportFormKind = "daily" | "monthly";
 
+/** 화면·안내 문구에 쓰는 양식 종류 이름 */
+export const REPORT_FORM_KIND_LABEL: Record<ReportFormKind, string> = { daily: "일별활동일지", monthly: "월별활동일지" };
+
 export interface ReportField {
   /** 앱 데이터의 키 (기존 양식의 영어 표시) */
   key: string;
