@@ -14,7 +14,7 @@ import { combineQueries, treatPlaceholderAsPending, useServiceUsers } from "@/ap
 import { useStatsSummary } from "@/app/useStatsSummary";
 import { useToday } from "@/lib/today";
 import { activeServiceUsers } from "@/services/diaryService";
-import { currentPeriod, isPeriodInProgress, nonZero, periodRange, summaryFor } from "@/services/statsService";
+import { currentPeriod, nonZero, summaryFor } from "@/services/statsService";
 import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
 import { useStatsContext } from "@/app/StatsContext";
 import type { CountItem } from "@/types";
@@ -35,7 +35,6 @@ export function StatsPage() {
   const users = includeClosed ? usersQuery.data ?? [] : activeServiceUsers(usersQuery.data ?? []);
   const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [statsQuery]);
 
-  const range = periodRange(period);
   const summary = summaryFor(stats, "all");
   const typeCounts = stats.behavior.byType;
   const trend = stats.behavior.trend;
@@ -86,9 +85,6 @@ export function StatsPage() {
               setPeriod(currentPeriod(next, today));
             }}
           />
-          {!loadState.isPending && !loadState.isError ? <p className="tnum type-caption text-muted-foreground">
-            {range.label} · 작성 완료 일지 {stats.completedDiaries}건 기준 (임시 저장 제외)
-          </p> : null}
         </div>
 
         {/* 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다 */}
@@ -114,13 +110,9 @@ export function StatsPage() {
                   </Button>
                 </div>
 
-                <BehaviorSummaryMetrics
-                  summary={summary}
-                  inProgress={isPeriodInProgress(range, today)}
-                  today={today}
-                />
+                <BehaviorSummaryMetrics summary={summary} />
 
-                <FormSection title="기간 추이" description={"단위: 건 · " + range.label + " 강조"}>
+                <FormSection title="기간 추이">
                   <TrendBars points={trend} />
                 </FormSection>
 
@@ -153,7 +145,6 @@ export function StatsPage() {
                 title="컨디션"
                 to="/stats/condition"
                 items={nonZero(stats.condition)}
-                note="컨디션은 일지별 선택 건수로 셉니다."
               />
             </>
           )}
@@ -169,12 +160,10 @@ function TopItemsSection({
   title,
   to,
   items,
-  note,
 }: {
   title: string;
   to: string;
   items: CountItem[];
-  note?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasMore = items.length > 3;
@@ -182,7 +171,6 @@ function TopItemsSection({
   return (
     <FormSection
       title={title}
-      description={note}
       action={
         <Button variant="ghost" size="dense" asChild>
           <Link to={to}>

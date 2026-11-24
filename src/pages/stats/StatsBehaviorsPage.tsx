@@ -16,14 +16,12 @@ import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
 import {
   detailItemsFor,
-  isPeriodInProgress,
   periodRange,
   recordsFor,
   summaryFor,
 } from "@/services/statsService";
 import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
 import { WeatherBehaviorSections } from "@/components/stats/WeatherBehaviorSections";
-import { useToday } from "@/lib/today";
 import { useStatsContext } from "@/app/StatsContext";
 import { formatShortDate, formatTimeRange, weekdayLabel } from "@/lib/utils";
 import type { BehaviorType } from "@/types";
@@ -43,7 +41,6 @@ type Filter = BehaviorType | "all";
 export function StatsBehaviorsPage() {
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
-  const today = useToday();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleRecords, setVisibleRecords] = useState(RECORDS_PAGE_SIZE);
@@ -78,11 +75,7 @@ export function StatsBehaviorsPage() {
       <div className="flex flex-col gap-3">
         <StatsScopeSection userName={serviceUser?.name} />
 
-        <BehaviorSummaryMetrics
-          summary={summary}
-          inProgress={isPeriodInProgress(range, today)}
-          today={today}
-        />
+        <BehaviorSummaryMetrics summary={summary} />
 
         <FormSection title="유형 필터">
           <PillToggle

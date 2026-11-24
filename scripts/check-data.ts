@@ -15,7 +15,6 @@ import {
   completedDiaries,
   conditionCounts,
   currentPeriod,
-  isPeriodInProgress,
   periodRange,
   previousPeriod,
 } from "@/services/statsService";
@@ -187,19 +186,7 @@ expect(
 
 
 console.log("");
-console.log("[진행 중인 기간]");
-const thisMonth = periodRange(currentPeriod("month", DEMO_TODAY));
-const lastMonth = periodRange(previousPeriod(currentPeriod("month", DEMO_TODAY)));
-expect("이번 달은 진행 중", isPeriodInProgress(thisMonth, DEMO_TODAY), thisMonth.label);
-expect("지난달은 진행 중 아님", !isPeriodInProgress(lastMonth, DEMO_TODAY), lastMonth.label);
-expect("기간 첫날도 진행 중", isPeriodInProgress(thisMonth, thisMonth.start), thisMonth.start);
-expect("기간 마지막 날도 진행 중", isPeriodInProgress(thisMonth, thisMonth.end), thisMonth.end);
-expect(
-  "기간이 끝난 다음 날은 진행 중 아님",
-  !isPeriodInProgress(thisMonth, addDays(thisMonth.end, 1)),
-  addDays(thisMonth.end, 1),
-);
-
+console.log("[기간 계산]");
 for (const unit of ["week", "quarter", "year"] as const) {
   const p = currentPeriod(unit, DEMO_TODAY);
   const r = periodRange(p);

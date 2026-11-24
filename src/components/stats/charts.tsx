@@ -111,7 +111,6 @@ export function TrendBars({ points }: { points: readonly TrendPoint[] }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="type-caption text-muted-foreground">단위: 건 (세부 행동 선택 건수)</p>
       {!hasAny ? <p className="type-caption text-muted-foreground">이 구간에는 기록이 없어요.</p> : null}
     </div>
   );

@@ -46,7 +46,7 @@ export function WeatherBehaviorSections({ userId, from, to }: { userId: string; 
   const excluded = stats.temperatureExcluded;
   return (
     <>
-      <FormSection title="날씨별 도전적 행동" description="전체 유형 · 작성 완료 일지 기준">
+      <FormSection title="날씨별 도전적 행동">
         <HorizontalBars
           items={bars(stats.weather)}
           tone="behavior"
@@ -54,7 +54,7 @@ export function WeatherBehaviorSections({ userId, from, to }: { userId: string; 
         />
       </FormSection>
 
-      <FormSection title="온도별 도전적 행동" description="전체 유형 · 작성 완료 일지 기준">
+      <FormSection title="온도별 도전적 행동">
         <HorizontalBars
           items={bars(stats.temperature.map((band) => ({ ...band, label: band.label + " " + band.range })))}
           tone="behavior"
