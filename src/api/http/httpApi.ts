@@ -36,6 +36,7 @@ export const httpApi: Api = {
   },
   stats: {
     summary: (query) => request("/stats/summary", { query: { ...query } }),
+    weather: (query) => request("/stats/weather", { query: { ...query } }),
   },
   news: {
     list: (query) => request("/news", { query: { ...query } }),

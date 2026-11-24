@@ -189,9 +189,37 @@ export interface StatsBehaviorRecord {
   behaviors: { type: BehaviorType; detailId: string; otherText?: string }[];
 }
 
+/** 날씨별·온도 구간별 도전적 행동 조회 (from~to 둘 다 포함, YYYY-MM-DD) */
+export interface WeatherStatsQuery {
+  userId: string;
+  from: string;
+  to: string;
+}
+
+/** 날씨·온도 구간 1개의 도전적 행동 건수와 그 날씨(구간)였던 날 수 (작성 완료 일지 기준) */
+export interface WeatherStatsItem {
+  code: string;
+  label: string;
+  behaviorCount: number;
+  days: number;
+}
+
+/** GET /stats/weather. 날씨 5개·온도 구간 4개는 0건이어도 모두 목록 순서로 온다 */
+export interface WeatherStats {
+  start: string;
+  end: string;
+  completedDiaries: number;
+  weather: WeatherStatsItem[];
+  temperature: (WeatherStatsItem & { range: string })[];
+  /** 온도를 고르지 않아 온도별 집계에서 뺀 일지 (온도 칸이 생기기 전 일지 포함) */
+  temperatureExcluded: { days: number; behaviorCount: number };
+}
+
 export interface StatsApi {
   /** 이용자가 없거나 형식이 틀리면 400 */
   summary(query: StatsQuery): Promise<StatsSummary>;
+  /** 기간이 비었거나 거꾸로면 400 */
+  weather(query: WeatherStatsQuery): Promise<WeatherStats>;
 }
 
 export interface CalendarApi {

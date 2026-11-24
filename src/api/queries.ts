@@ -16,6 +16,7 @@ import type {
   ParticipationUpdate,
   SaveDiaryInput,
   StatsQuery,
+  WeatherStatsQuery,
   ServiceUserInput,
   StaffInput,
   ChangeableRole,
@@ -72,6 +73,7 @@ export const queryKeys = {
   calendarDay: (date: string) => ["calendar", "day", date] as const,
   stats: ["stats"] as const,
   statsSummary: (query: StatsQuery) => ["stats", "summary", query] as const,
+  statsWeather: (query: WeatherStatsQuery) => ["stats", "weather", query] as const,
   news: ["news"] as const,
   newsSince: (since: string) => ["news", since] as const,
   serviceUsers: ["serviceUsers"] as const,
@@ -171,6 +173,16 @@ export function useStatsSummary(query: StatsQuery) {
   return useQuery({
     queryKey: queryKeys.statsSummary(query),
     queryFn: () => api.stats.summary(query),
+    enabled: Boolean(query.userId),
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** 날씨별·온도 구간별 도전적 행동. 일지를 저장하면 통계와 함께 다시 불러온다 (queryKeys.stats) */
+export function useWeatherStats(query: WeatherStatsQuery) {
+  return useQuery({
+    queryKey: queryKeys.statsWeather(query),
+    queryFn: () => api.stats.weather(query),
     enabled: Boolean(query.userId),
     placeholderData: (previous) => previous,
   });
