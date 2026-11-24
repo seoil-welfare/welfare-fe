@@ -235,7 +235,7 @@ export function ActivityEditPage() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <ActivityTimeSelect label="시작 시각" id="activity-start" value={activity.startTime}
                   invalid={Boolean(timeError)} onChange={(value) => { patch({ startTime: value }); setTimeError(undefined); }} />
-                <ActivityTimeSelect label="종료 시각" id="activity-end" value={activity.endTime} end
+                <ActivityTimeSelect label="종료 시각" id="activity-end" value={activity.endTime} end after={activity.startTime}
                   invalid={Boolean(timeError)} onChange={(value) => { patch({ endTime: value }); setTimeError(undefined); }} />
               </div>
               <FieldError id="activity-time-error">

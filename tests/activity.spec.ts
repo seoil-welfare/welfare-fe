@@ -4,10 +4,16 @@ import { mockApi, openActivity } from "./support";
 import { activityMinutes, activityTimeError } from "../src/services/activityTime";
 import { emptyActivity } from "../src/services/diaryService";
 
+/** 목록(10:00~17:00, 30분 간격)에 있으면 목록에서, 없으면 '직접 입력'으로 적는다 */
 async function setTime(page: Page, label: string, time: string) {
-  const [hour, minute] = time.split(":");
-  await page.getByRole("combobox", { name: label + " 시", exact: true }).selectOption(hour);
-  if (hour !== "24") await page.getByRole("combobox", { name: label + " 분", exact: true }).selectOption(minute);
+  await page.getByRole("button", { name: label, exact: true }).click();
+  const listed = page.getByRole("listbox", { name: label }).getByRole("option", { name: time, exact: true });
+  if (await listed.count()) {
+    await listed.click();
+    return;
+  }
+  await page.getByRole("listbox", { name: label }).getByRole("option", { name: "직접 입력", exact: true }).click();
+  await page.getByRole("textbox", { name: label + " 직접 입력", exact: true }).fill(time);
 }
 
 const times = [["00:00", "00:01"], ["00:00", "24:00"], ["09:00", "10:00"], ["17:00", "18:00"],
@@ -18,7 +24,6 @@ for (const [start, end] of times) {
     await openActivity(page);
     await setTime(page, "시작 시각", start);
     await setTime(page, "종료 시각", end);
-    if (end === "24:00") await expect(page.getByRole("combobox", { name: "종료 시각 분", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "저장하고 다음 활동" }).click();
     await expect(page).toHaveURL(/\/diaries\/new$/);
     await expect(page.getByText(start + "~" + end, { exact: true })).toBeVisible();
