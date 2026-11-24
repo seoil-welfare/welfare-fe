@@ -23,6 +23,7 @@ import { forgetRememberedDraftId, readRememberedDraftId, useDraft } from "@/app/
 import { getLastPage } from "@/app/lastPage";
 import { useCategoryChoices } from "@/app/useCategoryChoices";
 import { choiceLabels } from "@/services/categoryService";
+import { TEMPERATURE_BANDS } from "@/data/catalog";
 import { useToday } from "@/lib/today";
 import {
   activeServiceUsers,
@@ -42,6 +43,7 @@ import type { Activity, Condition, DiaryStatus, Weather } from "@/types";
  * 일지 작성 (2.1.4/FR-08 ~ FR-16).
  * - 이용자 변경 시 입력 내용은 유지되고, 저장 전까지 다른 이용자의 일지로 저장되지 않는다 (FR-09)
  * - 날씨 기본 '맑음', 컨디션 기본 '양호', 컨디션 '기타'는 직접 입력 (FR-10, FR-11)
+ * - 온도 구간은 날씨 아래에서 고른다. 필수가 아니라 기본 미선택이고, 다시 누르면 선택이 풀린다 (복지관 요청)
  * - 활동 요약에 도전적 행동 표시, 항목 선택 시 수정 화면 이동 (FR-12)
  * - 입력이 멈추거나 화면이 가려지면 '작성 중'으로 자동 임시저장한다 (DraftContext).
  *   상단 '임시저장'은 그 저장을 바로 실행한다
@@ -479,6 +481,15 @@ export function DiaryEditPage() {
             onChange={(value) => updateDraft({ weather: value as Weather })}
           />
           <SingleChoiceGroup
+            label="온도"
+            options={TEMPERATURE_OPTIONS.map((option) => option.label)}
+            value={TEMPERATURE_OPTIONS.find((option) => option.code === draft.temperature)?.label ?? ""}
+            onChange={(label) =>
+              updateDraft({ temperature: TEMPERATURE_OPTIONS.find((option) => option.label === label)?.code })
+            }
+            clearable
+          />
+          <SingleChoiceGroup
             label="이용자 컨디션"
             options={choiceLabels(choices.condition, [draft.condition])}
             value={draft.condition}
@@ -638,6 +649,9 @@ export function DiaryEditPage() {
     </AppShell>
   );
 }
+
+/** 온도 칩: 추움 10℃ 이하 (칩 글자 ↔ 저장 코드) */
+const TEMPERATURE_OPTIONS = TEMPERATURE_BANDS.map((band) => ({ code: band.code, label: band.label + " " + band.range }));
 
 /** 자동 저장 시각 표시용 HH:mm */
 function formatClock(date: Date): string {

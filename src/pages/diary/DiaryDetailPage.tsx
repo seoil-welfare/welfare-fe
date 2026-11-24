@@ -13,6 +13,7 @@ import { MetricCard } from "@/components/common/MetricCard";
 import { EmptyState } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { ActivityAccordion } from "@/components/diary/ActivityAccordion";
+import { TEMPERATURE_BANDS } from "@/data/catalog";
 import { isApiError } from "@/api/errors";
 import { combineQueries, useDiary, useServiceUsers, useStaffList } from "@/api/queries";
 import { useCurrentStaff } from "@/app/auth";
@@ -208,7 +209,12 @@ function DiaryDetail({
             description="도전적 행동"
             tone={behaviorCount > 0 ? "behavior" : "default"}
           />
-          <MetricCard value={diary.weather} description="날씨" size="compact" />
+          <MetricCard
+            value={diary.weather}
+            // 온도는 고른 일지만 함께 적는다 (온도 칸이 생기기 전 일지는 날씨만)
+            description={["날씨", TEMPERATURE_BANDS.find((band) => band.code === diary.temperature)?.label].filter(Boolean).join(" · ")}
+            size="compact"
+          />
         </div>
 
         <FormSection title="이용자 컨디션">

@@ -1,4 +1,4 @@
-import type { BehaviorType, Condition, Weather } from "@/types";
+import type { BehaviorType, Condition, TemperatureBand, Weather } from "@/types";
 
 /**
  * 선택 항목 카탈로그.
@@ -8,6 +8,23 @@ import type { BehaviorType, Condition, Weather } from "@/types";
 
 /** FR-10 — 기본값 '맑음' */
 export const WEATHERS: readonly Weather[] = ["맑음", "구름조금", "흐림", "비", "눈"];
+
+/**
+ * 온도 구간 — 복지관 요청. 필수 아님, 기본 미선택. 서버 TemperatureBand와 같은 코드·범위.
+ * 날씨처럼 담당자가 직접 고른다 (외부 날씨 조회 없음)
+ */
+export const TEMPERATURE_BANDS: readonly { code: TemperatureBand; label: string; range: string }[] = [
+  { code: "COLD", label: "추움", range: "10℃ 이하" },
+  { code: "COOL", label: "선선함", range: "11~19℃" },
+  { code: "WARM", label: "따뜻함", range: "20~27℃" },
+  { code: "HOT", label: "더움", range: "28℃ 이상" },
+];
+
+/** 따뜻함(20~27℃). 고르지 않았으면 빈 글자 */
+export function temperatureLabel(code: TemperatureBand | undefined): string {
+  const band = TEMPERATURE_BANDS.find((item) => item.code === code);
+  return band ? band.label + "(" + band.range + ")" : "";
+}
 
 /** FR-11 — 기본값 '양호', '기타' 선택 시 직접 입력 */
 export const CONDITIONS: readonly Condition[] = ["양호", "보통", "저조", "관찰요망", "기타"];
