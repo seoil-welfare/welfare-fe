@@ -16,13 +16,12 @@ import { useStatsSummary } from "@/app/useStatsSummary";
 import { findServiceUser } from "@/services/diaryService";
 import {
   detailItemsFor,
-  isPeriodInProgress,
   periodRange,
   recordsFor,
   summaryFor,
 } from "@/services/statsService";
 import { BehaviorSummaryMetrics } from "@/components/stats/BehaviorSummaryMetrics";
-import { useToday } from "@/lib/today";
+import { WeatherBehaviorSections } from "@/components/stats/WeatherBehaviorSections";
 import { useStatsContext } from "@/app/StatsContext";
 import { formatShortDate, formatTimeRange, weekdayLabel } from "@/lib/utils";
 import type { BehaviorType } from "@/types";
@@ -32,6 +31,7 @@ import type { BehaviorType } from "@/types";
  * - 조회 이용자·기간·단위는 통계 메인에서 가져와 유지한다
  * - '전체/타해/자해/파괴행동/기타' 필터에 각 유형의 건수를 표시한다
  * - 세부 행동별 가로 막대 + 발생 기록 최신순, 기록 선택 시 일지 상세로 이동
+ * - 날씨별·온도별 도전적 행동 (복지관 요청). 따로 불러오고, 유형 필터와 상관없이 전체 기준이다
  */
 
 const RECORDS_PAGE_SIZE = 5;
@@ -41,7 +41,6 @@ type Filter = BehaviorType | "all";
 export function StatsBehaviorsPage() {
   const usersQuery = useServiceUsers();
   const { userId, period } = useStatsContext();
-  const today = useToday();
   const { query: statsQuery, summary: stats } = useStatsSummary(userId, period);
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleRecords, setVisibleRecords] = useState(RECORDS_PAGE_SIZE);
@@ -54,6 +53,7 @@ export function StatsBehaviorsPage() {
 
   const details = detailItemsFor(stats, filter);
   const records = recordsFor(stats, filter);
+  const range = periodRange(period);
 
   // 기간·이용자를 바꾸는 동안 이전 결과로 계산한 수치를 보여 주지 않는다
   const loadState = treatPlaceholderAsPending(combineQueries([usersQuery, statsQuery]), [
@@ -75,11 +75,7 @@ export function StatsBehaviorsPage() {
       <div className="flex flex-col gap-3">
         <StatsScopeSection userName={serviceUser?.name} />
 
-        <BehaviorSummaryMetrics
-          summary={summary}
-          inProgress={isPeriodInProgress(periodRange(period), today)}
-          today={today}
-        />
+        <BehaviorSummaryMetrics summary={summary} />
 
         <FormSection title="유형 필터">
           <PillToggle
@@ -111,6 +107,8 @@ export function StatsBehaviorsPage() {
             emptyMessage="이 기간·유형에는 기록이 없어요."
           />
         </FormSection>
+
+        <WeatherBehaviorSections userId={userId} from={range.start} to={range.end} />
 
         <FormSection
           title="발생 기록"

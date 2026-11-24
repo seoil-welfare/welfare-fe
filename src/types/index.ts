@@ -48,6 +48,8 @@ export interface ServiceUser {
 }
 
 export type Weather = "맑음" | "구름조금" | "흐림" | "비" | "눈";
+/** 온도 구간 (복지관 요청). 고르지 않아도 된다. 화면 글자는 data/catalog의 TEMPERATURE_BANDS */
+export type TemperatureBand = "COLD" | "COOL" | "WARM" | "HOT";
 export type Condition = "양호" | "보통" | "저조" | "관찰요망" | "기타";
 
 export type BehaviorType = "selfHarm" | "otherHarm" | "destruction" | "other";
@@ -94,6 +96,8 @@ export interface Diary {
   lastEditorId?: string;
   status: DiaryStatus;
   weather: Weather;
+  /** 고르지 않았으면 없다 (온도 칸이 생기기 전 일지 포함) */
+  temperature?: TemperatureBand;
   condition: Condition;
   conditionOther?: string;
   activities: Activity[];
@@ -145,6 +149,7 @@ export interface DiaryDraft {
   userId: string;
   date: string;
   weather: Weather;
+  temperature?: TemperatureBand;
   condition: Condition;
   conditionOther?: string;
   activities: Activity[];

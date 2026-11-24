@@ -17,6 +17,7 @@ export interface ExpandSelectOption {
  * 키보드: 열린 상태에서 ↑↓로 이동, Enter·Space로 선택, Esc로 닫기 (listbox 패턴)
  */
 export function ExpandSelect({
+  id: triggerId,
   label,
   options,
   value,
@@ -30,6 +31,8 @@ export function ExpandSelect({
   className,
   triggerClassName,
 }: {
+  /** 값 칸(버튼) id. 바깥 FieldLabel htmlFor와 맞출 때 */
+  id?: string;
   /** 화면 낭독기용 이름 */
   label: string;
   options: readonly ExpandSelectOption[];
@@ -140,6 +143,7 @@ export function ExpandSelect({
     <div ref={rootRef} className={cn("relative flex flex-col", className)}>
       <button
         ref={triggerRef}
+        id={triggerId}
         type="button"
         aria-label={label}
         aria-haspopup="listbox"

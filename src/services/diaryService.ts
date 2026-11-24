@@ -250,6 +250,7 @@ export function isUntouchedDraft(draft: DiaryDraft): boolean {
   const initial = emptyDraft(draft.userId, draft.date);
   return (
     draft.weather === initial.weather &&
+    !draft.temperature &&
     draft.condition === initial.condition &&
     !draft.conditionOther?.trim() &&
     draft.activities.length === 0 &&
@@ -285,6 +286,7 @@ export function draftFromDiary(diary: Diary): DiaryDraft {
     userId: diary.userId,
     date: diary.date,
     weather: diary.weather,
+    temperature: diary.temperature,
     condition: diary.condition,
     conditionOther: diary.conditionOther,
     activities: diary.activities.map((a) => ({ ...a })),

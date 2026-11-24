@@ -59,14 +59,11 @@ export function StatsActivitiesPage() {
           <MetricCard value={summary.otherCount} unit="건" description="‘기타’ 입력" />
         </div>
 
-        <FormSection title="활동별 참여 건수" description="모든 활동 카테고리를 표시합니다.">
+        <FormSection title="활동별 참여 건수">
           <HorizontalBars items={stats.participation} />
         </FormSection>
 
-        <FormSection
-          title="활동별 도전적 행동"
-          description="도전적 행동이 기록되지 않은 활동도 0건으로 표시합니다."
-        >
+        <FormSection title="활동별 도전적 행동">
           <HorizontalBars items={summary.behaviorByParticipation} tone="behavior" />
         </FormSection>
 

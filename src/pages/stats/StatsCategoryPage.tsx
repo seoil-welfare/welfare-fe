@@ -19,18 +19,11 @@ import { NotFoundPage } from "@/pages/NotFoundPage";
  * '자세히' 선택 시 상세 화면 구성은 FR-37·FR-43 미확정 사항이다.
  */
 
-const CATEGORY_META: Record<
-  string,
-  { title: string; field: ActivityField | "condition"; unitLabel: string }
-> = {
-  reaction: { title: "이용자 반응 상세", field: "reaction", unitLabel: "활동별 선택 건수" },
-  preSupport: { title: "사전 지원 상세", field: "preSupport", unitLabel: "활동별 선택 건수" },
-  positiveSupport: {
-    title: "긍정행동지원 상세",
-    field: "positiveSupport",
-    unitLabel: "활동별 선택 건수",
-  },
-  condition: { title: "컨디션 상세", field: "condition", unitLabel: "일지별 선택 건수" },
+const CATEGORY_META: Record<string, { title: string; field: ActivityField | "condition" }> = {
+  reaction: { title: "이용자 반응 상세", field: "reaction" },
+  preSupport: { title: "사전 지원 상세", field: "preSupport" },
+  positiveSupport: { title: "긍정행동지원 상세", field: "positiveSupport" },
+  condition: { title: "컨디션 상세", field: "condition" },
 };
 
 export function StatsCategoryPage() {
@@ -77,7 +70,7 @@ function StatsCategoryContent({ meta }: { meta: (typeof CATEGORY_META)[string] }
           <MetricCard value={stats.completedDiaries} unit="건" description="완료 일지" />
         </div>
 
-        <FormSection title="항목별 기록 건수" description={meta.unitLabel + " 기준"}>
+        <FormSection title="항목별 기록 건수">
           <HorizontalBars items={items} />
         </FormSection>
 

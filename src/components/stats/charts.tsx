@@ -22,7 +22,8 @@ export function HorizontalBars({
   onSelect,
   emptyMessage = "기록이 없어요",
 }: {
-  items: readonly CountItem[];
+  /** note: 건수 옆 괄호 안 보조 설명 (예: "5일 중") */
+  items: readonly (CountItem & { note?: string })[];
   tone?: "primary" | "behavior";
   maxVisible?: number;
   onSelect?: (label: string) => void;
@@ -48,6 +49,9 @@ export function HorizontalBars({
               <span className="min-w-0 truncate type-body text-foreground">{item.label}</span>
               <span className="tnum shrink-0 type-body font-medium text-foreground">
                 {item.count}건
+                {item.note ? (
+                  <span className="ml-1 type-caption font-normal text-muted-foreground">({item.note})</span>
+                ) : null}
               </span>
             </div>
             <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-secondary">
@@ -107,7 +111,6 @@ export function TrendBars({ points }: { points: readonly TrendPoint[] }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="type-caption text-muted-foreground">단위: 건 (세부 행동 선택 건수)</p>
       {!hasAny ? <p className="type-caption text-muted-foreground">이 구간에는 기록이 없어요.</p> : null}
     </div>
   );

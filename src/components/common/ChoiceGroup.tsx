@@ -35,8 +35,14 @@ export function SingleChoiceGroup({
   hideLabel = false,
   otherValue,
   onOtherChange,
+  clearable = false,
   className,
-}: BaseProps & { value: string; onChange: (value: string) => void }) {
+}: BaseProps & {
+  value: string;
+  onChange: (value: string) => void;
+  /** 필수가 아닌 항목: 고른 칩을 다시 누르면 선택이 풀리고 onChange("")를 부른다 */
+  clearable?: boolean;
+}) {
   const name = useId();
   return (
     <fieldset className={cn("flex flex-col gap-2 border-0 p-0", className)}>
@@ -51,6 +57,7 @@ export function SingleChoiceGroup({
             label={option}
             checked={value === option}
             onChange={() => onChange(option)}
+            onClickChecked={clearable ? () => onChange("") : undefined}
           />
         ))}
       </div>
@@ -162,12 +169,15 @@ function Chip({
   label,
   checked,
   onChange,
+  onClickChecked,
 }: {
   type: "radio" | "checkbox";
   name: string;
   label: string;
   checked: boolean;
   onChange: () => void;
+  /** 이미 고른 라디오 칩을 다시 눌렀을 때 (라디오는 이때 onChange가 오지 않는다) */
+  onClickChecked?: () => void;
 }) {
   return (
     <label
@@ -187,6 +197,7 @@ function Chip({
         name={name}
         checked={checked}
         onChange={onChange}
+        onClick={checked && onClickChecked ? onClickChecked : undefined}
         className="absolute size-0 opacity-0"
       />
       {/*
