@@ -53,7 +53,7 @@ export function ActivityEditPage() {
   const [timeError, setTimeError] = useState<string>();
   const timeSectionRef = useRef<HTMLDivElement>(null);
   const behaviorSectionRef = useRef<HTMLDivElement>(null);
-  // 입력한 내용을 버릴지 묻는 팝업 (← 와 '취소' 공통)
+  // ← 를 눌렀을 때 입력한 내용을 버릴지 묻는 팝업
   const [askDiscard, setAskDiscard] = useState(false);
 
   const isNew = activityId === "new" || activityId === undefined;
@@ -180,7 +180,7 @@ export function ActivityEditPage() {
     navigate("/diaries/new");
   }
 
-  // ← 와 '취소'는 같게 동작한다. 입력한 게 없으면 바로 나가고, 있으면 버릴지 묻는다
+  // ← 를 누르면: 입력한 게 없으면 바로 나가고, 있으면 버릴지 묻는다
   function requestLeave() {
     if (hasInput) setAskDiscard(true);
     else discard();
@@ -191,11 +191,6 @@ export function ActivityEditPage() {
       header={
         <AppHeader
           title={isNew ? "활동 입력" : "활동 수정"}
-          action={
-            <Button variant="ghost" size="dense" onClick={requestLeave}>
-              취소
-            </Button>
-          }
           backTo="/diaries/new"
           onBack={requestLeave}
         />
