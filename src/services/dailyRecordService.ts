@@ -1,4 +1,4 @@
-import { behaviorDetailLabel, behaviorTypeLabel, OTHER_LABEL } from "@/data/catalog";
+import { behaviorDetailLabel, behaviorTypeLabel, OTHER_LABEL, temperatureLabel } from "@/data/catalog";
 import { behaviorEntries, labelsOf, sortActivities } from "@/services/diaryService";
 import { parseISODate, weekdayLabel } from "@/lib/utils";
 import type { Activity, Diary, ServiceUser, Staff } from "@/types";
@@ -43,6 +43,8 @@ export interface DailyRecordData {
   /** 월, 화 … (양식에 '요일'이 이미 적혀 있다) */
   weekday: string;
   weather: string;
+  /** 따뜻함(20~27℃). 고르지 않았으면 빈 글자 */
+  temperature: string;
   condition: string;
   activities: DailyRecordRow[];
   notes: string;
@@ -111,6 +113,7 @@ export function dailyRecordData(diary: Diary, client: ServiceUser, staff: readon
     day: date.getDate(),
     weekday: weekdayLabel(diary.date),
     weather: diary.weather,
+    temperature: temperatureLabel(diary.temperature),
     condition: labelsOf([diary.condition], diary.conditionOther)[0],
     // 일지 상세 화면과 같은 순서(시작 시간순)로 적는다
     activities,

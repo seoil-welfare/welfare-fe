@@ -52,6 +52,7 @@ export const DAILY_FIELDS: ReportFieldSet = {
     { key: "day", label: "일", description: "일지 날짜의 일 (예: 9)" },
     { key: "weekday", label: "요일", description: "요일 한 글자 (예: 월)" },
     { key: "weather", label: "날씨", description: "날씨" },
+    { key: "temperature", label: "온도", description: "온도 구간 (예: 따뜻함(20~27℃)). 고르지 않았으면 빈칸" },
     { key: "condition", label: "컨디션", description: "이용자 컨디션" },
     { key: "behaviorCount", label: "행동건수", description: "그날 도전적 행동 선택 건수" },
     { key: "notes", label: "특이사항", description: "특이사항" },

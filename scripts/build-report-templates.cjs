@@ -115,12 +115,13 @@ function buildDaily(src, out) {
   save(source, out, [
     paragraph("일별활동일지", { heading: true }),
     paragraph("이용자: {clientName}    작성일: {year}년 {month}월 {day}일 {weekday}요일    작성자: {authorName}"),
-    paragraph("날씨: {weather}    컨디션: {condition}"),
+    paragraph("날씨: {weather}    온도: {temperature}    컨디션: {condition}"),
     paragraph("시간대별 활동 기록", { heading: true }), activity,
-    paragraph("도전적 행동 및 특이사항", { heading: true, page: true }),
+    // 특이사항은 활동 기록 바로 아래에 둔다 (복지관 요청)
+    paragraph("특이사항", { heading: true }), paragraph("{notes}"),
+    paragraph("도전적 행동", { heading: true, page: true }),
     paragraph("이용자: {clientName}    작성일: {year}년 {month}월 {day}일"),
     paragraph("도전적 행동 선택 기록 {behaviorCount}건"), behaviors,
-    paragraph("특이사항", { heading: true }), paragraph("{notes}"),
   ].join(""));
 }
 

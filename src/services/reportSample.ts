@@ -47,6 +47,7 @@ function diary(date: string, index: number): Diary {
     authorId: "sample-staff",
     status: "completed",
     weather: ["맑음", "구름조금", "흐림"][index % 3] as Diary["weather"],
+    temperature: (["WARM", "COOL", "WARM"] as const)[index % 3],
     condition: ["양호", "보통", "양호"][index % 3] as Diary["condition"],
     notes: index % 4 === 0 ? "오후에 피곤해 보여 휴식 시간을 한 번 더 가졌습니다." : "",
     activities: [

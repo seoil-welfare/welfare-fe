@@ -38,6 +38,7 @@ const diary: Diary = {
   authorId: "s-check",
   status: "completed",
   weather: "맑음",
+  temperature: "WARM",
   condition: "기타",
   conditionOther: "졸려 함",
   notes: "가상 특이사항",
@@ -82,6 +83,9 @@ expect(
 );
 expect("컨디션 기타(입력값)", data.condition === "기타(졸려 함)", data.condition);
 expect("특이사항", data.notes === "가상 특이사항", data.notes);
+expect("온도 구간(범위)", data.temperature === "따뜻함(20~27℃)", data.temperature);
+const noTemperature = dailyRecordData({ ...diary, temperature: undefined }, client).temperature;
+expect("온도를 고르지 않으면 빈칸", noTemperature === "", JSON.stringify(noTemperature));
 
 console.log("[파일 이름]");
 const fileName = dailyRecordFileName(diary, client);
@@ -129,6 +133,14 @@ async function checkRenderedDocx() {
   expect("활동 수만큼 표 줄 생성", rows === 5, rows + "줄");
   expect("줄바꿈은 Word 줄바꿈으로", xml.includes("<w:br/>") && !text.includes("\n"), "<w:br/> 사용");
   expect("도전적 행동 내용", text.includes("파괴행동 - 물건 던지기"), "영역 - 항목");
+  expect("온도 채움", text.includes("온도: 따뜻함(20~27℃)"), "날씨 줄");
+  // 특이사항은 활동 기록 표 바로 아래, 도전적 행동 쪽보다 앞 (복지관 요청)
+  const notesAt = text.indexOf("가상 특이사항");
+  expect(
+    "특이사항이 활동 기록 바로 아래",
+    notesAt > text.indexOf("긍정행동지원") && notesAt < text.indexOf("도전적 행동 선택 기록"),
+    "활동 표 → 특이사항 → 도전적 행동",
+  );
 }
 
 /** 여러 건을 한 파일로 만들 때 일지마다 표가 반복되고, 두 번째부터 새 페이지에서 시작하는지 확인한다 */
