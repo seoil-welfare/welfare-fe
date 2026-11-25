@@ -15,8 +15,21 @@ const first = (node, name) => children(node, name)[0];
 const all = (node, name) => Array.from(node.getElementsByTagNameNS(W, name));
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
+// Word의 w:sz는 반 포인트 단위(9pt = 18). 복지관 11/24 회의 요청으로 정한 인쇄용 글자 크기.
+// 여기 숫자만 바꾸면 두 양식 전체에 반영된다.
+const FONT_SIZES = {
+  heading: 26, // 13pt — 제목(일별활동일지, 시간대별 활동 기록, 특이사항, 도전적 행동, 월별 제목·요약 제목)
+  body: 20, // 10pt — 이용자·날씨 줄, 특이사항 내용, 월별 설명·요약 문장
+  approval: 20, // 10pt — 결재란 글자(결/재, 담 당, 팀 장)
+  dailyTableHeader: 18, // 9pt, 굵게 — 일별 표 머리글
+  dailyTableBody: 18, // 9pt — 일별 표 내용(활동 표·도전적 행동 표)
+  monthlyTableHeader: 17, // 8.5pt, 굵게 — 월별 표 머리글
+  monthlyTableBody: 16, // 8pt — 월별 표 내용(날짜 숫자 포함)
+};
+
 function paragraph(value, { heading = false, page = false } = {}) {
-  return `<w:p><w:pPr>${page ? "<w:pageBreakBefore/>" : ""}<w:spacing w:before="120" w:after="120"/>${heading ? "<w:keepNext/>" : ""}</w:pPr><w:r><w:rPr><w:rFonts w:ascii="맑은 고딕" w:eastAsia="맑은 고딕"/>${heading ? '<w:b/><w:color w:val="17376B"/>' : ""}<w:sz w:val="${heading ? 26 : 18}"/></w:rPr><w:t xml:space="preserve">${esc(value)}</w:t></w:r></w:p>`;
+  const size = heading ? FONT_SIZES.heading : FONT_SIZES.body;
+  return `<w:p><w:pPr>${page ? "<w:pageBreakBefore/>" : ""}<w:spacing w:before="120" w:after="120"/>${heading ? "<w:keepNext/>" : ""}</w:pPr><w:r><w:rPr><w:rFonts w:ascii="맑은 고딕" w:eastAsia="맑은 고딕"/>${heading ? '<w:b/><w:color w:val="17376B"/>' : ""}<w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${esc(value)}</w:t></w:r></w:p>`;
 }
 
 function setCell(cell, value) {
@@ -34,6 +47,36 @@ function setCell(cell, value) {
   run.appendChild(t); p.appendChild(run);
   for (const n of children(cell).filter((n) => n.localName !== "tcPr")) cell.removeChild(n);
   cell.appendChild(p);
+}
+
+/**
+ * 칸 글자 크기를 size(반 포인트)로 맞춘다. 예시 양식에서 칸마다 5.5~6pt로 섞여 있던 걸 통일한다.
+ * sz·szCs를 덮어 쓰거나 새로 넣고, bold면 굵게(w:b)를 보장한다 (원래 글꼴·색은 그대로 둔다).
+ */
+function setRunSize(cell, size, { bold = false } = {}) {
+  const p = all(cell, "p")[0];
+  const run = all(p, "r")[0];
+  if (!run) return;
+  const setOrCreate = (rPr, name) => {
+    let el = first(rPr, name);
+    if (!el) { el = rPr.ownerDocument.createElementNS(W, "w:" + name); rPr.appendChild(el); }
+    el.setAttributeNS(W, "w:val", String(size));
+  };
+  let rPr = first(run, "rPr");
+  if (!rPr) {
+    rPr = run.ownerDocument.createElementNS(W, "w:rPr");
+    run.insertBefore(rPr, run.firstChild);
+  }
+  setOrCreate(rPr, "sz");
+  setOrCreate(rPr, "szCs");
+  if (bold && !first(rPr, "b")) {
+    const b = rPr.ownerDocument.createElementNS(W, "w:b");
+    const rFonts = first(rPr, "rFonts");
+    rPr.insertBefore(b, rFonts ? rFonts.nextSibling : rPr.firstChild);
+  }
+  // 문단 표시(pilcrow)의 서식에 옛 크기(원래 예시 양식의 5.5~7.5pt)가 남지 않게 같이 맞춘다.
+  const markRPr = first(first(p, "pPr"), "rPr");
+  if (markRPr) { setOrCreate(markRPr, "sz"); setOrCreate(markRPr, "szCs"); }
 }
 
 /** 칸 안 내용을 세로 가운데로 맞춘다 (가로 정렬은 그대로 둔다) */
@@ -59,7 +102,7 @@ const SOLID_BORDERS = ["top", "left", "bottom", "right"]
   .map((side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join("");
 
 function approvalParagraph(value) {
-  return `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="맑은 고딕" w:eastAsia="맑은 고딕"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${esc(value)}</w:t></w:r></w:p>`;
+  return `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="맑은 고딕" w:eastAsia="맑은 고딕"/><w:sz w:val="${FONT_SIZES.approval}"/></w:rPr><w:t xml:space="preserve">${esc(value)}</w:t></w:r></w:p>`;
 }
 
 function approvalTcPr({ width, shade = false, vMerge = null }) {
@@ -110,7 +153,7 @@ function titleWithApproval(text, section) {
 }
 
 /** 불필요한 열을 제거하고 원래 너비 비율로 나머지 열을 배분한다. */
-function table(source, keep, headers, fields, loop) {
+function table(source, keep, headers, fields, loop, { headerSize, bodySize }) {
   const tbl = source.cloneNode(true);
   const rows = children(tbl, "tr");
   if (rows.length < 2) throw new Error("반복할 데이터 행이 있는 표가 필요합니다.");
@@ -127,11 +170,11 @@ function table(source, keep, headers, fields, loop) {
   }
   for (let r = 0; r < 2; r++) {
     const row = rows[r];
-    if (r === 0) {
-      let props = first(row, "trPr");
-      if (!props) { props = row.ownerDocument.createElementNS(W, "w:trPr"); row.insertBefore(props, row.firstChild); }
-      if (!first(props, "tblHeader")) props.appendChild(row.ownerDocument.createElementNS(W, "w:tblHeader"));
-    }
+    let props = first(row, "trPr");
+    if (!props) { props = row.ownerDocument.createElementNS(W, "w:trPr"); row.insertBefore(props, row.firstChild); }
+    // 한 행이 쪽 경계에서 반으로 잘리지 않게 머리줄·반복 행 모두에 cantSplit을 둔다 (trHeight보다 앞, 스키마 순서상 맨 앞).
+    if (!first(props, "cantSplit")) props.insertBefore(row.ownerDocument.createElementNS(W, "w:cantSplit"), props.firstChild);
+    if (r === 0 && !first(props, "tblHeader")) props.appendChild(row.ownerDocument.createElementNS(W, "w:tblHeader"));
     const cells = children(row, "tc");
     if (cells.length <= Math.max(...keep)) throw new Error("양식 표의 열 수가 예상과 달라요.");
     cells.forEach((cell, index) => { if (!keep.includes(index)) row.removeChild(cell); });
@@ -142,10 +185,10 @@ function table(source, keep, headers, fields, loop) {
         : (index === 0 ? "{#" + loop + "}" : "") + "{" + fields[index] + "}" + (index === fields.length - 1 ? "{/" + loop + "}" : "");
       setCell(cell, value);
       setVAlignCenter(cell);
+      setRunSize(cell, r === 0 ? headerSize : bodySize, { bold: r === 0 });
     });
     // 사용자 기록이 길어져도 고정 행 높이로 잘리지 않게 한다.
     for (const height of all(row, "trHeight")) height.setAttributeNS(W, "w:hRule", "atLeast");
-    if (r === 1) for (const cant of all(row, "cantSplit")) cant.parentNode.removeChild(cant);
   }
   return serialize(tbl);
 }
@@ -181,11 +224,12 @@ function save(source, out, bodyXml) {
 
 function buildDaily(src, out) {
   const source = load(src);
+  const dailyTableSizes = { headerSize: FONT_SIZES.dailyTableHeader, bodySize: FONT_SIZES.dailyTableBody };
   const activity = table(source.tables[0], [0, 1, 2, 3, 4, 5],
     ["시간", "참여 활동", "활동 내용", "사전 지원", "이용자 반응", "긍정행동지원"],
-    ["time", "participation", "detail", "preSupport", "reaction", "positiveSupport"], "activities");
+    ["time", "participation", "detail", "preSupport", "reaction", "positiveSupport"], "activities", dailyTableSizes);
   const behaviors = table(source.tables[1], [0, 2, 3],
-    ["활동 시간", "도전적 행동 선택 기록", "기록된 지원 방법"], ["time", "behaviors", "support"], "behaviorRecords");
+    ["활동 시간", "도전적 행동 선택 기록", "기록된 지원 방법"], ["time", "behaviors", "support"], "behaviorRecords", dailyTableSizes);
   save(source, out, [
     titleWithApproval("일별활동일지", source.section),
     paragraph("이용자: {clientName}    작성일: {year}년 {month}월 {day}일 {weekday}요일    작성자: {authorName}"),
@@ -215,7 +259,8 @@ function buildMonthly(src, out) {
   const source = load(src);
   const headers = ["일", "컨디션", "대표 활동", "주요 지원", "전반 반응", "특이사항 / 도전적 행동", "선택 건수"];
   const fields = ["day", "condition", "activity", "support", "reaction", "remarks", "count"];
-  const half = (index, loop) => table(source.tables[index], [0, 1, 2, 3, 4, 6, 7], headers, fields, loop);
+  const monthlyTableSizes = { headerSize: FONT_SIZES.monthlyTableHeader, bodySize: FONT_SIZES.monthlyTableBody };
+  const half = (index, loop) => table(source.tables[index], [0, 1, 2, 3, 4, 6, 7], headers, fields, loop, monthlyTableSizes);
   const header = paragraph("이용자: {clientName}    작성월: {year}년 {month}월    작성자: {authorNames}");
   save(source, out, [
     titleWithApproval("월별활동일지 · 1~16일", source.section), header,
