@@ -25,7 +25,10 @@ export function renderDailyRecordDocx(template: ArrayBuffer, data: DailyRecordDa
  */
 export function renderDailyRecordBundleDocx(template: ArrayBuffer, records: DailyRecordData[]): Blob {
   return render(toBundleTemplate(new PizZip(template)), {
-    records: records.map((record, index) => ({ ...withKoreanLabels("daily", record), pageBreak: index > 0 })),
+    records: records.map((record, index) => ({
+      ...withKoreanLabels("daily", record),
+      pageBreak: index > 0 ? PAGE_BREAK_PARAGRAPH : "",
+    })),
   });
 }
 
@@ -41,20 +44,24 @@ function render(zip: PizZip, data: object): Blob {
 
 const DOCUMENT_XML = "word/document.xml";
 
+/** 두 번째 일지부터 새 페이지에서 시작하려고 넣는, 표 밖의 독립된 페이지 나누기 문단 */
+const PAGE_BREAK_PARAGRAPH = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+
 /**
  * 본문 전체를 {#records}…{/records}로 감싸 일지 수만큼 반복하게 한다.
- * 두 번째 일지부터는 첫 문단 맨 앞에 페이지 나누기를 넣는다 (빈 줄 없이 새 페이지에서 시작)
+ * 두 번째 일지부터는 본문 맨 앞, 표 밖의 별도 문단에 페이지 나누기를 넣는다.
+ * Word·한글은 표 칸(w:tc) 안의 페이지 나누기를 무시하므로 표(제목+결재 표 포함) 앞에 독립된 문단으로 둬야 한다.
+ * {@pageBreak}는 docxtemplater의 rawxml 모듈 문법으로, 값이 그 문단(<w:p>) 전체를 그대로 대신한다.
+ * 값이 빈 문자열이면 문단이 통째로 사라져서 (일반 {tag} 치환과 달리 빈 문단이 남지 않음) 첫 일지 위에 빈 줄이 생기지 않는다.
  */
 function toBundleTemplate(zip: PizZip): PizZip {
   const xml = zip.file(DOCUMENT_XML)?.asText() ?? "";
   const tagParagraph = (tag: string) => "<w:p><w:r><w:t>" + tag + "</w:t></w:r></w:p>";
-  const pageBreakRuns =
-    "<w:r><w:t>{#pageBreak}</w:t></w:r>" + '<w:r><w:br w:type="page"/></w:r>' + "<w:r><w:t>{/pageBreak}</w:t></w:r>";
+  const pageBreakSlot = "<w:p><w:r><w:t>{@pageBreak}</w:t></w:r></w:p>";
 
   const bodyStart = xml.indexOf("<w:body>") + "<w:body>".length;
-  const firstPPrEnd = xml.indexOf("</w:pPr>", bodyStart) + "</w:pPr>".length; // 첫 문단의 서식 바로 뒤
   const sectionStart = xml.lastIndexOf("<w:sectPr");
-  if (bodyStart < "<w:body>".length || firstPPrEnd < bodyStart || sectionStart < firstPPrEnd) {
+  if (bodyStart < "<w:body>".length || sectionStart < bodyStart) {
     throw new Error("일일 기록지 양식의 구조가 예상과 달라요.");
   }
 
@@ -62,9 +69,8 @@ function toBundleTemplate(zip: PizZip): PizZip {
     DOCUMENT_XML,
     xml.slice(0, bodyStart) +
       tagParagraph("{#records}") +
-      xml.slice(bodyStart, firstPPrEnd) +
-      pageBreakRuns +
-      xml.slice(firstPPrEnd, sectionStart) +
+      pageBreakSlot +
+      xml.slice(bodyStart, sectionStart) +
       tagParagraph("{/records}") +
       xml.slice(sectionStart),
   );

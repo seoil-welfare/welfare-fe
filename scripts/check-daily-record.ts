@@ -128,9 +128,9 @@ async function checkRenderedDocx() {
   expect("파일 형식", blob.type === DOCX_MIME, blob.type);
   expect("남은 자리표시자 없음", !/[{}]/.test(text), text.match(/\{[^}]*\}/)?.[0] ?? "없음");
   expect("머리말 값 채움", text.includes("가상이용자 A") && text.includes("2026년 9월 21일 월요일"), "이름·작성일");
-  // 머리말 2줄 + 활동 표(제목 1줄 + 활동 2줄) + 특이사항 1줄
+  // 결재란 표(제목 줄 1 + 결재 2줄) + 활동 표(제목 1줄 + 활동 2줄) + 특이사항 1줄
   const rows = xml.match(/<w:tr[ >]/g)?.length ?? 0;
-  expect("활동 수만큼 표 줄 생성", rows === 5, rows + "줄");
+  expect("활동 수만큼 표 줄 생성", rows === 8, rows + "줄");
   expect("줄바꿈은 Word 줄바꿈으로", xml.includes("<w:br/>") && !text.includes("\n"), "<w:br/> 사용");
   expect("도전적 행동 내용", text.includes("파괴행동 - 물건 던지기"), "영역 - 항목");
   expect("온도 채움", text.includes("온도: 따뜻함(20~27℃)"), "날씨 줄");
@@ -153,9 +153,22 @@ async function checkBundleDocx() {
   const text = [...xml.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("");
 
   const tables = xml.match(/<w:tbl[ >]/g)?.length ?? 0;
-  const singleTables = 2; // 양식 1장 = 머리말·활동·특이사항 표 3개
+  const singleTables = 4; // 양식 1장 = 결재란(제목 감싸는 표 + 결재 표) 2개 + 활동·도전적 행동 표 2개
   expect("일지 수만큼 양식 반복", tables === singleTables * records.length, tables + "개 표");
   expect("페이지 나누기는 일지 사이에만", (xml.match(/w:type="page"/g)?.length ?? 0) === records.length - 1, "일지 3건 → 2개");
+  // 표 칸(w:tc) 안의 페이지 나누기는 Word·한글이 무시하므로, 표 밖(표 중첩 깊이 0)에 있는지 깊이를 세어 확인한다
+  const tblDepthAt = (index: number) => {
+    const before = xml.slice(0, index);
+    const opens = before.match(/<w:tbl[ >]/g)?.length ?? 0;
+    const closes = before.match(/<\/w:tbl>/g)?.length ?? 0;
+    return opens - closes;
+  };
+  const pageBreaks = [...xml.matchAll(/<w:br w:type="page"\/>/g)];
+  expect(
+    "페이지 나누기가 표 밖에 있음",
+    pageBreaks.length === records.length - 1 && pageBreaks.every((m) => tblDepthAt(m.index!) === 0),
+    pageBreaks.map((m) => tblDepthAt(m.index!)).join(", "),
+  );
   expect("남은 자리표시자 없음", !/[{}]/.test(text), text.match(/\{[^}]*\}/)?.[0] ?? "없음");
   expect("날짜마다 머리말", ["21일", "22일", "24일"].every((day) => text.includes("9월 " + day)), "9/21, 9/22, 9/24");
   expect("본문 끝 구역 설정 유지", xml.trimEnd().endsWith("</w:sectPr></w:body></w:document>"), "가로 A4 설정");

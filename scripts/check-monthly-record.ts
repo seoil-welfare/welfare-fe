@@ -164,7 +164,8 @@ async function checkRenderedDocx() {
   expect("양식 예시 이름이 남지 않음", !text.includes("김OO") && !text.includes("박OO"), "김OO·박OO 없음");
   expect("중복 글상자 없이 실제 머리말", !xml.includes("<w:txbxContent>") && text.includes("이용자: 가상이용자 A"), "일반 문단 머리말");
   const tableRows = xml.match(/<w:tr[ >]/g)?.length ?? 0;
-  expect("표 줄 = 머리글 2 + 31일", tableRows === 33, tableRows + "줄");
+  // 결재란 표(제목 줄 1 + 결재 2줄) + 머리글 2 + 31일
+  expect("표 줄 = 결재란 3 + 머리글 2 + 31일", tableRows === 36, tableRows + "줄");
   expect("요약 문장", text.includes(data.summaryParticipation), "실제 선택 건수");
   expect("양식 예시 요약이 남지 않음", !text.includes("전반적으로") && !text.includes("효과적이었고"), "예시 문장 없음");
   const swapped = [MONTHLY_IMAGE_PATHS.totals, MONTHLY_IMAGE_PATHS.chart].every(
