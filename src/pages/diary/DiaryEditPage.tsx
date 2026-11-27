@@ -1,8 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Save, Trash2, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
@@ -13,7 +12,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomActionBar } from "@/components/layout/bars";
 import { FormSection } from "@/components/common/FormSection";
-import { SingleChoiceGroup } from "@/components/common/ChoiceGroup";
 import { EmptyState, ListSkeleton } from "@/components/common/states";
 import { QueryGate } from "@/components/common/QueryGate";
 import { api } from "@/api";
@@ -21,14 +19,9 @@ import { errorMessage, isApiError, isUpdatedByOther, NETWORK_ERROR_STATUS } from
 import { combineQueries, useDeleteDiary, useDiaries, useSaveDiary, useServiceUsers } from "@/api/queries";
 import { forgetRememberedDraftId, readRememberedDraftId, useDraft } from "@/app/DraftContext";
 import { getLastPage } from "@/app/lastPage";
-import { useCategoryChoices } from "@/app/useCategoryChoices";
-import { choiceLabels } from "@/services/categoryService";
-import { TEMPERATURE_BANDS } from "@/data/catalog";
 import { useToday } from "@/lib/today";
 import {
   activeServiceUsers,
-  activitySummary,
-  countActivityBehaviors,
   diariesOnDate,
   findActivityMissingBehaviorDetail,
   isUntouchedDraft,
@@ -37,7 +30,9 @@ import {
   toSaveInput,
 } from "@/services/diaryService";
 import { formatLongDate, formatTime, formatTimeRange } from "@/lib/utils";
-import type { Activity, Condition, DiaryStatus, Weather } from "@/types";
+import type { DiaryStatus } from "@/types";
+import { ActivityListSection } from "@/pages/diary/diaryEdit/ActivityListSection";
+import { WeatherConditionSection } from "@/pages/diary/diaryEdit/WeatherConditionSection";
 
 /**
  * 일지 작성 (2.1.4/FR-08 ~ FR-16).
@@ -71,15 +66,12 @@ export function DiaryEditPage() {
     setAutosaveBlocked,
     reportUpdatedByOther,
   } = useDraft();
-  // 삭제 확인 팝업을 띄울 활동
-  const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
   // 활동이 없는 일지를 완료할지 묻는 팝업
   const [askEmptyComplete, setAskEmptyComplete] = useState(false);
   // 작성 중 일지 삭제 확인 팝업
   const [askDeleteDiary, setAskDeleteDiary] = useState(false);
   const saveDiary = useSaveDiary();
   const deleteDiary = useDeleteDiary();
-  const choices = useCategoryChoices(); // 날씨·컨디션 선택지 (GET /categories)
   const usersQuery = useServiceUsers();
   const users = activeServiceUsers(usersQuery.data ?? []);
 
@@ -473,95 +465,9 @@ export function DiaryEditPage() {
           </Field>
         </FormSection>
 
-        <FormSection title="날씨와 컨디션">
-          <SingleChoiceGroup
-            label="날씨"
-            options={choiceLabels(choices.weather, [draft.weather])}
-            value={draft.weather}
-            onChange={(value) => updateDraft({ weather: value as Weather })}
-          />
-          <SingleChoiceGroup
-            label="온도"
-            options={TEMPERATURE_OPTIONS.map((option) => option.label)}
-            value={TEMPERATURE_OPTIONS.find((option) => option.code === draft.temperature)?.label ?? ""}
-            onChange={(label) =>
-              updateDraft({ temperature: TEMPERATURE_OPTIONS.find((option) => option.label === label)?.code })
-            }
-            clearable
-          />
-          <SingleChoiceGroup
-            label="이용자 컨디션"
-            options={choiceLabels(choices.condition, [draft.condition])}
-            value={draft.condition}
-            onChange={(value) => updateDraft({ condition: value as Condition })}
-            otherValue={draft.conditionOther}
-            onOtherChange={(value) => updateDraft({ conditionOther: value })}
-          />
-        </FormSection>
+        <WeatherConditionSection draft={draft} onChange={updateDraft} />
 
-        <FormSection
-          title="활동 내용"
-          description={"활동 " + activities.length + "건"}
-        >
-          {activities.length === 0 ? (
-            <EmptyState message="아직 등록한 활동이 없어요." />
-          ) : (
-            <Card variant="list">
-              <ul className="divide-y divide-border">
-                {activities.map((activity) => {
-                  const behaviorCount = countActivityBehaviors(activity);
-                  return (
-                    <li
-                      key={activity.id}
-                      className={"flex items-center" + (behaviorCount > 0 ? " bg-behavior-soft" : "")}
-                    >
-                      <Link
-                        to={"/diaries/new/activities/" + activity.id}
-                        onClick={rememberScroll}
-                        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 hover:bg-accent"
-                      >
-                        <span className="flex min-w-0 flex-1 flex-col gap-1">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="tnum type-body font-medium">
-                              {formatTimeRange(activity.startTime, activity.endTime)}
-                            </span>
-                            {behaviorCount > 0 ? (
-                              <Badge variant="soft" tone="behavior">
-                                도전적 행동 {behaviorCount}건
-                              </Badge>
-                            ) : null}
-                          </span>
-                          <span className="truncate type-caption text-muted-foreground">
-                            {activitySummary(activity)}
-                          </span>
-                        </span>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="mr-2 shrink-0 text-muted-foreground"
-                        aria-label={
-                          formatTimeRange(activity.startTime, activity.endTime) + " 활동 삭제"
-                        }
-                        onClick={() => setDeleteTarget(activity)}
-                      >
-                        <X aria-hidden />
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
-          )}
-
-          <Button variant="dashed" asChild>
-            <Link to="/diaries/new/activities/new" onClick={rememberScroll}>
-              <Plus aria-hidden />
-              활동 내용 추가
-            </Link>
-          </Button>
-
-        </FormSection>
+        <ActivityListSection activities={activities} onLeave={rememberScroll} onRemove={removeActivity} />
 
         <FormSection title="특이사항">
           <Field>
@@ -600,24 +506,6 @@ export function DiaryEditPage() {
       />
 
       <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-        title={
-          (deleteTarget
-            ? formatTimeRange(deleteTarget.startTime, deleteTarget.endTime) + " "
-            : "") + "활동을 삭제할까요?"
-        }
-        description="삭제한 활동 내용은 되돌릴 수 없어요."
-        confirmLabel="삭제"
-        onConfirm={() => {
-          if (deleteTarget) removeActivity(deleteTarget.id);
-          setDeleteTarget(null);
-        }}
-      />
-
-      <ConfirmDialog
         open={askEmptyComplete}
         onOpenChange={setAskEmptyComplete}
         title="활동 없이 완료할까요?"
@@ -649,9 +537,6 @@ export function DiaryEditPage() {
     </AppShell>
   );
 }
-
-/** 온도 칩: 추움 10℃ 이하 (칩 글자 ↔ 저장 코드) */
-const TEMPERATURE_OPTIONS = TEMPERATURE_BANDS.map((band) => ({ code: band.code, label: band.label + " " + band.range }));
 
 /** 자동 저장 시각 표시용 HH:mm */
 function formatClock(date: Date): string {
