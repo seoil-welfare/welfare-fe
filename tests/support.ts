@@ -65,6 +65,11 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
     else if (path === "/notifications/summary") data = { unreadCount: 0 };
     else if (path === "/news") data = options.news ?? [];
     else if (path === "/stats/summary") { status = options.statsStatus ?? 200; data = status === 200 ? options.stats ?? summary() : { code: "TEST_ERROR", message: "기록 조회 실패" }; }
+    else if (path === "/stats/weather") {
+      // 날씨·온도별 통계 (도전적 행동 상세). 기록이 없는 기간으로 답한다
+      const query = new URL(request.url()).searchParams;
+      data = { start: query.get("from"), end: query.get("to"), completedDiaries: 0, weather: [], temperature: [], temperatureExcluded: { days: 0, behaviorCount: 0 } };
+    }
     else if (path === "/diaries" && method === "GET") data = options.diaries ?? [];
     else if (path.startsWith("/diaries")) {
       status = options.saveStatus ?? 200;
